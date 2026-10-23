@@ -19,6 +19,7 @@ import {
   allAreas,
   allAreaPairs,
   areaOfEach,
+  stepFeeOfEach,
   valueBandsOfEach,
 } from "@/lib/areas-server";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
@@ -122,6 +123,7 @@ export async function GET(): Promise<NextResponse> {
       areaOf,
       areaPairs,
       valueBandsOf,
+      stepFeeOf,
       promoters,
       nudge,
     ] = await Promise.all([
@@ -139,6 +141,7 @@ export async function GET(): Promise<NextResponse> {
       areaOfEach(),
       allAreaPairs(),
       valueBandsOfEach(),
+      stepFeeOfEach(),
       namedPromoters(),
       appNudge(),
     ]);
@@ -206,6 +209,12 @@ export async function GET(): Promise<NextResponse> {
       // basket off the container ladder and quotes a number nobody is
       // charged, which is the one thing a checkout must never do.
       valueBandsOf,
+      // The kitchens that price by the cool box rather than by the
+      // container: something small that people buy a lot of, grabbed on the
+      // way past rather than fetched. Without this the app prices fifteen
+      // small ice creams as fifteen takeaway boxes and quotes a number
+      // nobody is charged, which is the one thing a checkout must never do.
+      stepFeeOf,
       // Who somebody could say they heard about the shop from. Empty means
       // nobody is promoting, and then the question is not worth asking.
       promoters,

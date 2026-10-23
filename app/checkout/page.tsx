@@ -22,6 +22,7 @@ import {
   allAreaPairs,
   areaOfEach,
   valueBandsOfEach,
+  stepFeeOfEach,
   openDaysOfEach,
 } from "@/lib/areas-server";
 import { toBatchView, toClosedBatchView } from "@/lib/view";
@@ -130,6 +131,7 @@ export default async function CheckoutPage({
       // The kitchens that charge by what the shopping comes to rather than
       // by how many things it is. A market trip is one trip and two bags.
       valueBandsOf={await valueBandsOfEach()}
+      stepFeeOf={await stepFeeOfEach()}
       openDaysOf={await openDaysOfEach()}
       // The promotions on today, with their rules, so the checkout quotes the
       // price it is about to charge rather than the ladder it is replacing.

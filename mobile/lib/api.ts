@@ -402,6 +402,10 @@ export type Shop = {
   /** The kitchens that price by what the shopping comes to rather than by
    *  how many things it is. A market is one; a restaurant is not. */
   valueBandsOf?: Record<string, ValueBand[]>;
+  /** The things priced by the cool box rather than by the container, by
+   *  item. Absent on an older server, which is everything on the ordinary
+   *  ladder, which is how it worked before. */
+  stepFeeOf?: Record<string, StepFee>;
   /** What is on at each kitchen, by restaurant id: a few words for the card,
    *  a sentence for the top of its menu, and the list behind the button. */
   offers?: Record<
@@ -1491,4 +1495,62 @@ export function countdown(msRemaining: number): string {
   if (h > 0) return `${h}h ${String(m).padStart(2, "0")}m`;
   if (m > 0) return `${m}m ${String(s).padStart(2, "0")}s`;
   return `${s}s`;
+}
+
+/**
+ * Delivery priced by the cool box rather than by the thing.
+ *
+ * Fantasy ice cream is small and the people who buy it buy a lot: fifteen
+ * is one cool box and thirty is two. On the container ladder fifteen of
+ * them price as fifteen takeaway boxes, which is a number nobody pays.
+ *
+ * And it is not a stop the car makes for its own sake. It is grabbed on the
+ * way past, so it is the dearer of the two rather than the sum: three
+ * Domino's pizzas and an ice cream pays for the pizzas, and sixty ice
+ * creams and one pizza pays for four cool boxes.
+ *
+ * The same sentence the server bills by, so the number on the phone is the
+ * number on the bill.
+ */
+export type StepFee = {
+  first: number;
+  firstFee: number;
+  step: number;
+  stepFee: number;
+};
+
+/** The dearest box ladder this cart touches, or none. */
+export function stepsFor(shop: Shop | null, itemIds: string[]): StepFee | null {
+  const byItem = shop?.stepFeeOf ?? {};
+  let worst: StepFee | null = null;
+  for (const id of itemIds) {
+    const one = byItem[id];
+    if (!one) continue;
+    if (worst === null || one.firstFee > worst.firstFee) worst = one;
+  }
+  return worst;
+}
+
+/** Whether this thing is priced by the cool box. */
+export function pricesByStep(shop: Shop | null, itemId: string): boolean {
+  return (shop?.stepFeeOf ?? {})[itemId] !== undefined;
+}
+
+/** What this many of them costs to bring. Part of a lot is a lot. */
+export function feeByStep(count: number, steps: StepFee | null): number {
+  if (steps === null || steps.first < 1 || steps.step < 1) return 0;
+  const many = Math.max(0, Math.floor(Number(count) || 0));
+  if (many <= 0) return 0;
+  if (many <= steps.first) return steps.firstFee;
+  return steps.firstFee + Math.ceil((many - steps.first) / steps.step) * steps.stepFee;
+}
+
+/** The dearer of what the car went for and what the cool boxes come to. */
+export function feeRidingAlong(args: {
+  stepCount: number;
+  steps: StepFee | null;
+  otherFee: number;
+}): number {
+  if (args.steps === null || args.stepCount <= 0) return args.otherFee;
+  return Math.max(args.otherFee, feeByStep(args.stepCount, args.steps));
 }

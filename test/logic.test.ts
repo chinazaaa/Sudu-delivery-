@@ -40,6 +40,12 @@ import { buyingDone } from "../lib/runner";
 import { didYouMean } from "../lib/did-you-mean";
 import { looksLikeABasket, looksLikeAGift, orderPart } from "../lib/occasions";
 import {
+  feeByStep,
+  feeRidingAlong,
+  parseStepFee,
+  serialiseStepFee,
+} from "../lib/step-fee";
+import {
   isCustom,
   liveRoutes,
   parcelsFrom,
@@ -5802,4 +5808,65 @@ test("a cart pasted in whole is read as its lines", () => {
   ]);
   // And the comma rule still does what it always did.
   assert.deepEqual(botSplitOrder("2 chicken pie, 1 coke"), ["2 chicken pie", "1 coke"]);
+});
+
+test("ice cream rides along rather than making its own trip", () => {
+  /*
+   * Fantasy ice cream is small and the people who buy it buy a lot:
+   * fifteen is one cool box, thirty is two. On the container ladder
+   * fifteen prices as fifteen takeaway boxes, which is a number nobody
+   * pays.
+   */
+  const steps = { first: 15, firstFee: 4000, step: 15, stepFee: 500 };
+
+  assert.equal(feeByStep(1, steps), 4000);
+  assert.equal(feeByStep(15, steps), 4000);
+  // Part of a lot is a lot: sixteen needs the second cool box as surely as
+  // thirty does, and charging sixteen as fifteen is giving the box away.
+  assert.equal(feeByStep(16, steps), 4500);
+  assert.equal(feeByStep(30, steps), 4500);
+  assert.equal(feeByStep(31, steps), 5000);
+  assert.equal(feeByStep(45, steps), 5000);
+  assert.equal(feeByStep(0, steps), 0);
+  assert.equal(feeByStep(30, null), 0);
+
+  /*
+   * The car is going for the pizzas. The ice cream is grabbed on the way
+   * past, so it is the dearer of the two rather than the sum: added would
+   * charge twice for one journey, and a cart with both in it would fall
+   * off a cliff.
+   */
+  // Three Domino's pizzas and fifteen ice creams: pay for the pizzas.
+  assert.equal(
+    feeRidingAlong({ stepCount: 15, steps, otherFee: 5500 }),
+    5500
+  );
+  // Fifteen ice creams and nothing else: the ice cream is the trip.
+  assert.equal(feeRidingAlong({ stepCount: 15, steps, otherFee: 0 }), 4000);
+  // Sixty ice creams and one pizza: four cool boxes is the trip now, and a
+  // shop that carried them for the price of one pizza is giving the boot
+  // away.
+  assert.equal(
+    feeRidingAlong({ stepCount: 60, steps, otherFee: 4000 }),
+    5500
+  );
+  // Nothing priced this way leaves the ordinary fee exactly as it was.
+  assert.equal(
+    feeRidingAlong({ stepCount: 0, steps, otherFee: 7000 }),
+    7000
+  );
+  assert.equal(
+    feeRidingAlong({ stepCount: 30, steps: null, otherFee: 7000 }),
+    7000
+  );
+
+  // Read back out of a row, and a row nobody can read is a thing
+  // priced the ordinary way rather than a broken checkout.
+  assert.deepEqual(parseStepFee(serialiseStepFee(steps)), steps);
+  assert.equal(parseStepFee(""), null);
+  assert.equal(parseStepFee("not json"), null);
+  // A first lot of nothing would charge the same for one as for a
+  // thousand; a step of nothing would divide by zero working out the lots.
+  assert.equal(parseStepFee('{"first":0,"firstFee":4000,"step":15,"stepFee":500}'), null);
+  assert.equal(parseStepFee('{"first":15,"firstFee":4000,"step":0,"stepFee":500}'), null);
 });

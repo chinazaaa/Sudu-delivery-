@@ -6,11 +6,14 @@ import {
   api,
   bandIndex,
   feeAcross,
+  feeRidingAlong,
   feeFor,
   lagosToday,
   naira,
   nextArrival,
+  pricesByStep,
   pricesByValue,
+  stepsFor,
   sameDayFeeFor,
   valueLadderFor,
 } from "@/lib/api";
@@ -171,10 +174,32 @@ export default function Cart() {
   // a car of its own, and quoting the run ladder here had the cart promising
   // four thousand over a checkout about to charge six and a half.
   const byValue = shop ? valueLadderFor(shop, kitchensIn) : [];
+  /*
+   * What rides along on a trip the car was making anyway.
+   *
+   * Fantasy ice cream is small and the people who buy it buy a lot, and the
+   * container ladder would call fifteen of them fifteen takeaway boxes. It
+   * is grabbed on the way past rather than fetched, so it is the dearer of
+   * the two rather than the sum. The cart says what the checkout will say.
+   */
+  const steps = shop ? stepsFor(shop, lines.map((line) => line.itemId)) : null;
+  const ridingHalf = lines.filter((line) => pricesByStep(shop, line.itemId));
+  const drivingHalf = lines.filter((line) => !pricesByStep(shop, line.itemId));
+  const ridingCount = ridingHalf.reduce((all, line) => all + line.qty, 0);
+  const driving = ridingHalf.length === 0 ? items : countItems(drivingHalf);
+  const ridesAlong = (otherFee: number) =>
+    feeRidingAlong({ stepCount: ridingCount, steps, otherFee });
   const carFee =
     shop && items > 0
       ? soon && (shop.sameDay?.bands?.length ?? 0) > 0
-        ? sameDayFeeFor(items, soon.urgent, shop.sameDay!.bands, shop.sameDay!.urgentExtra ?? 0)
+        ? ridesAlong(
+            sameDayFeeFor(
+              driving,
+              soon.urgent,
+              shop.sameDay!.bands,
+              shop.sameDay!.urgentExtra ?? 0
+            )
+          )
         : byValue.length > 0
           ? // Two errands, two fees. The market half pays by what the
             // shopping comes to and the restaurant half by how much of the
@@ -194,7 +219,7 @@ export default function Cart() {
               })(),
               bands: byValue,
             })
-          : feeFor(items, shop.bands, run?.flashFee ?? null)
+          : ridesAlong(feeFor(driving, shop.bands, run?.flashFee ?? null))
       : 0;
 
   // An offer prices delivery outright, so there is no ladder left to beat

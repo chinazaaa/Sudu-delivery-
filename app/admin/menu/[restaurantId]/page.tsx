@@ -31,6 +31,8 @@ import type { MenuCategory, MenuItem, Restaurant } from "@/lib/types";
 import { allAreas } from "@/lib/areas-server";
 import ImportCatalogue from "@/components/admin/ImportCatalogue";
 import ValueBandEditor from "@/components/admin/ValueBandEditor";
+import StepFeeEditor from "@/components/admin/StepFeeEditor";
+import { parseStepFee } from "@/lib/step-fee";
 import { parseValueBands } from "@/lib/value-bands";
 import PhotoField from "@/components/admin/PhotoField";
 import { Picking, Tick, Bar, Done } from "@/components/admin/BulkStock";
@@ -781,6 +783,18 @@ export default async function RestaurantAdmin({
                       placeholder="Two pieces, chips and a drink"
                       className="field"
                     />
+                  </div>
+                  <div className="rounded-xl bg-shell p-2.5">
+                    <p className="label mb-0">Delivery, where room is not the measure</p>
+                    <p className="mb-2 text-xs text-muted">
+                      For something small that people buy a lot of. Fifteen
+                      Fantasy ice creams is one cool box and thirty is two, and
+                      the room setting above would call fifteen of them fifteen
+                      containers. This is the floor the trip cannot go under
+                      rather than something added on top: it rides along, so
+                      three pizzas and an ice cream pays for the pizzas.
+                    </p>
+                    <StepFeeEditor initial={parseStepFee(item.step_fee ?? "")} />
                   </div>
                   {/* The back of the product, never the front. Half of what a
                       collection holds is not on anybody's menu, and when the

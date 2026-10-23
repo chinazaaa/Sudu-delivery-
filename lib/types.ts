@@ -108,6 +108,12 @@ export type MenuItem = {
    *  is 25 and a three-pizza deal is 300. Undefined before the column exists,
    *  which reads as a whole container and prices exactly as yesterday. */
   container_pct?: number;
+  /** Delivery priced by the cool box, as JSON: a first lot at one price and
+   *  every further lot at another. For something small that people buy a lot
+   *  of, where the container count is the wrong measure and the thing rides
+   *  along on a trip the car was making anyway. Empty is the ordinary
+   *  ladder, which is nearly everything. */
+  step_fee?: string;
 };
 
 export type BatchStatus = "open" | "closed" | "delivered" | "cancelled";

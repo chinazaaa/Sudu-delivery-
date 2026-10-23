@@ -31,8 +31,9 @@ import { runDateLabel, weekdayLabel } from "./time";
 import { createSameDayBatch, getBatch, isOrderable, orderCounts } from "./batches";
 import { bandsFor, isSkincareBatch } from "./skincare";
 import { counterHolding } from "./counter";
-import { areaOfCart } from "./areas-server";
+import { areaOfCart, stepFeeOfEach } from "./areas-server";
 import { feeAcross } from "./value-bands";
+import { feeRidingAlong, type StepFee } from "./step-fee";
 import { realPromoter } from "./promoters";
 import { containersIn, pctOf } from "./containers";
 import { key as priceKey, linePrice, type AsItem, type ChosenOption } from "./pricing";
@@ -297,6 +298,15 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // from the browser: a cart is written on a phone and a phone can say
   // anything, and this is the sentence the bill comes from.
   const where = await areaOfCart(placesIn(priced.lines));
+  /*
+   * What is priced by the cool box rather than by the container.
+   *
+   * Fantasy ice cream is small and the people who buy it buy a lot: the
+   * container ladder would call fifteen of them fifteen takeaway boxes. On
+   * the item rather than the shop, because it sits in Sudu Shop beside
+   * kettles and bedsheets and none of those is sold by the cool box.
+   */
+  const byBox = await stepFeeOfEach();
 
   // Three hours is the whole promise of a car of its own: fetch it, drive it
   // over. An hour each way to somewhere further out eats that before the
@@ -624,18 +634,54 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
                     ),
                     bands: where.valueBands,
                   }) + where.dearest.runExtra + where.mixedExtra
-                : undefined),
+                : /*
+                   * What rides along, priced by the cool box.
+                   *
+                   * Fantasy ice cream is small and the people who buy it
+                   * buy a lot, and the container ladder would call fifteen
+                   * of them fifteen takeaway boxes. It is not a stop the
+                   * car makes for its own sake either: it is grabbed on
+                   * the way past, so the trip is the dearer of the two
+                   * rather than the sum. Three pizzas and an ice cream
+                   * pays for the pizzas; sixty ice creams and one pizza
+                   * pays for four cool boxes.
+                   */
+                  stepsIn(priced.lines, byBox) !== null && !sameDay && !party
+                  ? feeRidingAlong({
+                      stepCount: countOf(priced.lines, byBox),
+                      steps: stepsIn(priced.lines, byBox),
+                      otherFee: feeOfHalf(
+                        drivingLines(priced.lines, byBox),
+                        batch.flash_fee,
+                        // The plain ladder. The trip is added once below,
+                        // for the whole order.
+                        where.baseBands
+                      ),
+                    }) + where.dearest.runExtra + where.mixedExtra
+                  : undefined),
           promotionCode: promotion?.coupon.code ?? null,
           sameDayFee: sameDay && !party
-            ? sameDayFee(
-                countItems(priced.lines),
-                sameDay.slot.urgent,
-                // The ladder as this cart is charged it, distance and all.
-                // A car of its own only goes to areas that allow one, so
-                // this is the home ladder unless an area says otherwise.
-                where.sameDayBands,
-                where.urgentExtra
-              )
+            ? // The ice cream rides along on a car of its own exactly as it
+              // does on a run: out of the container count, and the trip is
+              // the dearer of what the car went for and what the cool boxes
+              // come to.
+              feeRidingAlong({
+                stepCount: countOf(priced.lines, byBox),
+                steps: stepsIn(priced.lines, byBox),
+                otherFee: sameDayFee(
+                  countItems(
+                    countOf(priced.lines, byBox) === 0
+                      ? priced.lines
+                      : drivingLines(priced.lines, byBox)
+                  ),
+                  sameDay.slot.urgent,
+                  // The ladder as this cart is charged it, distance and all.
+                  // A car of its own only goes to areas that allow one, so
+                  // this is the home ladder unless an area says otherwise.
+                  where.sameDayBands,
+                  where.urgentExtra
+                ),
+              })
             : null,
           groupMode: input.groupMode ?? null,
           paymentMethod,
@@ -748,7 +794,21 @@ export async function quote(args: {
 
   const where = await areaOfCart(placesIn(priced.lines));
   const batch = args.batchId ? await getBatch(args.batchId) : null;
-  const carrying = countItems(priced.lines);
+
+  /*
+   * What rides along, kept out of the count.
+   *
+   * Fantasy ice cream is small and the people who buy it buy a lot, and
+   * the container ladder would call fifteen of them fifteen takeaway
+   * boxes. It is not a stop the car makes for its own sake either: it is
+   * grabbed on the way past, so it pays by the cool box and the trip is
+   * the dearer of the two rather than the sum.
+   */
+  const byBox = await stepFeeOfEach();
+  const ridingCount = countOf(priced.lines, byBox);
+  const carrying = countItems(
+    ridingCount === 0 ? priced.lines : drivingLines(priced.lines, byBox)
+  );
 
   let fee: number;
   if (args.sameDay) {
@@ -792,6 +852,15 @@ export async function quote(args: {
     const bands = isSkincareBatch(batch) ? await bandsFor(batch) : where.bands;
     fee = feeFor(carrying, batch?.flash_fee ?? null, bands);
   }
+
+  // The car is going for the rest of it. Whichever is the bigger number is
+  // what the trip costs: three pizzas and an ice cream pays for the
+  // pizzas, sixty ice creams and one pizza pays for four cool boxes.
+  fee = feeRidingAlong({
+    stepCount: ridingCount,
+    steps: stepsIn(priced.lines, byBox),
+    otherFee: fee,
+  });
 
   const food = countFood(priced.lines);
 
@@ -970,6 +1039,47 @@ const countFood = (lines: PricedLine[]) =>
 /** One half of a mixed cart: the market lines, or everything else. */
 const onlyFrom = (lines: PricedLine[], byValue: string[], want: boolean) =>
   lines.filter((l) => byValue.includes(l.item.restaurant_id) === want);
+
+/**
+ * How many of a cart came from these kitchens.
+ *
+ * Things, not containers: a cool box holds fifteen small ice creams
+ * whatever fraction of a takeaway box each of them counts as, and the
+ * whole point of pricing them this way is that the container count is the
+ * wrong measure for them.
+ */
+const ridingLines = (lines: PricedLine[], byItem: Record<string, StepFee>) =>
+  lines.filter((l) => byItem[l.item.id] !== undefined);
+
+const drivingLines = (lines: PricedLine[], byItem: Record<string, StepFee>) =>
+  lines.filter((l) => byItem[l.item.id] === undefined);
+
+/**
+ * How many of a cart are priced by the cool box.
+ *
+ * Things, not containers: a cool box holds fifteen small ice creams
+ * whatever fraction of a takeaway box each of them counts as, and the
+ * whole point of pricing them this way is that the container count is the
+ * wrong measure for them.
+ */
+const countOf = (lines: PricedLine[], byItem: Record<string, StepFee>) =>
+  ridingLines(lines, byItem).reduce((all, line) => all + line.qty, 0);
+
+/**
+ * The dearest cool box ladder this cart touches, or none.
+ *
+ * Dearest wins where two do, for the same reason the area does: one car
+ * fetches all of it, and the harder half of the trip is what it costs.
+ */
+const stepsIn = (lines: PricedLine[], byItem: Record<string, StepFee>) => {
+  let worst: StepFee | null = null;
+  for (const line of lines) {
+    const one = byItem[line.item.id];
+    if (!one) continue;
+    if (worst === null || one.firstFee > worst.firstFee) worst = one;
+  }
+  return worst;
+};
 
 /**
  * The container fee for a half of a cart, or nothing where that half is
@@ -1884,6 +1994,8 @@ export async function moveOrder(
       : [orderId];
 
   const bands = await bandsFor(batch);
+  // What is priced by the cool box, read once for the whole move.
+  const byBoxOnMove = await stepFeeOfEach();
 
   /*
    * A car of its own is priced off its own ladder, not the run's.
@@ -1925,7 +2037,24 @@ export async function moveOrder(
       (total, line) => total + line.unitPrice * line.qty,
       0
     );
-    const items = repriced.lines.reduce((count, line) => count + line.qty, 0);
+    /*
+     * What rides along, kept out of the count here too.
+     *
+     * Moving an order to another run reprices it from scratch, and a cart
+     * with fifteen Fantasy ice creams in it would have come back priced as
+     * fifteen takeaway boxes: the one place a move could cost somebody
+     * thousands for a night they did not choose.
+     */
+    const ridingHere = repriced.lines.filter((line) => byBoxOnMove[line.itemId]);
+    const ridingThere = ridingHere.reduce((count, line) => count + line.qty, 0);
+    const items = repriced.lines
+      .filter((line) => ridingThere === 0 || !byBoxOnMove[line.itemId])
+      .reduce((count, line) => count + line.qty, 0);
+    let worstBox: StepFee | null = null;
+    for (const line of ridingHere) {
+      const one = byBoxOnMove[line.itemId];
+      if (worstBox === null || one.firstFee > worstBox.firstFee) worstBox = one;
+    }
 
     // Its own containers, like any other order. Nothing on the new run is
     // credited towards it, because nothing is credited across orders at all.
@@ -1946,11 +2075,15 @@ export async function moveOrder(
      * Not urgent, ever. The extra is for ordering at an hour's notice,
      * and a move is the shop rearranging its own car.
      */
-    const onLadder = await feeOnTrip(
-      batch,
-      items,
-      repriced.lines.map((line) => line.restaurantId)
-    );
+    const onLadder = feeRidingAlong({
+      stepCount: ridingThere,
+      steps: worstBox,
+      otherFee: await feeOnTrip(
+        batch,
+        items,
+        repriced.lines.map((line) => line.restaurantId)
+      ),
+    });
     const fee = car ? Math.max(onLadder, Number(one.fee ?? 0)) : onLadder;
 
     // The lines carry the new prices too, so the order reads as it is charged.

@@ -17,6 +17,7 @@ import {
 } from "./areas";
 import type { Band } from "./fees";
 import { parseValueBands, type ValueBand } from "./value-bands";
+import { parseStepFee, type StepFee } from "./step-fee";
 
 /**
  * Where every restaurant is, read once.
@@ -202,6 +203,40 @@ export const openDaysOfEach = cache(async function openDaysOfEach(): Promise<
   for (const one of (data ?? []) as { id: string; open_days?: string }[]) {
     const said = (one.open_days ?? "").trim();
     if (said !== "") found[one.id] = said;
+  }
+  return found;
+});
+
+/**
+ * Everything priced by the cool box rather than by the container, by item.
+ *
+ * On the item and not the restaurant, because Fantasy ice cream sits in
+ * Sudu Shop beside kettles, bedsheets and a bouquet of roses: hung off the
+ * shop, the rule would have priced a mattress protector by the cool box.
+ *
+ * Read on the server and sent down, the same way the value ladders are, and
+ * for the same reason: how a thing is charged for is a fact about the shop,
+ * and a cart written on a phone cannot be trusted with it. The browser only
+ * picks which of them applies to what is in front of it, and the server
+ * decides it again when the order is placed.
+ *
+ * Only the handful that have one, so this stays a few rows however many
+ * thousand things the shop sells.
+ */
+export const stepFeeOfEach = cache(async function stepFeeOfEach(): Promise<
+  Record<string, StepFee>
+> {
+  const { data, error } = await db()
+    .from("menu_items")
+    .select("id, step_fee")
+    .neq("step_fee", "");
+  // Before the migration there is no column, and nothing is priced this way.
+  if (error) return {};
+
+  const found: Record<string, StepFee> = {};
+  for (const one of (data ?? []) as { id: string; step_fee?: string }[]) {
+    const steps = parseStepFee(one.step_fee);
+    if (steps) found[one.id] = steps;
   }
   return found;
 });

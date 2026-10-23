@@ -14,7 +14,10 @@ import {
   api,
   areasIn,
   feeAcross,
+  feeRidingAlong,
+  pricesByStep,
   pricesByValue,
+  stepsFor,
   valueLadderFor,
   aroundPhrase,
   canGoSameDay,
@@ -171,6 +174,21 @@ export default function Checkout() {
       ?.restaurant.id ?? "";
   const marketHalf = lines.filter((line) => pricesByValue(shop, kitchenOf(line)));
   const restHalf = lines.filter((line) => !pricesByValue(shop, kitchenOf(line)));
+  /*
+   * What rides along on a trip the car was making anyway.
+   *
+   * Fantasy ice cream is small and the people who buy it buy a lot, and the
+   * container ladder would call fifteen of them fifteen takeaway boxes. It
+   * is grabbed on the way past rather than fetched, so it is the dearer of
+   * the two rather than the sum: three pizzas and an ice cream pays for the
+   * pizzas, sixty ice creams and one pizza pays for four cool boxes.
+   */
+  const steps = stepsFor(shop, lines.map((line) => line.itemId));
+  const ridingHalf = lines.filter((line) => pricesByStep(shop, line.itemId));
+  const drivingHalf = lines.filter((line) => !pricesByStep(shop, line.itemId));
+  const ridingCount = ridingHalf.reduce((all, line) => all + line.qty, 0);
+  const ridesAlong = (otherFee: number) =>
+    feeRidingAlong({ stepCount: ridingCount, steps, otherFee });
   const area = dearestArea(shop, kitchens);
   // The dearest area sets the distance; every area after the first is a
   // second stop, and a second stop costs the same whichever two they are.
@@ -284,12 +302,27 @@ export default function Checkout() {
           })(),
           bands: byValue,
         }) + farExtra
-      : feeFrom(items, runBands, flash);
+      : ridesAlong(
+          feeFrom(
+            // What rides along is out of the container count: the car is
+            // going for the rest of it.
+            ridingHalf.length === 0 ? items : countItems(drivingHalf),
+            runBands,
+            flash
+          )
+        );
 
   /** And what it costs in a car of its own, which is one ladder either way:
    *  a car is a car whatever is riding in it. */
   const feeOnCar = (slot: Slot): number =>
-    sameDayFeeFor(items, slot.urgent, sameDayBands, shop?.sameDay?.urgentExtra ?? 0);
+    ridesAlong(
+      sameDayFeeFor(
+        ridingHalf.length === 0 ? items : countItems(drivingHalf),
+        slot.urgent,
+        sameDayBands,
+        shop?.sameDay?.urgentExtra ?? 0
+      )
+    );
 
   const ladder = picked
     ? feeOnCar(picked)

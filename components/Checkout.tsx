@@ -35,7 +35,8 @@ import { perkOnCart } from "@/app/actions";
 import type { LinkPerk } from "@/lib/orders";
 import HeardFrom from "./HeardFrom";
 import { feeAcross, feeForValue, type ValueBand } from "@/lib/value-bands";
-import { ladderFor, pricesByValue } from "@/lib/areas-shared";
+import { ladderFor, pricesByStep, pricesByValue, stepsFor } from "@/lib/areas-shared";
+import { feeRidingAlong, type StepFee } from "@/lib/step-fee";
 import CouponBox from "@/components/CouponBox";
 import { clearJoin, readJoin } from "@/components/JoinDelivery";
 import GroupLink, {
@@ -91,6 +92,7 @@ export default function Checkout({
   areaOf,
   areaPairs = [],
   valueBandsOf,
+  stepFeeOf,
   openDaysOf = {},
   offers,
   hostels,
@@ -123,6 +125,9 @@ export default function Checkout({
   /** The kitchens that price by what the shopping comes to rather than by
    *  how many things it is, by id. A market is one; a restaurant is not. */
   valueBandsOf: Record<string, ValueBand[]>;
+  /** The kitchens priced by the cool box, so the checkout quotes
+   *  the same number the till charges. */
+  stepFeeOf: Record<string, StepFee>;
   /** The days each restaurant opens, for the few that do not open every
    *  day. Missing means all seven. */
   openDaysOf?: Record<string, string>;
@@ -166,6 +171,23 @@ export default function Checkout({
   // the restaurant half by how much of the car it fills.
   const marketHalf = cart.filter((line) => pricesByValue(line.restaurantId, valueBandsOf));
   const restHalf = cart.filter((line) => !pricesByValue(line.restaurantId, valueBandsOf));
+  /*
+   * What rides along on a trip the car was making anyway.
+   *
+   * Fantasy ice cream is small and the people who buy it buy a lot: the
+   * container ladder would call fifteen of them fifteen takeaway boxes. It
+   * is also not a stop the car makes for its own sake, so it is the dearer
+   * of the two rather than the sum: three pizzas and an ice cream pays for
+   * the pizzas, and sixty ice creams and one pizza pays for four cool
+   * boxes.
+   */
+  const steps = stepsFor(cart.map((line) => line.itemId), stepFeeOf);
+  const ridingHalf = cart.filter((line) => pricesByStep(line.itemId, stepFeeOf));
+  const drivingHalf = cart.filter((line) => !pricesByStep(line.itemId, stepFeeOf));
+  const ridingCount = ridingHalf.reduce((all, line) => all + line.qty, 0);
+  /** What the rest of the cart costs, with what rides along left out. */
+  const ridesAlong = (otherFee: number) =>
+    feeRidingAlong({ stepCount: ridingCount, steps, otherFee });
   const sameDayBands = withExtra(baseSameDayBands, area.sameDayExtra + secondStop);
   // One thing from a far area makes the whole order a run: a car cannot be
   // in two places in three hours.
@@ -648,7 +670,15 @@ export default function Checkout({
           bands: byValue,
         }) +
         farExtra
-      : feeFor(itemCount, selected?.flashFee ?? null, bands);
+      : ridesAlong(
+          feeFor(
+            // What rides along is out of the container count: the car is
+            // going for the rest of it.
+            ridingHalf.length === 0 ? itemCount : countItems(drivingHalf),
+            selected?.flashFee ?? null,
+            bands
+          )
+        );
 
   /**
    * When this order arrives, in the same words as the front page.
@@ -727,7 +757,13 @@ export default function Checkout({
           })(),
           bands: byValue,
         }) + area.runExtra
-      : feeFor(itemCount, flash, bands);
+      : ridesAlong(
+          feeFor(
+            ridingHalf.length === 0 ? itemCount : countItems(drivingHalf),
+            flash,
+            bands
+          )
+        );
 
   /**
    * The next run, for somebody in a car of its own.

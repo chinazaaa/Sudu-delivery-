@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import type { Slot } from "@/lib/same-day";
 import { nextArrival, type ArrivalRun } from "@/lib/arrival";
 import { dearestArea, withExtra, type Area } from "@/lib/areas";
-import { ladderFor, pricesByValue } from "@/lib/areas-shared";
+import { ladderFor, pricesByStep, pricesByValue, stepsFor } from "@/lib/areas-shared";
+import { feeRidingAlong, type StepFee } from "@/lib/step-fee";
 import { feeAcross, type ValueBand } from "@/lib/value-bands";
 
 import Link from "next/link";
@@ -46,6 +47,7 @@ export default function CartView({
   areas = [],
   areaOf = {},
   valueBandsOf = {},
+  stepFeeOf = {},
   openDaysOf = {},
   offers = [],
   nextRunId = "",
@@ -76,6 +78,9 @@ export default function CartView({
   areaOf?: Record<string, string>;
   /** The kitchens that price by what the shopping comes to. */
   valueBandsOf?: Record<string, ValueBand[]>;
+  /** The kitchens priced by the cool box, so the cart quotes the
+   *  same number the checkout and the till do. */
+  stepFeeOf?: Record<string, StepFee>;
   /** The offers on today, so the cart can say when it is one thing away from
    *  one rather than leaving somebody to wonder why it is not free. */
   offers?: LiveOffer[];
@@ -488,6 +493,15 @@ export default function CartView({
   // the restaurant half by how much of the car it fills.
   const marketHalf = cart.filter((line) => pricesByValue(line.restaurantId, valueBandsOf));
   const restHalf = cart.filter((line) => !pricesByValue(line.restaurantId, valueBandsOf));
+  // What rides along on a trip the car was making anyway: out of the
+  // container count, and the trip is the dearer of the two rather than the
+  // sum. The cart says what the checkout will say.
+  const steps = stepsFor(cart.map((line) => line.itemId), stepFeeOf);
+  const ridingHalf = cart.filter((line) => pricesByStep(line.itemId, stepFeeOf));
+  const drivingHalf = cart.filter((line) => !pricesByStep(line.itemId, stepFeeOf));
+  const ridingCount = ridingHalf.reduce((all, line) => all + line.qty, 0);
+  const ridesAlong = (otherFee: number) =>
+    feeRidingAlong({ stepCount: ridingCount, steps, otherFee });
   // Which way the food is actually going, by the same rule as everywhere
   // else. With no run inside the days people can order ahead, the soonest
   // thing is a car of its own, and quoting the run ladder here had the cart
@@ -582,7 +596,13 @@ export default function CartView({
           bands: byValue,
         })
     : ladder.length > 0
-      ? feeFor(countItems(cart), flash, ladder)
+      ? ridesAlong(
+          feeFor(
+            ridingHalf.length === 0 ? countItems(cart) : countItems(drivingHalf),
+            flash,
+            ladder
+          )
+        )
       : 0;
 
   const names = people.map((p) => p.name);

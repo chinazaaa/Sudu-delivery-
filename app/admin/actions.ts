@@ -1653,6 +1653,10 @@ export async function updateMenuItem(form: FormData): Promise<void> {
       String(form.get("image_url") ?? "").trim(),
     category_id: String(form.get("category_id") ?? "") || null,
     container_pct: containerFrom(form.get("container_pct")),
+    // Priced by the cool box rather than by the room it takes, for
+    // something small that people buy a lot of. Empty is the ordinary
+    // ladder, which is nearly everything.
+    step_fee: String(form.get("step_fee") ?? "").trim(),
     // Where to go and get it, for us, never for the customer.
     source: String(form.get("source") ?? "").trim(),
   };
@@ -1662,7 +1666,11 @@ export async function updateMenuItem(form: FormData): Promise<void> {
   const id = String(form.get("item_id"));
   let { error } = await db().from("menu_items").update(fields).eq("id", id);
   if (error) {
-    const { source: _noSource, ...withoutSource } = fields;
+    const { step_fee: _noSteps, ...withoutSteps } = fields;
+    ({ error } = await db().from("menu_items").update(withoutSteps).eq("id", id));
+  }
+  if (error) {
+    const { step_fee: _alsoNoSteps, source: _noSource, ...withoutSource } = fields;
     ({ error } = await db().from("menu_items").update(withoutSource).eq("id", id));
     if (error) {
       const { container_pct: _dropped, ...rest } = withoutSource;
