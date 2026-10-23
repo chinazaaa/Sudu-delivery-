@@ -108,9 +108,32 @@ export default function ProductSearch({
   const waiting = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const now = params.get("q") ?? "";
-    if (typed.trim() === now) return;
+    const want = typed.trim();
+    if (want === now) return;
 
-    waiting.current = setTimeout(() => go(typed), 300);
+    /*
+     * One letter is not a search.
+     *
+     * Every pause sends the box to the server, so "c" on the way to
+     * "curtain" was a real search for c, a real empty answer, and a real
+     * "nothing matches that" under the box while somebody was still
+     * typing the word. The page told them it had failed three times
+     * before they had finished asking.
+     *
+     * Clearing still takes effect at once: an empty box means show me
+     * everything, and waiting to be told that would be its own bug.
+     */
+    if (want.length === 1) return;
+
+    /*
+     * Half a second, not a third of one.
+     *
+     * Long enough that an ordinary typing speed produces one search
+     * rather than three, which is the difference between a page that
+     * answers and a page that flickers. Short enough that stopping to
+     * think still gets an answer before anybody wonders.
+     */
+    waiting.current = setTimeout(() => go(typed), 500);
     return () => {
       if (waiting.current) clearTimeout(waiting.current);
     };
@@ -144,6 +167,22 @@ export default function ProductSearch({
             : "field py-3.5 pl-10 text-base"
         }
       />
+      {/*
+        Said in words, not only as a pulsing magnifier.
+
+        The results below swap to "nothing matches that" the moment a
+        half-typed word genuinely matches nothing, and an icon breathing
+        quietly in the corner is not enough to tell somebody that is a
+        work in progress rather than an answer.
+      */}
+      {working && (
+        <span
+          aria-live="polite"
+          className="pointer-events-none absolute -bottom-6 left-1 text-[13px] font-semibold text-muted"
+        >
+          Searching\u2026
+        </span>
+      )}
       <span
         className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted ${
           big ? "left-5" : "left-3.5"
