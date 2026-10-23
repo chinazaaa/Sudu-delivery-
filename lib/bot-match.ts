@@ -229,9 +229,41 @@ export function find(said: string, among: Candidate[], most = 4): Found {
     hits[0].score >= SURE &&
     (hits.length === 1 || hits[0].score - hits[1].score >= AHEAD) &&
     // One word, and only nearly that word, is never certain.
-    heard(asked, hits[0].name);
+    heard(asked, hits[0].name) &&
+    // And one word that names a whole shelf is never an answer.
+    !aKind(asked, ranked);
 
   return { hits, how: clear ? "sure" : "asking" };
+}
+
+/**
+ * Whether one word was a dish or a kind of dish.
+ *
+ * Somebody picked Domino's, was asked what they wanted, and said "pizza".
+ * The chat said "Found it: Pizza Sauce Calzone" and added it. Every word
+ * of that is true and none of it is what was asked for: at a pizza place
+ * "pizza" is not the name of a dish, it is the name of the menu, and the
+ * one it landed on won by being first in a long list of things with the
+ * word in them.
+ *
+ * So a single word that is in the name of several things on offer is a
+ * kind rather than a thing, and a kind is a question. "Zinger" is still
+ * one dish and still goes straight in; "pizza", "rice", "chicken",
+ * "burger" put the real ones up to be tapped.
+ *
+ * Only on a single word. "chicken bbq" is two, agrees with one dish, and
+ * was never ambiguous.
+ */
+const A_FEW = 3;
+
+function aKind(asked: string[], ranked: { name: string }[]): boolean {
+  if (asked.length !== 1) return false;
+  const word = asked[0];
+  if (word.length < 3) return false;
+  const inName = ranked.filter((one) =>
+    words(one.name).some((part) => part === word || part.startsWith(word))
+  );
+  return inName.length >= A_FEW;
 }
 
 /**

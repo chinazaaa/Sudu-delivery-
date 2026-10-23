@@ -5999,3 +5999,38 @@ test("which kitchens is a question the chat can answer itself", () => {
     ""
   );
 });
+
+test("a word that names a whole shelf is a question, not an answer", () => {
+  /*
+   * Somebody picked Domino's, was asked what they wanted, and said
+   * "pizza". The chat said "Found it: Pizza Sauce Calzone" and added it.
+   * Every word of that is true and none of it is what was asked for: at a
+   * pizza place "pizza" is the name of the menu, not of a dish, and the
+   * one it landed on won by being first in a long list of things with the
+   * word in them.
+   */
+  const dominos = [
+    "Pizza Sauce Calzone",
+    "Margherita Pizza",
+    "Hawaiian Pizza",
+    "Pepperoni",
+    "Cheesy Bread",
+    "Zinger Burger",
+  ].map((name, at) => ({ id: String(at), name }));
+
+  const kind = botFind("pizza", dominos, 3);
+  assert.equal(kind.how, "asking");
+  // And the real pizzas are what it offers, not the calzone that merely
+  // had the word first.
+  assert.equal(kind.hits[0].name.includes("Pizza"), true);
+
+  // One dish is still one dish. Nothing here is about being cautious with
+  // a name somebody actually said.
+  assert.equal(botFind("zinger", dominos, 3).how, "sure");
+  assert.equal(botFind("calzone", dominos, 3).how, "sure");
+  assert.equal(botFind("cheesy bread", dominos, 3).how, "sure");
+
+  // A word on only one or two things is not a kind. "Pepperoni" here is
+  // the dish, and asking about it would be the chat being unhelpful.
+  assert.equal(botFind("pepperoni", dominos, 3).how, "sure");
+});
