@@ -38,7 +38,7 @@ import {
 } from "../lib/refunds";
 import { buyingDone } from "../lib/runner";
 import { didYouMean } from "../lib/did-you-mean";
-import { looksLikeAGift, orderPart } from "../lib/occasions";
+import { looksLikeABasket, looksLikeAGift, orderPart } from "../lib/occasions";
 import {
   isCustom,
   liveRoutes,
@@ -5701,4 +5701,49 @@ test("a parcel route with no price is still a route", () => {
     parcelsFrom({ parcel_on: "on", parcel_routes: JSON.stringify([half]) } as never).on,
     false
   );
+});
+
+test("a dish with an occasion in its name is not an occasion", () => {
+  /*
+   * "Birthday Cake Remix" is a tub of ice cream at Cold Stone. Somebody
+   * pasted a basket with one in it and was asked whose birthday it was,
+   * then handed a box for the recipient's first name, on an order they
+   * were placing for themselves.
+   */
+  const dishes = ["Birthday Cake Remix Like It", "Gift Box Hamper Large"];
+
+  assert.equal(looksLikeAGift("1 x Birthday Cake Remix Like It"), true);
+  assert.equal(looksLikeAGift("1 x Birthday Cake Remix Like It", dishes), false);
+
+  // The real thing still gets asked about, dishes or no dishes.
+  assert.equal(looksLikeAGift("it is my sister's birthday", dishes), true);
+  assert.equal(looksLikeAGift("a gift for someone", dishes), true);
+
+  // A pasted cart is an order, whatever words are in the dish names.
+  assert.equal(
+    looksLikeABasket(
+      "I want to order the below 1 × Chicken BBQ Medium × Original " +
+        "× Dodo Pizza 1 × Pepperoni Original"
+    ),
+    true
+  );
+  assert.equal(looksLikeABasket("1 x jollof rice"), false);
+  assert.equal(looksLikeABasket("2 chicken pie for my sister"), false);
+  assert.equal(looksLikeABasket("2 chicken pie\n1 coke"), true);
+  assert.equal(looksLikeABasket(""), false);
+});
+
+test("pointing at a list is not naming a dish", () => {
+  /*
+   * "I want to order the below" was searched against the menu and came
+   * back with Yellow Pepper: "below" and "yellow" are a letter and a
+   * shuffle apart, and a menu is all the search has to offer.
+   */
+  assert.equal(botIntentOf("I want to order the below"), "vague-order");
+  assert.equal(botIntentOf("order the following"), "vague-order");
+  assert.equal(botIntentOf("i want to order"), "vague-order");
+
+  // A sentence with a real word in it is still an order to search for.
+  assert.equal(botIntentOf("I want to order from Dominos"), "");
+  assert.equal(botIntentOf("i want yellow pepper"), "");
 });

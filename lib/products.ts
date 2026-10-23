@@ -322,3 +322,51 @@ export async function shelfNames(place?: string, cap = 5000): Promise<string[]> 
     return [];
   }
 }
+
+/**
+ * The dishes whose names sound like an occasion.
+ *
+ * "Birthday Cake Remix" is a tub of ice cream at Cold Stone, and the chat's
+ * gift rule is a plain regex that cannot tell that from somebody's actual
+ * birthday: a pasted basket with one in it was answered with "who is it
+ * going to?" and a box for the recipient's first name, on an order the
+ * person was placing for themselves.
+ *
+ * A handful of rows, asked for by the five words that rule cares about, so
+ * the chat can be handed them without reading the whole menu. The rule
+ * stays a regex and still works with none of this.
+ */
+export async function giftyDishes(): Promise<string[]> {
+  try {
+    const places = await foodPlaces(true);
+    if (places.length === 0) return [];
+
+    const { data, error } = await db()
+      .from("menu_items")
+      .select("name")
+      .in("restaurant_id", places.map((one) => one.id))
+      .eq("available", true)
+      .or(
+        [
+          "name.ilike.%birthday%",
+          "name.ilike.%gift%",
+          "name.ilike.%surprise%",
+          "name.ilike.%anniversary%",
+          "name.ilike.%congratulat%",
+        ].join(",")
+      )
+      .limit(200);
+
+    if (error) return [];
+    return [
+      ...new Set(
+        ((data ?? []) as { name?: string }[])
+          .map((one) => String(one.name ?? "").trim())
+          .filter((one) => one.length >= 8)
+      ),
+    ];
+  } catch {
+    // Without them the rule behaves exactly as it always has.
+    return [];
+  }
+}

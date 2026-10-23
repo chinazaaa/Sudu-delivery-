@@ -1267,7 +1267,8 @@ body:has([data-actionbar]) .sudubot-launcher {
   display: flex;
   gap: 8px;
 }
-.sudubot .ask input {
+.sudubot .ask input,
+.sudubot .ask textarea {
   flex: 1 1 auto;
   min-width: 0;
   border: 2px solid var(--bot-ink);
@@ -1277,7 +1278,29 @@ body:has([data-actionbar]) .sudubot-launcher {
   color: var(--bot-ink);
   font-size: 15px;
 }
-.sudubot .ask input:focus {
+/*
+ * The box somebody can paste a basket into.
+ *
+ * It was an input, which holds no newlines at all, so shift and enter did
+ * nothing and a cart copied out of a notes app arrived as one long line.
+ * A textarea that grows with what is in it, up to about five lines, and
+ * then scrolls: taller than that and the conversation above it is gone.
+ *
+ * Rounded like the input until it is more than one line, because a pill
+ * with four lines of text in it reads as a mistake.
+ */
+.sudubot .ask textarea {
+  font-family: inherit;
+  line-height: 1.35;
+  resize: none;
+  overflow-y: auto;
+  max-height: 124px;
+}
+.sudubot .ask textarea.tall {
+  border-radius: 18px;
+}
+.sudubot .ask input:focus,
+.sudubot .ask textarea:focus {
   outline: 3px solid var(--bot-volt);
   outline-offset: 1px;
 }

@@ -8,6 +8,7 @@ import { anyCodeToType } from "@/lib/coupons";
 import { faqsForChat } from "@/lib/faq";
 import { cardOnOffer } from "@/lib/cards";
 import { liveOccasions } from "@/lib/boxes";
+import { giftyDishes } from "@/lib/products";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
 import { deliverySlots, slotsWorthOffering, windowHours } from "@/lib/same-day";
 import { headlineFee } from "@/lib/fees";
@@ -59,8 +60,20 @@ async function whoIsAsking(): Promise<
  */
 export async function GET(): Promise<NextResponse> {
   try {
-    const [hostels, batches, menu, settings, bands, hours, sameDay, codes, faqs, card, shelves] =
-      await Promise.all([
+    const [
+      hostels,
+      batches,
+      menu,
+      settings,
+      bands,
+      hours,
+      sameDay,
+      codes,
+      faqs,
+      card,
+      shelves,
+      giftDishes,
+    ] = await Promise.all([
       hostelNames(),
       openBatches().catch(() => []),
       // The counters only, not every dish on every one of them. Reading
@@ -87,6 +100,11 @@ export async function GET(): Promise<NextResponse> {
       // menu. Without them the chat says "I cannot find that anywhere on
       // the shop" to somebody asking for a thing the shop is selling.
       liveOccasions().catch(() => []),
+      // The handful of dishes whose names sound like an occasion, so the
+      // gift rule can tell a tub of Birthday Cake ice cream from somebody's
+      // actual birthday. Not the menu: five words, two hundred rows at
+      // most, and the chat still says hello in no time.
+      giftyDishes(),
     ]);
 
     /*
@@ -189,6 +207,32 @@ export async function GET(): Promise<NextResponse> {
       faqs,
       card,
       /*
+       * The made-up boxes, which are a shelf of their own and on no food
+       * menu.
+       *
+       * Fetched here all along and never put in the answer: the field was
+       * simply missing from this object, so the chat read undefined every
+       * time and fell back to an empty list. "Matriculation box" is a
+       * thing this shop sells and the chat has been saying it cannot find
+       * it anywhere on the shop.
+       */
+      boxes: shelves.map((one) => ({
+        slug: one.slug,
+        name: one.name,
+        kind: one.kind,
+        happensAt: one.happens_at ?? null,
+        closesAt: one.closes_at ?? null,
+      })),
+      /*
+       * The handful of dishes whose names sound like an occasion.
+       *
+       * "Birthday Cake Remix" is a tub of ice cream, and the gift rule is
+       * a plain regex that cannot tell that from somebody's actual
+       * birthday: a pasted basket with one in it was answered with "who is
+       * it going to?" on an order the person was placing for themselves.
+       */
+      giftDishes,
+      /*
        * How far ahead a customer may book, which is not how far ahead the
        * runs are planned.
        *
@@ -229,6 +273,7 @@ export async function GET(): Promise<NextResponse> {
       faqs: [],
       card: null,
       boxes: [],
+      giftDishes: [],
       horizonDays: 7,
       carFrom: 0,
       kitchens: [],

@@ -889,6 +889,17 @@ const FILLER = new Set([
   "so", "well", "actually", "maybe", "think", "guess", "wanna", "gonna",
   "make", "place", "put", "like", "looking", "look", "trying", "try",
   "hi", "hello", "hey", "good", "day", "sir", "ma", "abeg", "biko", "jare",
+  /*
+   * Pointing at something rather than naming it.
+   *
+   * "I want to order the below" is somebody about to paste a list, and
+   * searched as written it found Yellow Pepper: "below" and "yellow" are
+   * one letter and a shuffle apart, and a menu is all the search has to
+   * offer. None of these is the name of anything on any shelf, and every
+   * one of them is a person saying the food is coming next.
+   */
+  "below", "above", "following", "attached", "listed", "list", "these",
+  "those", "items", "item",
 ]);
 
 /**

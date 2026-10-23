@@ -212,7 +212,7 @@ export function Asking({
   email?: string;
 }) {
   const [typed, setTyped] = useState("");
-  const box = useRef<HTMLInputElement | null>(null);
+  const box = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     setTyped("");
@@ -262,14 +262,13 @@ export function Asking({
           </button>
         )}
         <div className="ask">
-          <input
-            ref={box}
+          <Box
+            boxRef={box}
             value={typed}
-            type={ask.type ?? "text"}
-            onChange={(event) => setTyped(event.target.value)}
-            onKeyDown={(event) => event.key === "Enter" && send()}
-            placeholder={ask.placeholder}
-            aria-label={ask.placeholder}
+            type={ask.type}
+            onChange={setTyped}
+            onSend={send}
+            placeholder={ask.placeholder ?? ""}
           />
           <button type="button" className="send" onClick={send} aria-label="Send">
             ↑
@@ -301,13 +300,12 @@ export function Asking({
         </div>
         {ask.onSay && (
           <div className="ask">
-            <input
-              ref={box}
+            <Box
+              boxRef={box}
               value={typed}
-              onChange={(event) => setTyped(event.target.value)}
-              onKeyDown={(event) => event.key === "Enter" && send()}
+              onChange={setTyped}
+              onSend={send}
               placeholder={ask.placeholder ?? "Or say it in your own words"}
-              aria-label={ask.placeholder ?? "Or say it in your own words"}
             />
             <button type="button" className="send" onClick={send} aria-label="Send">
               ↑
@@ -442,4 +440,83 @@ export function useSaying(
   }, []);
 
   return { say, clear, typing };
+}
+
+/**
+ * The box somebody types into, and pastes a basket into.
+ *
+ * It was an input, which holds no newlines at all: shift and enter did
+ * nothing, and a cart copied out of a notes app arrived as one long line
+ * with the dishes run together. A textarea takes the newlines, grows with
+ * what is in it up to about five lines and then scrolls, because taller
+ * than that and the conversation it is about has scrolled off the top.
+ *
+ * Enter still sends, because that is what every chat box does and the
+ * thumb on a phone has nowhere else to go. Shift and enter is the new
+ * line, which is what every chat box does too.
+ *
+ * A question wanting a number keeps the plain input: a phone keyboard
+ * opens on digits for one and on letters for the other, and that is worth
+ * more here than a newline nobody types into a phone number.
+ */
+function Box({
+  boxRef,
+  value,
+  type,
+  onChange,
+  onSend,
+  placeholder,
+}: {
+  boxRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
+  value: string;
+  type?: string;
+  onChange: (said: string) => void;
+  onSend: () => void;
+  placeholder: string;
+}) {
+  const grow = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
+  if (type !== undefined && type !== "text") {
+    return (
+      <input
+        ref={boxRef as React.RefObject<HTMLInputElement>}
+        value={value}
+        type={type}
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => event.key === "Enter" && onSend()}
+        placeholder={placeholder}
+        aria-label={placeholder}
+      />
+    );
+  }
+
+  return (
+    <textarea
+      ref={(el) => {
+        (boxRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
+        grow(el);
+      }}
+      rows={1}
+      value={value}
+      className={value.includes("\n") ? "tall" : undefined}
+      onChange={(event) => {
+        onChange(event.target.value);
+        grow(event.target);
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" || event.shiftKey) return;
+        // Not while a phone keyboard is still deciding what word this is:
+        // enter means "take that suggestion" then, not "send".
+        if (event.nativeEvent.isComposing) return;
+        event.preventDefault();
+        onSend();
+      }}
+      placeholder={placeholder}
+      aria-label={placeholder}
+    />
+  );
 }

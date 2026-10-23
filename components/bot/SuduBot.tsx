@@ -24,6 +24,7 @@ import {
 import { Asking, Rail, Said, Typing, useSaying, type Ask, type Line } from "./Chat";
 import Rider from "./Rider";
 import {
+  looksLikeABasket,
   looksLikeAGift,
   orderPart,
   occasionBy,
@@ -82,6 +83,9 @@ type Start = {
     happensAt: string | null;
     closesAt: string | null;
   }[];
+  /** The handful of dishes whose names sound like an occasion, so the gift
+   *  rule can tell a tub of Birthday Cake ice cream from a birthday. */
+  giftDishes: string[];
   whatsapp: string;
   email: string;
   /** Who is reading this, where the shop already knows them from the
@@ -1427,7 +1431,20 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         echo &&
         held.current.occasion === "me" &&
         held.current.forName === "" &&
-        looksLikeAGift(said)
+        /*
+         * Not on a basket somebody has pasted.
+         *
+         * A list with quantities on it is an order, whatever words are in
+         * the dish names. Somebody pasted a cart holding a Birthday Cake
+         * Remix and a Krispy Kreme half dozen and was asked whose birthday
+         * it was, then handed a box for the recipient's first name, on an
+         * order they were placing for themselves.
+         */
+        !looksLikeABasket(said) &&
+        // And with the shop's own occasion-sounding dishes taken out of
+        // the sentence first, so the name of a thing we sell is read as
+        // the thing rather than as the occasion.
+        looksLikeAGift(said, startRef.current?.giftDishes ?? [])
       ) {
         held.current.occasion = "gift";
         bot("That sounds like it is for somebody else. Who is it going to?", 440);

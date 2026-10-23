@@ -128,12 +128,54 @@ const GIFTY = [
   /\bit's for\b/i,
 ];
 
-export function looksLikeAGift(said: string): boolean {
-  const text = String(said ?? "");
-  if (text.trim() === "") return false;
+/**
+ * A gifty word that is really part of something we sell.
+ *
+ * "Birthday Cake Remix" is a tub of ice cream at Cold Stone, and somebody
+ * pasting a basket with one in it was asked whose birthday it was and then
+ * handed a box for the recipient's first name. The order was for them.
+ *
+ * So the dishes come out of the sentence before the rule reads it. Only
+ * the ones that carry a gifty word are worth taking out, which on this
+ * shop is a handful, and the rule underneath is unchanged: a plain regex
+ * that works whether or not anything else does.
+ */
+function withoutDishes(said: string, dishes: string[]): string {
+  let text = said;
+  for (const dish of dishes) {
+    const name = dish.trim();
+    // Short names are not worth it and are the ones most likely to eat a
+    // real word: a counter called "Gift" must not swallow "gift" itself.
+    if (name.length < 8) continue;
+    if (!GIFTY.some((one) => one.test(name))) continue;
+    text = text.split(name).join(" ");
+    // And again without case, which is how a pasted basket usually differs.
+    const lower = text.toLowerCase();
+    let at = lower.indexOf(name.toLowerCase());
+    while (at !== -1) {
+      text = `${text.slice(0, at)} ${text.slice(at + name.length)}`;
+      at = text.toLowerCase().indexOf(name.toLowerCase());
+    }
+  }
+  return text;
+}
+
+/**
+ * Whether this sentence is about somebody else.
+ *
+ * `dishes` is what the shop sells, so a dish with a gifty word in its name
+ * is read as the dish it is rather than as an occasion. Left out, the rule
+ * behaves exactly as it always has.
+ */
+export function looksLikeAGift(said: string, dishes: string[] = []): boolean {
+  const whole = String(said ?? "");
+  if (whole.trim() === "") return false;
   // "for me" said plainly outranks everything: somebody heading this off
   // means it, and a false gift costs two questions nobody wanted.
-  if (/\bfor (me|myself)\b/i.test(text)) return false;
+  if (/\bfor (me|myself)\b/i.test(whole)) return false;
+
+  const text = dishes.length > 0 ? withoutDishes(whole, dishes) : whole;
+  if (text.trim() === "") return false;
   return GIFTY.some((one) => one.test(text));
 }
 
@@ -201,4 +243,30 @@ export function orderPart(said: string): string {
   if (words.every((one) => one.length < 3) && !/\d/.test(text)) return "";
 
   return text;
+}
+
+/**
+ * A basket somebody has pasted, rather than a sentence they have written.
+ *
+ * Two or more quantities in one message is a cart: "1 × Pepperoni Original
+ * × Dodo Pizza Medium × 1 × Assorted doughnuts". Whatever words are in the
+ * dish names, that is an order being placed, and the questions a sentence
+ * deserves are the wrong ones to ask of it.
+ *
+ * Two rather than one, because "2 chicken pie for my sister" is one
+ * quantity and a real gift, and the question belongs there.
+ */
+export function looksLikeABasket(said: string): boolean {
+  const text = String(said ?? "");
+  // "1 x", "2 ×", "3 X" — a number and a times sign, which is how every
+  // cart on every site writes a line.
+  const timesed = text.match(/\b\d+\s*[x×]\s*\S/gi) ?? [];
+  if (timesed.length >= 2) return true;
+
+  // Or several lines each opening with a count, which is the other shape a
+  // pasted order comes in.
+  const counted = text
+    .split("\n")
+    .filter((line) => /^\s*\d+\s*[x×.)\-]?\s*\S/i.test(line));
+  return counted.length >= 2;
 }
