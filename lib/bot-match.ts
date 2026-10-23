@@ -792,6 +792,16 @@ export function splitOrder(said: string): string[] {
   const text = String(said ?? "").trim();
   if (text === "") return [];
 
+  /*
+   * A pasted cart first.
+   *
+   * It has no commas and no new lines of its own, but it does have prices
+   * in it, and "+N9,700" split on the comma gives a line called "700".
+   * Cutting at the counts has to happen on the whole thing or not at all.
+   */
+  const basket = basketLines(text);
+  if (basket.length > 0) return basket;
+
   const parts = text
     .split(/\s*(?:\r?\n|[,;]|\s\+\s|\sthen\s|\salso\s)\s*/i)
     .flatMap((part) => {
@@ -811,6 +821,72 @@ export function splitOrder(said: string): string[] {
     .filter((part) => part !== "" && words(part).length > 0);
 
   return parts.length >= 2 ? parts : [];
+}
+
+/**
+ * A basket pasted in whole, split into its lines.
+ *
+ * Somebody with an order already on screen copies it and pastes it here,
+ * which is the most complete thing anybody ever types and was the one the
+ * chat handled worst. A cart copied off a page has no commas and no new
+ * lines in it: the browser runs the whole table together, and what is left
+ * marking one line from the next is the quantity at the front of each.
+ *
+ *   I want to order the below 1 x Chicken BBQ Medium x Original x Dodo
+ *   Pizza 1 x Pepperoni Original x Dodo Pizza Medium x 1 x Assorted
+ *   doughnuts Half dozen (6) +N9,700 x Krispy Kreme
+ *
+ * Read as one sentence that matches nothing, which is the chat telling
+ * somebody who has done more work than anybody else that it cannot find
+ * their order.
+ *
+ * So it cuts before each count. The counter's name is left on the line,
+ * because the search scores the dish and the counter together and "Dodo
+ * Pizza" is most of what makes Pepperoni Original findable. The prices
+ * come off, because a figure the shop did not work out is not something
+ * to search for and not something to trust.
+ */
+export function basketLines(said: string): string[] {
+  const text = String(said ?? "").trim();
+  if (text === "") return [];
+
+  // Before each count: a number, a times sign, a space and a letter. The
+  // times sign is what makes it a cart line rather than a dish with a
+  // number in its name, so "7 Up" and "5 Alive" are never cut.
+  const cut = text.split(/\s+(?=\d+\s*[x×✕✖*]\s+[A-Za-z])/);
+  if (cut.length < 2) return [];
+
+  const lines = cut
+    .map((part) =>
+      part
+        // The price the page printed beside the line. Not a thing to
+        // search for, and not a number this shop would stand behind
+        // coming back in through a paste.
+        .replace(/\+?\s*[₦N#]\s*\d[\d,. ]*/g, " ")
+        // And a plus with nothing left after it, which is what the page
+        // printed before the figure.
+        .replace(/\s\+(?=\s|$)/g, " ")
+        // A times sign left hanging where an option or a counter used to
+        // be, which is most lines once the page's columns run together.
+        .replace(/\s[x×✕✖*]\s*$/i, "")
+        // A word left dangling at the end because the next line was cut
+        // away from it: "2 x chicken pie and" is one line and a conjunction.
+        .replace(/\s+(?:and|plus|with|also|then|,)\s*$/i, "")
+        .replace(/\s+/g, " ")
+        .trim()
+    )
+    // The run-up, which is somebody saying they are about to paste
+    // something rather than naming anything.
+    .filter((part) => /^\d+\s*[x×✕✖*]\s+/i.test(part))
+    .map((part) =>
+      // The times sign between the count and the dish, so the line reads
+      // as "2 hamburger meal" and the count is read the way it is read
+      // everywhere else.
+      part.replace(/^(\d+)\s*[x×✕✖*]\s+/i, "$1 ")
+    )
+    .filter((part) => words(part).length > 0);
+
+  return lines.length >= 2 ? lines : [];
 }
 
 /**

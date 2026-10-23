@@ -146,6 +146,23 @@ export function shopBrief(shop: ShopNow): string {
     "",
     "Rules:",
     "- Put every separate thing they asked for in `wanted`, with the words they used. Do not correct spelling and do not swap in a menu name: the shop's search handles near misses and is better at it than you.",
+    /*
+     * A cart somebody has pasted.
+     *
+     * Plenty of people arrive with the order already on screen, and
+     * somebody ordering for a birthday almost always does: it was agreed
+     * in a group chat, or it is sitting in a basket on another tab. That
+     * is the most complete thing anybody ever types here and it was the
+     * one the chat handled worst, because a cart copied off a page runs
+     * together into one line with no commas in it at all.
+     *
+     * The shape is always the same: a count, the dish, its choices, the
+     * counter, and the price the page printed. Only the first two are
+     * wanted; the counter is a shop, not a dish, and the price is a
+     * number this shop works out itself.
+     */
+    "- A pasted cart runs together into one line, like \"1 x Pepperoni Original x Dodo Pizza 2 x Hamburger Meal Fries x Regular x Burger King\". Each count starts a new thing. Put the dish in `what` and the count in `qty`.",
+    "- On a line like that, leave out the counter's name and the printed price. Counters are the names listed above; a price is a figure with a naira sign or a plus in front of it. Keep the choices with the dish when they are part of what it is, such as a size or a flavour.",
     "- Only fill name, phone or hostel when they actually said one. An invented phone number sends somebody else's dinner to the wrong block.",
     "- Keep `say` to one short sentence, or empty. Leave it empty whenever the reply needs a price, a stock answer, or a confirmation, because the shop says those itself and two voices saying different numbers is worse than one voice saying none.",
     "- No em-dashes.",

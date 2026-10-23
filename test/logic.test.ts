@@ -191,6 +191,7 @@ import {
   asksForQty as botAsksForQty,
   splitOrder as botSplitOrder,
   intentOf as botIntentOf,
+  basketLines,
   looksLikeAQuestion as botLooksLikeAQuestion,
   nameIn as botNameIn,
   whyNotAName as botWhyNotAName,
@@ -5746,4 +5747,59 @@ test("pointing at a list is not naming a dish", () => {
   // A sentence with a real word in it is still an order to search for.
   assert.equal(botIntentOf("I want to order from Dominos"), "");
   assert.equal(botIntentOf("i want yellow pepper"), "");
+});
+
+test("a cart pasted in whole is read as its lines", () => {
+  /*
+   * Somebody ordering for a birthday has the list somewhere already: in a
+   * group chat, or in a basket on another tab. Pasted here it arrives as
+   * one line with no commas in it, because a browser runs a copied table
+   * together, and the chat read it as one dish that matched nothing.
+   *
+   * The real paste, off a real order.
+   */
+  const paste =
+    "I want to order the below 1 × Chicken BBQ Medium x Original × Dodo Pizza " +
+    "1 × Pepperoni Original × Dodo Pizza Medium x " +
+    "1 × Assorted doughnuts Half dozen (6) +₦9,700 x Krispy Kreme " +
+    "1 × Birthday Cake Remix Like It +₦1,150 x Cold Stone Creamery " +
+    "1 × Extra large value munch - fried rice & chicken in stew The Place " +
+    "2 × Hamburger Meal Fries x Regular x Burger King Coca-Cola x";
+
+  const lines = botSplitOrder(paste);
+  assert.equal(lines.length, 6);
+
+  // The run-up is not one of the lines: it names nothing.
+  assert.equal(
+    lines.some((one) => one.toLowerCase().includes("want to order")),
+    false
+  );
+  // The count comes off the times sign and reads the way it reads
+  // everywhere else.
+  assert.equal(lines[0], "1 Chicken BBQ Medium x Original × Dodo Pizza");
+  assert.equal(lines[5].startsWith("2 Hamburger Meal"), true);
+  // The printed price is not a thing to search for, and not a number this
+  // shop would take back in through a paste.
+  assert.equal(
+    lines.some((one) => one.includes("9,700") || one.includes("1,150")),
+    false
+  );
+  // The counter stays on the line: the search scores the dish and the
+  // counter together, and "Dodo Pizza" is most of what finds Pepperoni.
+  assert.equal(lines[1].includes("Dodo Pizza"), true);
+
+  // An ordinary message is not a cart and is left to the ordinary rules.
+  assert.deepEqual(basketLines("I want 2 x chicken pie"), []);
+  assert.deepEqual(basketLines("fish and chips"), []);
+  assert.deepEqual(basketLines(""), []);
+  // A real "x" inside a dish name is never a separator: this is the one
+  // that turned Birthday Cake Remix Like It into "Birthday Cake Remi".
+  assert.deepEqual(basketLines("Birthday Cake Remix Like It"), []);
+  // Two counts with a times sign is a cart, however it was typed.
+  assert.deepEqual(botSplitOrder("2 x chicken pie and 1 x coke"), [
+    "2 chicken pie",
+    "1 coke",
+  ]);
+  // And the comma rule still does what it always did.
+  assert.deepEqual(botSplitOrder("2 chicken pie, 1 coke"), ["2 chicken pie", "1 coke"]);
 });
