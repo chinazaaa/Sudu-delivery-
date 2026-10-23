@@ -95,6 +95,7 @@ import { templateFor } from "../lib/messages";
 import { EMPTY } from "../lib/settings";
 import { test } from "node:test";
 import { chargedByRestaurant, groupForCounter } from "../lib/admin";
+import { fareFor, parseFares, putOnCard, serialiseFares } from "../lib/transport";
 import { normalisePhone, formatPhone } from "../lib/phone";
 import { countdown, lagosInstant, lagosToday } from "../lib/time";
 import {
@@ -5916,4 +5917,57 @@ test("a cost somebody wrote down beats the sum", () => {
     new Map([["ice", 1200]])
   );
   assert.equal(counted[0].charged, 12_000);
+});
+
+test("what goes on the card is the counters and the fare", () => {
+  /*
+   * Customers transfer into the shop's account. The counters are paid with
+   * a card somebody else is holding, so before a run goes out the shop has
+   * to move money onto it: what the counters will charge, plus the fare
+   * for the trip. Whatever is left in the account is the shop's.
+   */
+  const table = parseFares(
+    serialiseFares([
+      { areas: ["sango"], amount: 3000 },
+      { areas: ["lekki"], amount: 6000 },
+      { areas: ["sango", "ajah"], amount: 5000 },
+      { areas: ["sango", "lekki"], amount: 7000 },
+    ])
+  );
+
+  // The table first, by the exact set of areas. A run stopping in two
+  // places is its own trip with its own fare: adding the singles would be
+  // charging for two journeys that were one.
+  assert.deepEqual(fareFor(["sango"], table), { amount: 3000, exact: true });
+  assert.deepEqual(fareFor(["lekki"], table), { amount: 6000, exact: true });
+  assert.deepEqual(fareFor(["ajah", "sango"], table), { amount: 5000, exact: true });
+  assert.deepEqual(fareFor(["lekki", "sango"], table), { amount: 7000, exact: true });
+  // Order and repeats cannot change the answer.
+  assert.deepEqual(fareFor(["sango", "sango", "ajah"], table), {
+    amount: 5000,
+    exact: true,
+  });
+
+  // Nobody has priced Ajah and Lekki together. The dearest leg it is made
+  // of, said as a guess rather than left blank on the screen where the
+  // money is decided.
+  assert.deepEqual(fareFor(["ajah", "lekki"], table), { amount: 6000, exact: false });
+  // Nothing priced at all is nothing to say.
+  assert.deepEqual(fareFor(["sango"], []), { amount: 0, exact: false });
+  assert.deepEqual(fareFor([], table), { amount: 0, exact: false });
+
+  // The one figure that gets typed into a transfer.
+  assert.equal(putOnCard({ counters: 50_000, fare: 3000 }), 53_000);
+  assert.equal(putOnCard({ counters: 0, fare: 0 }), 0);
+
+  // A row nobody can read is a shop with no fares typed in, which is how
+  // it worked before anybody typed one.
+  assert.deepEqual(parseFares("not json"), []);
+  assert.deepEqual(parseFares(""), []);
+  // A fare for no areas is not a trip. A fare of nought is: a drop made on
+  // the way home costs nothing, and saying so beats leaving a guess.
+  assert.deepEqual(parseFares('[{"areas":[],"amount":3000}]'), []);
+  assert.deepEqual(parseFares('[{"areas":["sango"],"amount":0}]'), [
+    { areas: ["sango"], amount: 0 },
+  ]);
 });

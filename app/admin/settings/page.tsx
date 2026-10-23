@@ -6,6 +6,8 @@ import { naira } from "@/lib/money";
 import SaveButton from "@/components/SaveButton";
 import BandEditor from "@/components/admin/BandEditor";
 import AreaEditor from "@/components/admin/AreaEditor";
+import FareEditor from "@/components/admin/FareEditor";
+import { parseFares } from "@/lib/transport";
 import { parseAreaPairs, parseAreas } from "@/lib/areas";
 import DayHours from "@/components/admin/DayHours";
 import ActionButton from "@/components/ActionButton";
@@ -1343,6 +1345,26 @@ export default async function SettingsAdmin() {
                 runBands={parseBands(settings.fee_bands)}
                 sameDayBands={parseBands(settings.same_day_bands)}
               />
+
+              {/* The other half of an area: what the shop charges to go
+                  there, above, and what it costs the shop to go there,
+                  here. One is the customer's price and the other is the
+                  fare that comes out of the card, and keeping them apart
+                  on two screens is how the second one gets forgotten. */}
+              <div className="border-t border-black/5 pt-3">
+                <p className="label mb-0">What the trip costs us</p>
+                <p className="mb-2 text-xs text-muted">
+                  Money goes into the shop&apos;s account and the counters are
+                  paid with a card. Before a run the shop moves across what
+                  the counters want plus the fare for the trip, and whatever
+                  stays in the account is the shop&apos;s. This is the fare
+                  half, and the run sheet adds it up for you.
+                </p>
+                <FareEditor
+                  initial={parseFares(settings.transport_fares)}
+                  areas={parseAreas(settings.delivery_areas)}
+                />
+              </div>
               <SaveButton look="btn-admin-go">Save areas</SaveButton>
             </div>
           </Panel>

@@ -3170,6 +3170,7 @@ const SETTING_FIELDS = [
   "santa_delivery_extra",
   "delivery_areas",
   "area_pairs",
+  "transport_fares",
   "season",
   "email_mute",
 ] as const;

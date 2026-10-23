@@ -41,7 +41,8 @@ import StagePicker from "@/components/admin/StagePicker";
 import SendSheet from "@/components/admin/SendSheet";
 import { payableAccounts } from "@/lib/banks";
 import { allAreas } from "@/lib/areas-server";
-import { areasOfRun } from "@/lib/areas";
+import { areasOfRun, HOME } from "@/lib/areas";
+import { fareFor, parseFares, putOnCard } from "@/lib/transport";
 import { placesOfRun } from "@/lib/run-places";
 import { openRestaurants } from "@/lib/menu";
 import { batchSheet, notPriced, stillOpen, typicalCosts, shortfalls } from "@/lib/admin";
@@ -361,15 +362,45 @@ export default async function BatchPage({
   const stillToSpend = unpriced.reduce(
     (total, one) =>
       total +
-      lineCost(
+      costFor(
+        { restaurant: one.restaurant },
         one.line.unitPrice,
         one.line.qty,
-        reach[one.restaurant]?.markup ?? DEFAULT_MARKUP
+        one.line.costPrice
       ),
     0
   );
   const stillAt = [...new Set(unpriced.map((one) => one.restaurant))];
   const likely = usual === null ? null : summary.profit - usual;
+
+  /*
+   * What to move onto the card before this run goes out.
+   *
+   * Customers transfer into the shop's own account. The counters are paid
+   * with a card somebody else is holding, so the money has to be moved
+   * across first, and the figure that gets typed into that transfer is the
+   * counters plus the fare for the trip. Working it out by hand at the
+   * moment the car is about to leave is how a driver ends up at a till
+   * short.
+   *
+   * The fare is a round trip and it depends on where the food is, not on
+   * where it is going: every run ends at PAU. So it is read off the areas
+   * this run's own stops sit in.
+   */
+  const stopAreas = [
+    ...new Set(counter.map((group) => reach[group.restaurant]?.area ?? "")),
+  ];
+  const fares = parseFares((await getSettings()).transport_fares);
+  const fare = fareFor(stopAreas, fares);
+  const areaNames = areas.length > 0 ? new Map(areas.map((one) => [one.id, one.name])) : new Map();
+  const whereTo = stopAreas
+    .map((id) => String(areaNames.get(id) ?? "") || HOME.name)
+    .filter(Boolean);
+  // Everything the counters want, whether or not a receipt has been typed
+  // for it yet: the card has to carry the whole run, not the part nobody
+  // has got to.
+  const allCounters = counter.reduce((total, group) => total + costAt(group), 0);
+  const toCard = putOnCard({ counters: allCounters, fare: fare.amount });
 
   // Which counter is being read. One counter at a time is the phone's shape,
   // and the counter is in the address so the sheet for one stop can be sent
@@ -776,6 +807,58 @@ export default async function BatchPage({
           />
         </div>
       </div>
+
+      {/*
+        What to move onto the card, before anybody drives anywhere.
+
+        Customers transfer into the shop's own account and the counters are
+        paid with a card somebody else is holding, so the money has to go
+        across first. The figure that gets typed into that transfer is the
+        counters plus the fare for the trip, and working it out by hand at
+        the moment the car is leaving is how a driver ends up at a till
+        short.
+
+        Only while there is still something to buy. Once every stop is
+        collected the money has gone and the question is the profit, which
+        is the line under this one.
+      */}
+      {batch.stage !== "handed_out" && allCounters > 0 && (
+        <section className="card mb-4 space-y-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="section-title">Put on the card</h2>
+            <span className="font-display text-[34px] font-black leading-none">
+              {naira(toCard)}
+            </span>
+          </div>
+          <p className="text-sm text-muted">
+            {naira(allCounters)} for the counters
+            {fare.amount > 0 ? ` and ${naira(fare.amount)} for the trip` : ""}
+            {whereTo.length > 0 ? ` to ${whereTo.join(" and ")}` : ""}.{" "}
+            {summary.gross > 0 && (
+              <>
+                {naira(Math.max(0, summary.gross - toCard))} stays in the account.
+              </>
+            )}
+          </p>
+          {/* Said as a guess when it is one. A figure somebody can see is
+              wrong beats a blank on the screen where the money is decided,
+              and a guess printed as a fact is worse than either. */}
+          {fares.length === 0 ? (
+            <p className="text-sm font-semibold text-brand-dark">
+              No fares typed in yet, so this is the counters alone. Put the
+              round trip for each set of areas in under Settings, Delivery
+              areas.
+            </p>
+          ) : !fare.exact ? (
+            <p className="text-sm font-semibold text-brand-dark">
+              Nobody has priced this exact trip, so that fare is the dearest
+              leg it is made of. Add{" "}
+              {whereTo.length > 0 ? whereTo.join(" and ") : "it"} to the fares
+              in Settings and this becomes exact.
+            </p>
+          ) : null}
+        </section>
+      )}
 
       {/* A plain verdict while the run can still be called off. The numbers
           above are all there, but at cut off what is wanted is the answer, not
@@ -2144,17 +2227,36 @@ export default async function BatchPage({
                       <label className="label" htmlFor="transport_cost">
                         What the car cost
                       </label>
+                      {/* The fare for this trip, already filled in, where
+                          somebody has priced it. It is the same figure the
+                          card was topped up with, so the profit and the
+                          transfer cannot disagree, and it is a box rather
+                          than a fact: the night a keke costs more than the
+                          table says, the table is not what happened. */}
                       <input
                         id="transport_cost"
                         name="transport_cost"
                         inputMode="numeric"
-                        defaultValue={batch.transport_cost || ""}
+                        defaultValue={
+                          batch.transport_cost ||
+                          (fare.exact && fare.amount > 0 ? String(fare.amount) : "")
+                        }
                         placeholder="0"
                         className="field field-admin min-h-[44px] sm:min-h-[42px]"
                       />
                       <p className="mt-1 text-xs text-muted">
                         Keke, bike, a car for the bags. This is the one that
                         comes off the profit on nearly every run.
+                        {batch.transport_cost === 0 &&
+                          fare.exact &&
+                          fare.amount > 0 && (
+                            <>
+                              {" "}
+                              Filled in at {naira(fare.amount)}, the fare for{" "}
+                              {whereTo.join(" and ")}. Change it if the night
+                              was different.
+                            </>
+                          )}
                       </p>
                     </div>
 

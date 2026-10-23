@@ -72,6 +72,10 @@ export type CounterContact = {
   /** Per cent this counter is marked up by, so a price can be turned back
    *  into what the card will actually be charged. */
   markup: number;
+  /** Which area it sits in, by id. Empty is home. The run's fare is a
+   *  round trip to wherever the food is, so the sheet has to know where
+   *  its stops are before it can say what to put on the card. */
+  area: string;
 };
 
 /**
@@ -90,7 +94,7 @@ export async function counterContacts(): Promise<Record<string, CounterContact>>
 
   const { data } = await db()
     .from("restaurants")
-    .select("name, phone, orders_ahead, pay_by, markup")
+    .select("name, phone, orders_ahead, pay_by, markup, area")
     .overrideTypes<
       {
         name: string;
@@ -98,6 +102,7 @@ export async function counterContacts(): Promise<Record<string, CounterContact>>
         orders_ahead: string | null;
         pay_by: string | null;
         markup: number | null;
+        area: string | null;
       }[]
     >();
 
@@ -110,6 +115,7 @@ export async function counterContacts(): Promise<Record<string, CounterContact>>
       // Null is the ordinary case: nearly every counter uses the shop's
       // own figure, and only the odd one out stores its own.
       markup: row.markup === null ? shopMarkup : markupOf(row.markup, shopMarkup),
+      area: String(row.area ?? "").trim(),
     };
   }
   return reach;

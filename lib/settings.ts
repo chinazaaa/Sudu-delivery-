@@ -243,6 +243,11 @@ export type Settings = {
    *  every price exactly as it was. */
   delivery_areas: string;
   area_pairs: string;
+  /** What a round trip to each set of areas costs the shop, as JSON. The
+   *  money that goes on the card alongside the counters' own. Empty is a
+   *  shop that has not typed any fares in, and then the run sheet says so
+   *  rather than guessing. */
+  transport_fares: string;
   /** Which season the site is dressed for. Empty is the ordinary shop. */
   season: string;
   /** Which admin notifications to stop sending, by kind. Empty is all of
@@ -363,6 +368,7 @@ export const EMPTY: Settings = {
   santa_delivery_extra: 0,
   delivery_areas: "",
   area_pairs: "",
+  transport_fares: "",
   season: "",
   email_mute: "",
   parcel_on: "",
