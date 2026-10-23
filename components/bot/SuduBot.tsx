@@ -142,6 +142,11 @@ type Held = {
   name: string;
   phone: string;
   hostel: string;
+  /** They said to use the block already on file for their number. It is
+   *  deliberately not fetched: the chat never learns where somebody
+   *  lives from their phone number, and the order's own route fills it in
+   *  from the record when it is placed. */
+  sameBlock?: boolean;
   /** What the order is for. Everything the chat does differently for a
    *  gift follows from this one tap. */
   occasion: string;
@@ -215,6 +220,7 @@ const EMPTY: Held = {
   name: "",
   phone: "",
   hostel: "",
+  sameBlock: false,
   occasion: "me",
   forName: "",
   wantDay: "",
@@ -303,6 +309,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   /** The slot step, held in a box because the day question comes before
    *  it and is written above it. */
   const askSlotRef = useRef<((then?: () => void) => void) | null>(null);
+  /** The number question, held in a box because the bill asks for it now:
+   *  details are collected at the till rather than at the door. */
+  const askPhoneRef = useRef<((then?: () => void) => void) | null>(null);
   /** The day question, held in a box so the basket can send somebody back
    *  to it without the two steps having to know about each other. */
   const askDayRef = useRef<((then?: () => void) => void) | null>(null);
@@ -1404,9 +1413,16 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           if (mine.phone === "" && reading.phone !== "") mine.phone = reading.phone;
           if (mine.hostel === "" && reading.hostel !== "") {
             const blocks = startRef.current?.hostels ?? [];
-            const match = blocks.find(
-              (one) => one.toLowerCase() === String(reading.hostel).toLowerCase()
+            /* Named exactly, or near enough that only one block could be
+               meant. "queen mary" and "Queen Mary Hall" are the same
+               place; two blocks that both match are not a block. */
+            const want = String(reading.hostel).toLowerCase().trim();
+            const exact = blocks.find((one) => one.toLowerCase() === want);
+            const near = blocks.filter(
+              (one) =>
+                one.toLowerCase().includes(want) || want.includes(one.toLowerCase())
             );
+            const match = exact ?? (near.length === 1 ? near[0] : undefined);
             /* Only a block the shop actually has. A reading is a reading,
                and a hostel nobody has heard of is not a delivery address. */
             if (match) mine.hostel = match;
@@ -2556,6 +2572,43 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     setAt(4);
     setAsk({ of: "nothing" });
     const mine = held.current;
+
+    /*
+     * Whatever is still missing, asked at the till.
+     *
+     * The name, the number and the block used to be the price of
+     * entering the conversation. They are now the price of leaving with
+     * food, which is where every shop in the world puts them, and which
+     * means somebody who typed the lot in one message is asked for none
+     * of them.
+     *
+     * In this order on purpose: the name is one word and the cheapest
+     * thing to be asked for, and the number is the one the whole order is
+     * filed under. Each step comes back here, so the bill is worked out
+     * once and only when it can actually be delivered.
+     */
+    if (mine.name === "") {
+      bot("Nearly there. What should I call you?", 430);
+      setAsk({
+        of: "text",
+        placeholder: "Your name",
+        onSay: (said) => {
+          me(said);
+          mine.name = (nameIn(said) || said).split(" ")[0];
+          soonRef.current?.();
+        },
+      });
+      return;
+    }
+    if (mine.phone === "") {
+      askPhoneRef.current?.(() => soonRef.current?.());
+      return;
+    }
+    if (mine.hostel === "" && mine.sameBlock !== true) {
+      askHostelRef.current?.(() => soonRef.current?.());
+      return;
+    }
+
     try {
       const answer = await working(
         "Working out your total…",
@@ -4146,7 +4199,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     });
   }, [bot, me, showBlocks, takeBlock]);
 
-  const askPhone = useCallback(() => {
+  const askPhone = useCallback((then?: () => void) => {
     setAt(0);
     bot(
       `Nice to meet you, <b>${held.current.name || "friend"}</b>. What number should we call on the day?`
@@ -4176,7 +4229,65 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         const number = phoneIn(said);
         if (number) {
           held.current.phone = number;
-          askHostel();
+          /*
+           * A block the shop already has, offered rather than asked for.
+           *
+           * Somebody who ordered last week has a block on file and being
+           * asked again is the shop admitting it keeps no records. One
+           * message saved on every returning customer, which is most of
+           * them.
+           *
+           * The block is never printed. The number is typed into a public
+           * chat by whoever is holding the phone, and answering with a
+           * name and a hostel would make this box a way of finding out
+           * where somebody sleeps, one number at a time, with no sign-in.
+           * So it is used and not shown: whoever it belongs to knows
+           * where they live, and nobody else learns it.
+           */
+          void (async () => {
+            const seen = await fetch("/api/bot/known", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ phone: number }),
+            })
+              .then((one) => one.json())
+              .catch(() => null);
+
+            if (!seen?.hasBlock) {
+              askHostel(then);
+              return;
+            }
+
+            bot("I have a block saved for this number. Same one?", 420);
+            setAsk({
+              of: "chips",
+              chips: [
+                {
+                  said: "Yes, same as last time",
+                  hot: true,
+                  go: () => {
+                    me("Yes, same as last time");
+                    /* Taken from the record on the server when the order
+                       is placed, which is where it has always come from
+                       for a signed-in customer. Nothing here has to know
+                       what it is. */
+                    held.current.hostel = "";
+                    held.current.sameBlock = true;
+                    if (then) then();
+                    else askSlotRef.current?.();
+                  },
+                },
+                {
+                  said: "No, different block",
+                  go: () => {
+                    me("No, different block");
+                    askHostel(then);
+                  },
+                },
+              ],
+              hint: "",
+            });
+          })();
           return;
         }
         tries += 1;
@@ -4216,6 +4327,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   useEffect(() => {
     askHostelRef.current = askHostel;
   }, [askHostel]);
+
+  useEffect(() => {
+    askPhoneRef.current = askPhone;
+  }, [askPhone]);
 
   const begin = useCallback(() => {
     settled.current = false;
@@ -4342,12 +4457,36 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           onSay: (who) => {
             me(who);
             held.current.forName = (nameIn(who) || who).split(" ")[0];
-            askPhone();
+            askFood();
           },
         });
         return;
       }
-      askPhone();
+      askFood();
+    };
+
+    /*
+     * Food second, details last.
+     *
+     * The chat used to take a name, a number and a block before anybody
+     * had said a word about dinner. Three questions, none of them about
+     * food, asked of somebody who has not yet been given a single reason
+     * to believe this is quicker than sending a WhatsApp message. Most
+     * people who leave, leave there, and they leave having told us
+     * nothing we could have sold them.
+     *
+     * So the order comes next, and the number and the block are asked for
+     * at the till, where every shop asks for them and where somebody has
+     * already decided they want the food. Nothing else moves: the same
+     * questions, the same answers, in the order a person expects them.
+     */
+    const askFood = () => {
+      bot("What are you after?", 430);
+      setAsk({
+        of: "text",
+        placeholder: "e.g. 2 chicken pie and a shawarma",
+        onSay: (said) => huntRef.current?.(said),
+      });
     };
     const askTheName = () =>
       setAsk({
@@ -4434,8 +4573,36 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       greetKnown(you);
       return;
     }
-    bot("What should I call you?", 450);
-    askTheName();
+
+    /*
+     * One box, and say everything or say one thing.
+     *
+     * The chat used to open with a name, then a number, then a block:
+     * three questions and three round trips before anybody had said a
+     * word about food, asked of somebody who has not yet been given one
+     * reason to believe this beats sending a WhatsApp message.
+     *
+     * A person who already knows what they want can now type the lot in
+     * one message, which is how they would have written it to a human
+     * anyway, and the reading layer pulls the name, the number and the
+     * block out of it. A person who does not is asked the ordinary
+     * questions, one at a time, in the ordinary order, and never has to
+     * know the other way existed.
+     *
+     * Whatever is still missing by the time there is a bill is asked for
+     * then, at the till, where every shop asks for it and where somebody
+     * has already decided they want the food.
+     */
+    bot(
+      "What are you after? You can say it all at once if you like, " +
+        "food, your name, your number and your block.",
+      450
+    );
+    setAsk({
+      of: "text",
+      placeholder: "e.g. Naza, 0802 477 1834, Queen Mary, 2 chicken pie",
+      onSay: (said) => huntRef.current?.(said),
+    });
   }, [askPhone, bot, me, sayFaq, stopWatching]);
 
   /*

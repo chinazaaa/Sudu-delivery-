@@ -5,6 +5,7 @@ import { narration } from "@/lib/messages";
 import { payableAccounts } from "@/lib/banks";
 import { safeSettings } from "@/lib/settings";
 import { normalisePhone } from "@/lib/phone";
+import { customerDetails } from "@/lib/customer-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,26 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const phone = normalisePhone(String(body.phone ?? ""));
     const name = String(body.name ?? "").trim();
-    const hostel = String(body.hostel ?? "").trim();
+    let hostel = String(body.hostel ?? "").trim();
+
+    /*
+     * The block the shop already has, filled in here rather than in the
+     * chat.
+     *
+     * Somebody who has ordered before is offered their saved block
+     * instead of being asked for it again, and says yes without the chat
+     * ever printing it. That is deliberate: a number typed into a public
+     * order box must not come back with a name and a hostel, or the box
+     * becomes a way of finding out where somebody sleeps.
+     *
+     * So the chat sends nothing and this reads the record. It is the same
+     * trust the order already runs on, since the number is what the whole
+     * order is filed under.
+     */
+    if (hostel === "" && phone) {
+      const saved = await customerDetails(phone);
+      hostel = String(saved?.hostel ?? "").trim();
+    }
     const batchId = String(body.batchId ?? "");
     const deliverAt = String(body.deliverAt ?? "").trim();
 
