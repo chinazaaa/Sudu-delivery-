@@ -1857,6 +1857,25 @@ export async function moveOrder(
 
   const bands = await bandsFor(batch);
 
+  /*
+   * A car of its own is priced off its own ladder, not the run's.
+   *
+   * Moving an unpaid order reprices it, which is right: it is going on a
+   * different trip and the trip is what the fee is for. What it did not
+   * do was notice which kind of trip. A same day car has its own ladder
+   * and an extra for an urgent one, and this reached for the run bands
+   * every time, so moving an order onto or along a car quietly dropped
+   * the delivery from ten thousand to six and the customer was looking
+   * at the lower figure before anybody saw it.
+   *
+   * The urgent extra is not re-applied here. It is charged for ordering
+   * at an hour's notice, and an order the shop is moving by hand is not
+   * the customer asking for anything, so re-charging it on a move would
+   * be the shop billing itself for its own rearrangement.
+   */
+  const car = batch.kind === "same_day";
+  const sameDay = car ? await sameDayPricing() : null;
+
   for (const id of moving) {
     const one = await getOrder(id);
     if (!one) continue;
@@ -1883,7 +1902,14 @@ export async function moveOrder(
 
     // Its own containers, like any other order. Nothing on the new run is
     // credited towards it, because nothing is credited across orders at all.
-    const fee = feeFor(items, batch.flash_fee, bands);
+    //
+    // A car keeps whatever the order was already charged where that is
+    // dearer: an order that bought an urgent slot has paid for one, and a
+    // move it did not ask for must not hand that money back.
+    const onLadder = sameDay
+      ? sameDayFee(items, false, sameDay.bands, sameDay.urgentExtra)
+      : feeFor(items, batch.flash_fee, bands);
+    const fee = car ? Math.max(onLadder, Number(one.fee ?? 0)) : onLadder;
 
     // The lines carry the new prices too, so the order reads as it is charged.
     for (const line of one.lines) {

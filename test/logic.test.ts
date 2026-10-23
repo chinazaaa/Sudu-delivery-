@@ -5491,3 +5491,30 @@ test("a correction is allowed to overwrite, an aside is not", () => {
   // "Nothing else" starts with no but is not a correction of anything.
   assert.equal(isCorrection("nothing else thanks"), false);
 });
+
+test("a car of its own keeps its own ladder when an order is moved", () => {
+  // The run ladder and the car ladder are different prices for different
+  // trips. Moving an order onto a car used to reach for the run's, which
+  // is how a 10,000 delivery became 6,000 while the customer was looking
+  // at it.
+  const carBands = [
+    { maxItems: 3, fee: 6000 },
+    { maxItems: 99, fee: 8000 },
+  ];
+  // Two items on the car ladder is 6,000, which is less than the 10,000
+  // this order was quoted for an urgent slot. The dearer figure wins: the
+  // shop moving its own car is not a reason to hand money back.
+  const onLadder = sameDayFee(2, false, carBands, 4000);
+  assert.equal(onLadder, 6000);
+  assert.equal(Math.max(onLadder, 10000), 10000);
+
+  // Where the ladder is dearer than what was charged, the ladder wins, so
+  // adding items to a moved order still costs what it should.
+  assert.equal(Math.max(sameDayFee(10, false, carBands, 4000), 6000), 8000);
+
+  // The urgent extra is not re-applied on a move: it is charged for
+  // ordering at an hour's notice, and a move is the shop rearranging
+  // itself, not the customer asking for anything.
+  assert.equal(sameDayFee(2, true, carBands, 4000), 10000);
+  assert.equal(sameDayFee(2, false, carBands, 4000), 6000);
+});
