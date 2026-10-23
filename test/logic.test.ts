@@ -38,6 +38,14 @@ import {
 } from "../lib/refunds";
 import { buyingDone } from "../lib/runner";
 import {
+  MOST,
+  NOTHING_READ,
+  howMany,
+  readIntent,
+  shopBrief,
+  worthActingOn,
+} from "../lib/bot-brain";
+import {
   counterKey,
   counterMessage,
   expectedAt,
@@ -5331,4 +5339,91 @@ test("a customer is told why in words, not in the driver's shorthand", () => {
   // Nothing known falls back to something true and plain, never to silence.
   assert.match(soldOutSaid("", ""), /could not be bought/);
   assert.match(soldOutSaid("   ", "Dominos"), /could not be bought/);
+});
+
+test("the bot's reading layer cannot invent anything that costs money", () => {
+  // A model answer is never trusted as it stands. Everything below is a
+  // thing a model could plausibly return and must not reach the shop.
+
+  // Nonsense of the wrong shape reads as nothing at all, not as an error.
+  assert.deepEqual(readIntent(null), NOTHING_READ);
+  assert.deepEqual(readIntent("2 pies"), NOTHING_READ);
+  assert.deepEqual(readIntent(42), NOTHING_READ);
+
+  // A quantity nobody could mean is clamped rather than obeyed. Twenty
+  // thousand chicken pies is a model slip, not an order.
+  assert.equal(howMany(9000), MOST);
+  assert.equal(howMany(-3), 1);
+  assert.equal(howMany("two"), 1);
+  assert.equal(howMany(null), 1);
+  assert.equal(howMany(2.4), 2);
+
+  // An order with nothing in it is not an order, whatever it calls itself.
+  // Letting this through would open a basket on an empty sentence.
+  assert.equal(readIntent({ kind: "order", wanted: [] }).kind, "other");
+
+  // Fields keep only what was said, trimmed and bounded. A name that is
+  // really a paragraph is a prompt injection attempt or a bug; either way
+  // it is not a name.
+  const long = readIntent({ kind: "greeting", name: "x".repeat(500) });
+  assert.equal(long.name.length, 60);
+
+  const read = readIntent({
+    kind: "order",
+    wanted: [
+      { what: "  chicken pie  ", qty: 2 },
+      { what: "", qty: 3 },
+      { what: "shawarma", qty: "1" },
+    ],
+    name: " Naza ",
+    phone: " 0704 268 5535 ",
+    hostel: " Trezadel ",
+    say: " Got it. ",
+  });
+  assert.equal(read.kind, "order");
+  // The blank line is dropped rather than searched for.
+  assert.deepEqual(read.wanted, [
+    { what: "chicken pie", qty: 2 },
+    { what: "shawarma", qty: 1 },
+  ]);
+  assert.equal(read.name, "Naza");
+  assert.equal(read.phone, "0704 268 5535");
+  assert.equal(read.hostel, "Trezadel");
+});
+
+test("a reading with nothing in it lets the shop's own rules answer", () => {
+  assert.equal(worthActingOn(readIntent({ kind: "greeting", say: "Hi" })), false);
+  assert.equal(worthActingOn(readIntent({ kind: "order", wanted: [{ what: "pie", qty: 1 }] })), true);
+  // A number on its own is still worth acting on: it is how somebody
+  // answers "what is your phone number".
+  assert.equal(worthActingOn(readIntent({ kind: "other", phone: "0704" })), true);
+});
+
+test("the shop brief says only what is true tonight", () => {
+  const open = shopBrief({
+    shopName: "Sudu",
+    counters: ["Chicken Republic", "KFC"],
+    hostels: ["Trezadel", "Emerald"],
+    nextRun: "tonight between 6pm and 7.30pm",
+    cutOff: "4.30 pm",
+    open: true,
+  });
+  assert.match(open, /next run is tonight between 6pm and 7\.30pm/);
+  assert.match(open, /shuts at 4\.30 pm/);
+  assert.match(open, /Chicken Republic, KFC/);
+  // It is told in as many words that it does not price or confirm.
+  assert.match(open, /never price|never pric/i);
+  assert.doesNotMatch(open, /—/);
+
+  // Nothing open must not be described as though something were.
+  const shut = shopBrief({
+    shopName: "Sudu",
+    counters: [],
+    hostels: [],
+    nextRun: "",
+    cutOff: "",
+    open: false,
+  });
+  assert.match(shut, /Nothing is open/);
+  assert.doesNotMatch(shut, /next run is/);
 });
