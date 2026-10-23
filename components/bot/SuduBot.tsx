@@ -1361,7 +1361,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
        * and the layer has nothing to add to it.
        *
        * What it adds is the sentence that is not a list. "Can I get two
-       * of those chicken pies and a shawarma for Naza, 0704 268 5535,
+       * of those chicken pies and a shawarma for John Doe, 0800 000 0000,
        * Trezadel" has no comma pattern the rules can trust, and taken by
        * them it becomes one long search for a dish that does not exist.
        * Read, it is three answers and an order.
@@ -4665,7 +4665,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     );
     setAsk({
       of: "text",
-      placeholder: "e.g. Naza, 0802 477 1834, Queen Mary, 2 chicken pie",
+      placeholder: "e.g. John Doe, 0800 000 0000, Queen Mary, 2 chicken pie",
       onSay: (said) => huntRef.current?.(said),
     });
   }, [askPhone, bot, me, sayFaq, stopWatching]);

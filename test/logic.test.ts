@@ -5378,7 +5378,7 @@ test("the bot's reading layer cannot invent anything that costs money", () => {
       { what: "shawarma", qty: "1" },
     ],
     name: " Naza ",
-    phone: " 0704 268 5535 ",
+    phone: " 0800 000 0000 ",
     hostel: " Trezadel ",
     say: " Got it. ",
   });
@@ -5389,7 +5389,7 @@ test("the bot's reading layer cannot invent anything that costs money", () => {
     { what: "shawarma", qty: 1 },
   ]);
   assert.equal(read.name, "Naza");
-  assert.equal(read.phone, "0704 268 5535");
+  assert.equal(read.phone, "0800 000 0000");
   assert.equal(read.hostel, "Trezadel");
 });
 
