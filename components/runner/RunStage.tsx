@@ -2,6 +2,7 @@
 
 import ActionButton from "@/components/ActionButton";
 import { setBatchStage } from "@/app/admin/actions";
+import { carIsFull } from "@/app/run/[token]/actions";
 import { STAGES, STAGE_ACTION, stageIndex, type BatchStage } from "@/lib/stages";
 
 /**
@@ -23,10 +24,13 @@ export default function RunStage({
   token,
   batchId,
   stage,
+  shut = false,
 }: {
   token: string;
   batchId: string;
   stage: BatchStage;
+  /** Somebody has already said the car is full. */
+  shut?: boolean;
 }) {
   const at = stageIndex(stage);
   const next = at >= 0 && at < STAGES.length - 1 ? STAGES[at + 1] : null;
@@ -70,6 +74,32 @@ export default function RunStage({
       {next === "handed_out" && (
         <p className="text-xs text-muted">
           This marks every paid bag on the run delivered and tells them so.
+        </p>
+      )}
+
+      {/*
+        The car is full, said by the person standing next to it.
+
+        The shop has this button too, and the shop is not here. Everything
+        else deciding whether another order can still be taken is the site
+        reasoning from a stage and a list of counters, and none of it can
+        see how much room is left in the boot. She can.
+      */}
+      <form action={carIsFull} className="border-t-[1.5px] border-rule pt-2.5">
+        <input type="hidden" name="token" value={token} />
+        {shut && <input type="hidden" name="open_again" value="1" />}
+        <ActionButton
+          className={`w-full py-3 text-base ${shut ? "btn-primary" : "btn-quiet"}`}
+          busy="…"
+          done={shut ? "Open ✓" : "Shut ✓"}
+        >
+          {shut ? "Take orders again" : "No more orders · the car is full"}
+        </ActionButton>
+      </form>
+      {shut && (
+        <p className="text-xs text-muted">
+          Nothing more can be added to this run until somebody says
+          otherwise.
         </p>
       )}
     </div>

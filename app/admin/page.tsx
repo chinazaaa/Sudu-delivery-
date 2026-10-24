@@ -176,15 +176,6 @@ export default async function AdminHome() {
   // one, which is the one thing on the day nobody can work on. See
   // lib/which-run.ts.
   const working = runToWorkOn(drivable, lagosToday());
-  // More than one thing going today is one drive with two sets of books.
-  const driveTheDay =
-    batches.filter(
-      (batch) =>
-        batch.run_date === lagosToday() &&
-        batch.kind !== "parcel" &&
-        batch.status !== "cancelled" &&
-        batch.status !== "delivered"
-    ).length > 1;
   const workingLabel =
     working === null
       ? ""
@@ -448,10 +439,10 @@ export default async function AdminHome() {
             </Link>
             {working && (
               <Link
-                href={driveTheDay ? "/admin/today" : `/admin/batch/${working.id}`}
+                href={`/admin/batch/${working.id}`}
                 className="btn-admin-go hidden sm:inline-flex"
               >
-                Open {driveTheDay ? "today's driving" : workingLabel.toLowerCase()} →
+                Open {workingLabel.toLowerCase()} →
               </Link>
             )}
           </>
@@ -524,10 +515,10 @@ export default async function AdminHome() {
              going and the day sheet would be a second door to the same
              food, so it opens that one directly. */
           <Link
-            href={driveTheDay ? "/admin/today" : `/admin/batch/${working.id}`}
+            href={`/admin/batch/${working.id}`}
             className="btn-admin-go min-h-[54px] w-full text-base"
           >
-            Open {driveTheDay ? "today's driving" : workingLabel.toLowerCase()} →
+            Open {workingLabel.toLowerCase()} →
           </Link>
         )}
       </div>

@@ -1579,6 +1579,33 @@ export async function typicalCosts(): Promise<number | null> {
   return Math.round(runs.reduce((sum, cost) => sum + cost, 0) / runs.length);
 }
 
+/**
+ * What past runs spent on the fare alone.
+ *
+ * Only useful beside `typicalCosts`: where the shop has a real fare for
+ * tonight's areas, this is the part of the average that figure replaces,
+ * and what is left over stands in for the fuel and the driver.
+ */
+export async function typicalTransport(): Promise<number> {
+  try {
+    const { data, error } = await db()
+      .from("batches")
+      .select("transport_cost")
+      .eq("stage", "handed_out")
+      .order("run_date", { ascending: false })
+      .limit(6);
+    if (error) return 0;
+
+    const fares = ((data ?? []) as { transport_cost?: number | null }[])
+      .map((row) => Number(row.transport_cost ?? 0))
+      .filter((one) => one > 0);
+    if (fares.length === 0) return 0;
+    return Math.round(fares.reduce((sum, one) => sum + one, 0) / fares.length);
+  } catch {
+    return 0;
+  }
+}
+
 export type Shortfall = {
   groupId: string;
   leader: string;

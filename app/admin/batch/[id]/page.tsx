@@ -46,7 +46,7 @@ import { areasOfRun, HOME } from "@/lib/areas";
 import { fareFor, parseFares, putOnCard } from "@/lib/transport";
 import { placesOfRun } from "@/lib/run-places";
 import { openRestaurants } from "@/lib/menu";
-import { batchSheet, notPriced, stillOpen, typicalCosts, shortfalls } from "@/lib/admin";
+import { batchSheet, notPriced, stillOpen, typicalCosts, typicalTransport, shortfalls } from "@/lib/admin";
 import { SLOT_LABEL } from "@/lib/config";
 import { runSchedule, WEEKDAYS } from "@/lib/schedule";
 import Link from "next/link";
@@ -343,7 +343,9 @@ export default async function BatchPage({
   // Before a run is driven nobody has entered its fuel or driver, so profit
   // reads high at exactly the moment the decision to drive is made. What past
   // runs actually cost is a far better guess than nothing.
-  const usual = summary.costs === 0 ? await typicalCosts() : null;
+  const guessed = summary.costs === 0 ? await typicalCosts() : null;
+  // The part of that average that a real fare replaces.
+  const guessedTransport = guessed === null ? 0 : await typicalTransport();
   // Windows a car could be moved into, when it is a car and nothing has been
   // bought for it yet.
   const windows =
@@ -378,7 +380,20 @@ export default async function BatchPage({
     0
   );
   const stillAt = [...new Set(unpriced.map((one) => one.restaurant))];
-  const likely = usual === null ? null : summary.profit - usual;
+  const likelyFrom = (fareNow: number | null) => {
+    if (guessed === null) return { usual: null, likely: null };
+    /*
+     * What this evening will cost, as well as it can be known yet.
+     *
+     * The average of the last few runs was the only answer there was.
+     * The shop now has the fares typed in by areas, so the transport
+     * half is not a guess at all where somebody has priced this exact
+     * trip: that figure is used and the average covers the rest.
+     */
+    const usual =
+      fareNow === null ? guessed : fareNow + Math.max(0, guessed - guessedTransport);
+    return { usual, likely: summary.profit - usual };
+  };
 
   /*
    * What to move onto the card before this run goes out.
@@ -399,6 +414,8 @@ export default async function BatchPage({
   ];
   const fares = parseFares((await getSettings()).transport_fares);
   const fare = fareFor(stopAreas, fares);
+  // Worked out here, where the fare is known, and not above it.
+  const { usual, likely } = likelyFrom(fare.exact ? fare.amount : null);
   const areaNames = areas.length > 0 ? new Map(areas.map((one) => [one.id, one.name])) : new Map();
   const whereTo = stopAreas
     .map((id) => String(areaNames.get(id) ?? "") || HOME.name)
@@ -979,7 +996,10 @@ export default async function BatchPage({
       {/* A plain verdict while the run can still be called off. The numbers
           above are all there, but at cut off what is wanted is the answer, not
           the arithmetic. */}
-      {batch.stage !== "handed_out" && likely !== null && (
+      {/* Nothing on it is nothing to judge: a verdict saying an empty run
+          loses three thousand is the shop telling itself off for a car
+          that was never going to exist. */}
+      {batch.stage !== "handed_out" && likely !== null && summary.paidCount > 0 && (
         <p
           className={`soft mb-4 px-4 py-3 text-[14px] ${
             likely >= 0
@@ -1177,7 +1197,9 @@ export default async function BatchPage({
         the cost of copying the wrong one is a stranger holding a different
         night's names and blocks.
       */}
-      {!batch.settled_at && (
+      {/* A link to a run with nothing on it opens an empty sheet, so it
+          is not offered until there is a night to work. */}
+      {!batch.settled_at && (summary.paidCount > 0 || batch.runner_token) && (
         <Panel
           title="Whoever is driving"
           detail="A link that opens this run and nothing else, so somebody who is not trusted with the shop can still work the night from their own phone."

@@ -165,3 +165,24 @@ export async function atTheCounter(form: FormData): Promise<void> {
   move.set("stage", "at_counter");
   await setBatchStage(move);
 }
+
+/**
+ * No more orders on this one, said from the car.
+ *
+ * The shop has a button for it and she is not at the shop: she is the one
+ * standing next to the boot, which is the only place the answer is
+ * actually known. Both ways, because the mistake to expect is pressing it
+ * at the wrong moment, and a thing that cannot be taken back is a thing
+ * nobody presses.
+ */
+export async function carIsFull(form: FormData): Promise<void> {
+  const batch = await runForAction(String(form.get("token") ?? ""));
+  if (!batch) return;
+
+  const shut = form.get("open_again") === null;
+  await db().from("batches").update({ no_more_orders: shut }).eq("id", batch.id);
+
+  revalidatePath(`/run/${batch.runner_token}`);
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
+}

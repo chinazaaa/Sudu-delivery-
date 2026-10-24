@@ -38,10 +38,7 @@ export const whatIsIn = (group: Group): string =>
 export const DAILY: Item[] = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/orders", label: "Orders" },
-  // Everything going out today as one shopping list, however many
-  // batches it came in on. See app/admin/today.
-  { href: "/admin/today", label: "Driving today" },
-  { href: "/admin/runs", label: "All runs" },
+  { href: "/admin/runs", label: "Runs" },
   { href: "/admin/schedule", label: "Schedule" },
 ];
 

@@ -1112,22 +1112,101 @@ export async function setRunCosts(form: FormData): Promise<void> {
   const whole = form.has("food_spend") ? { food_spend: money("food_spend") } : {};
 
   const id = String(form.get("batch_id"));
-  const costs = {
-    fuel_cost: money("fuel_cost"),
-    driver_cost: money("driver_cost"),
-    other_cost: money("other_cost"),
-    ...whole,
-    cost_note: String(form.get("cost_note") ?? "").trim(),
-  };
+  const note = String(form.get("cost_note") ?? "").trim();
 
-  // Transport is the newest of these. Naming a column the database has not
-  // been given yet fails the whole update, which would lose the fuel and the
-  // driver along with it, so it is tried and then dropped.
-  const { error } = await db()
+  /*
+   * One evening, one set of costs.
+   *
+   * She goes to the market once, so the fare is one fare. A run and a car
+   * of its own on the same night are two batches and one drive, and
+   * asking each of them for the fare asks for it twice: typed twice it is
+   * counted twice, and the day's profit comes out short by a whole fare
+   * with nothing anywhere saying why.
+   *
+   * So what is typed here is the whole evening's, shared across what is
+   * going by how many bags each is carrying, because every sum in the
+   * shop reads costs off a batch. One batch on the night and this is
+   * exactly what it always was. See lib/day-costs.ts.
+   */
+  const { data: mine } = await db()
     .from("batches")
-    .update({ ...costs, transport_cost: money("transport_cost") })
-    .eq("id", id);
-  if (error) await db().from("batches").update(costs).eq("id", id);
+    .select("run_date, kind")
+    .eq("id", id)
+    .maybeSingle();
+  const day = (mine as { run_date?: string } | null)?.run_date ?? "";
+  const kind = ((mine as { kind?: string | null } | null)?.kind ?? "run");
+
+  const sharing =
+    day !== "" && (kind === "run" || kind === "same_day")
+      ? await (async () => {
+          const { data } = await db()
+            .from("batches")
+            .select("id, kind, status")
+            .eq("run_date", day)
+            .neq("status", "cancelled");
+          return ((data ?? []) as { id: string; kind?: string | null }[])
+            .filter((one) => (one.kind ?? "run") === "run" || one.kind === "same_day")
+            .map((one) => one.id);
+        })()
+      : [id];
+
+  const spread = sharing.length > 1 ? sharing : [id];
+
+  // How many bags each is carrying, which is what the fare is shared by.
+  const bags = new Map<string, number>();
+  if (spread.length > 1) {
+    const { data: orders } = await db()
+      .from("orders")
+      .select("batch_id, status")
+      .in("batch_id", spread)
+      .not("status", "in", NOT_ORDERS_SQL);
+    for (const order of (orders ?? []) as { batch_id: string; status: string }[]) {
+      if (!isPaid(order.status)) continue;
+      bags.set(order.batch_id, (bags.get(order.batch_id) ?? 0) + 1);
+    }
+  }
+
+  const shares =
+    spread.length > 1
+      ? splitDayCosts(
+          {
+            fuel: money("fuel_cost"),
+            transport: money("transport_cost"),
+            driver: money("driver_cost"),
+            other: money("other_cost"),
+          },
+          spread.map((one) => ({ id: one, bags: bags.get(one) ?? 0 }))
+        )
+      : [
+          {
+            id,
+            fuel: money("fuel_cost"),
+            transport: money("transport_cost"),
+            driver: money("driver_cost"),
+            other: money("other_cost"),
+          },
+        ];
+
+  for (const share of shares) {
+    const costs = {
+      fuel_cost: share.fuel,
+      driver_cost: share.driver,
+      other_cost: share.other,
+      // What was spent on the food is this batch's own, so it is written
+      // only where it was typed.
+      ...(share.id === id ? whole : {}),
+      cost_note: note,
+    };
+
+    // Transport is the newest of these. Naming a column the database has
+    // not been given yet fails the whole update, which would lose the
+    // fuel and the driver along with it, so it is tried and then dropped.
+    const { error } = await db()
+      .from("batches")
+      .update({ ...costs, transport_cost: share.transport })
+      .eq("id", share.id);
+    if (error) await db().from("batches").update(costs).eq("id", share.id);
+  }
 
   revalidatePath("/admin", "layout");
 }

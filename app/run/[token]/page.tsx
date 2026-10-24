@@ -131,7 +131,12 @@ export default async function RunPage({
         </p>
       </header>
 
-      <RunStage token={token} batchId={batch.id} stage={batch.stage} />
+      <RunStage
+        token={token}
+        batchId={batch.id}
+        stage={batch.stage}
+        shut={batch.no_more_orders === true}
+      />
 
       {/*
         Every screen of the night, built once here and switched on the
