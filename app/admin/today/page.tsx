@@ -4,7 +4,9 @@ import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import Checklist from "@/components/Checklist";
 import Many from "@/components/Many";
-import { everythingAtTheCounter } from "@/app/admin/actions";
+import ActionButton from "@/components/ActionButton";
+import { everythingAtTheCounter, setDayCosts } from "@/app/admin/actions";
+import { dayCostSoFar } from "@/lib/day-costs";
 import { drivingToday } from "@/lib/admin";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
@@ -54,6 +56,8 @@ export default async function DrivingTodayPage() {
   }
 
   const toPay = sheet.counter.reduce((all, one) => all + one.expectedFoodTotal, 0);
+  // What the day has already been told, added back up out of the shares.
+  const already = dayCostSoFar(sheet.parts);
 
   return (
     <div>
@@ -72,6 +76,66 @@ export default async function DrivingTodayPage() {
         <Stat label="Items" value={sheet.items} />
         <Stat label="The card" value={toPay} money />
       </div>
+
+      {/*
+        What the day cost, typed once.
+
+        She goes to the market once, so the fare is one fare. Asking for
+        it on each batch asks for it twice, and typed twice it is counted
+        twice: the day's profit comes out short by a whole fare and
+        nothing anywhere says why. Shared out across them by how many
+        bags each is carrying, because every sum in the shop reads costs
+        off a batch. See lib/day-costs.ts.
+      */}
+      <section className="card mb-4">
+        <h2 className="font-bold">What today cost</h2>
+        <p className="mb-3 text-sm text-muted">
+          One drive, one set of costs. Typed here and shared across what is
+          going, so nothing is counted twice.
+        </p>
+        <form action={setDayCosts} className="space-y-3">
+          <input type="hidden" name="day" value={day} />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { name: "transport_cost", label: "Transport", value: already.transport },
+              { name: "fuel_cost", label: "Fuel", value: already.fuel },
+              { name: "driver_cost", label: "Driver", value: already.driver },
+              { name: "other_cost", label: "Anything else", value: already.other },
+            ].map((box) => (
+              <div key={box.name}>
+                <label className="label" htmlFor={box.name}>
+                  {box.label}
+                </label>
+                <input
+                  id={box.name}
+                  name={box.name}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  defaultValue={box.value > 0 ? box.value : ""}
+                  placeholder="0"
+                  className="field field-admin"
+                />
+              </div>
+            ))}
+          </div>
+          <div>
+            <label className="label" htmlFor="cost_note">
+              A note, if anything was odd
+            </label>
+            <input
+              id="cost_note"
+              name="cost_note"
+              defaultValue={sheet.parts[0]?.note ?? ""}
+              placeholder="Went to Ikoyi as well"
+              className="field field-admin"
+            />
+          </div>
+          <ActionButton className="btn-admin" done="Saved ✓">
+            Save what today cost
+          </ActionButton>
+        </form>
+      </section>
 
       {/*
         Where the books live, and nothing else.

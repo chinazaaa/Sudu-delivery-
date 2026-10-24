@@ -931,7 +931,19 @@ export type DrivingToday = TripSheet & {
   /** Every batch this sheet is made of, each keeping its own page: the
    *  costs, the profit and the stage all belong to one of them, and
    *  nothing here moves an order from the one it was ordered onto. */
-  parts: { id: string; label: string; kind: string; paid: number }[];
+  parts: {
+    id: string;
+    label: string;
+    kind: string;
+    paid: number;
+    /** Its share of what the day cost, so the whole can be added back up
+     *  and typed once. See lib/day-costs.ts. */
+    fuel: number;
+    transport: number;
+    driver: number;
+    other: number;
+    note: string;
+  }[];
 };
 
 /**
@@ -1006,6 +1018,11 @@ export async function drivingToday(date?: string): Promise<DrivingToday | null> 
       label: carLabel(one),
       kind: one.kind ?? "run",
       paid: paid.filter((order) => order.batch_id === one.id).length,
+      fuel: one.fuel_cost,
+      transport: one.transport_cost ?? 0,
+      driver: one.driver_cost,
+      other: one.other_cost,
+      note: one.cost_note ?? "",
     })),
   };
 }

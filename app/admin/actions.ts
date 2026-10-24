@@ -32,7 +32,8 @@ import {
   openRunsBetween,
 } from "@/lib/batches";
 import { closeGroup } from "@/lib/groups";
-import { moveOrder, placeOrder, NOT_ORDERS_SQL } from "@/lib/orders";
+import { isPaid, moveOrder, placeOrder, NOT_ORDERS_SQL } from "@/lib/orders";
+import { splitDayCosts } from "@/lib/day-costs";
 import { followRun, followRuns } from "@/lib/run-follow";
 import { newRunnerToken } from "@/lib/runner";
 import { runForAction } from "@/lib/runner-server";
@@ -1019,6 +1020,83 @@ export async function moveSameDayCar(form: FormData): Promise<void> {
 
   revalidatePath("/admin", "layout");
   revalidatePath("/");
+}
+
+/**
+ * What the whole day's driving cost, typed once.
+ *
+ * She goes to the market once. Asking for the fare on each batch asks
+ * for it twice and, typed twice, counts it twice: the day's profit comes
+ * out short by a whole fare and nothing anywhere says why. So it is one
+ * form for the day, shared out across the batches by how many bags each
+ * is carrying, because every sum in the shop reads costs off a batch.
+ * See lib/day-costs.ts.
+ */
+export async function setDayCosts(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const day = String(form.get("day") ?? "").trim();
+  if (day === "") return;
+
+  const money = (field: string) => {
+    const value = Math.round(Number(form.get(field) ?? 0));
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  };
+
+  const { data } = await db()
+    .from("batches")
+    .select("id, kind, status")
+    .eq("run_date", day)
+    .neq("status", "cancelled");
+
+  const batches = ((data ?? []) as { id: string; kind?: string | null }[]).filter(
+    (one) => (one.kind ?? "run") === "run" || one.kind === "same_day"
+  );
+  if (batches.length === 0) return;
+
+  // How many bags each is carrying, which is what the fare is shared out
+  // by. Unpaid orders are not in the car and so are not in the split.
+  const { data: orders } = await db()
+    .from("orders")
+    .select("batch_id, status")
+    .in("batch_id", batches.map((one) => one.id))
+    .not("status", "in", NOT_ORDERS_SQL);
+
+  const bags = new Map<string, number>();
+  for (const order of (orders ?? []) as { batch_id: string; status: string }[]) {
+    if (!isPaid(order.status)) continue;
+    bags.set(order.batch_id, (bags.get(order.batch_id) ?? 0) + 1);
+  }
+
+  const shares = splitDayCosts(
+    {
+      fuel: money("fuel_cost"),
+      transport: money("transport_cost"),
+      driver: money("driver_cost"),
+      other: money("other_cost"),
+    },
+    batches.map((one) => ({ id: one.id, bags: bags.get(one.id) ?? 0 }))
+  );
+
+  const note = String(form.get("cost_note") ?? "").trim();
+
+  for (const share of shares) {
+    const costs = {
+      fuel_cost: share.fuel,
+      driver_cost: share.driver,
+      other_cost: share.other,
+      cost_note: note,
+    };
+    // Transport is the newest of these, and naming a column the database
+    // has not been given yet fails the whole update.
+    const { error } = await db()
+      .from("batches")
+      .update({ ...costs, transport_cost: share.transport })
+      .eq("id", share.id);
+    if (error) await db().from("batches").update(costs).eq("id", share.id);
+  }
+
+  revalidatePath("/admin", "layout");
 }
 
 export async function setRunCosts(form: FormData): Promise<void> {

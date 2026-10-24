@@ -38,10 +38,10 @@ export const whatIsIn = (group: Group): string =>
 export const DAILY: Item[] = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/runs", label: "Runs" },
   // Everything going out today as one shopping list, however many
   // batches it came in on. See app/admin/today.
   { href: "/admin/today", label: "Driving today" },
+  { href: "/admin/runs", label: "All runs" },
   { href: "/admin/schedule", label: "Schedule" },
 ];
 
@@ -171,7 +171,11 @@ export const EVERY = [...DAILY, ...GROUPS.flatMap((one) => one.items), ...YOU];
 export const TABS: Item[] = [
   { href: "/admin", label: "Dash" },
   { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/runs", label: "Runs" },
+  /* The day's one shopping list, which is what the tab is wanted for
+     ninety evenings in a hundred. The list of runs is a tap further on,
+     at the top of it, because that page is the books and the history
+     rather than the thing being driven. */
+  { href: "/admin/today", label: "Runs" },
   { href: "/admin/schedule", label: "Diary" },
   { href: "/admin/more", label: "More" },
 ];

@@ -6,6 +6,7 @@ import { anythingLeft, stillToGo, takingLastMinute } from "../lib/last-minute";
 import { runCarries } from "../lib/run-places";
 import { withIce, withoutIce } from "../lib/ice";
 import { runToWorkOn, type RunToPick } from "../lib/which-run";
+import { dayCostSoFar, shareOut, splitDayCosts } from "../lib/day-costs";
 import { carsStillDrivable, driverIsOut } from "../lib/one-driver";
 import { saidPick, saidPicks, saidPicksLine } from "../lib/picks";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
@@ -6407,4 +6408,45 @@ test("today's run is the one with food in it", () => {
   assert.equal(runToWorkOn([later, tomorrowEmpty, tomorrowReal], today), tomorrowReal);
 
   assert.equal(runToWorkOn([], today), null);
+});
+
+test("a day's costs are typed once and shared, never doubled", () => {
+  // One fare for one drive, across a run carrying four bags and a car
+  // carrying two. What the parts come to is what was typed.
+  const split = splitDayCosts(
+    { fuel: 0, transport: 9000, driver: 0, other: 0 },
+    [
+      { id: "run", bags: 4 },
+      { id: "car", bags: 2 },
+    ]
+  );
+  assert.deepEqual(
+    split.map((one) => one.transport),
+    [6000, 3000]
+  );
+  assert.equal(
+    split.reduce((sum, one) => sum + one.transport, 0),
+    9000
+  );
+
+  // The odd naira goes to the one carrying most of the evening, so
+  // nothing is lost to rounding.
+  const odd = shareOut(7000, [2, 1]);
+  assert.deepEqual(odd, [4667, 2333]);
+  assert.equal(odd[0] + odd[1], 7000);
+
+  // Nothing carrying anything yet: split evenly rather than dropped.
+  assert.deepEqual(shareOut(4000, [0, 0]), [2000, 2000]);
+
+  // Nothing typed is nothing shared.
+  assert.deepEqual(shareOut(0, [3, 1]), [0, 0]);
+
+  // Added back up, which is what the boxes open on.
+  assert.deepEqual(
+    dayCostSoFar([
+      { fuel: 100, transport: 6000, driver: 0, other: 50 },
+      { fuel: 200, transport: 3000, driver: 0, other: 0 },
+    ]),
+    { fuel: 300, transport: 9000, driver: 0, other: 50 }
+  );
 });
