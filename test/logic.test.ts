@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { anythingLeft, stillToGo, takingLastMinute } from "../lib/last-minute";
 import { runCarries } from "../lib/run-places";
 import { withIce, withoutIce } from "../lib/ice";
+import { runToWorkOn, type RunToPick } from "../lib/which-run";
 import { carsStillDrivable, driverIsOut } from "../lib/one-driver";
 import { saidPick, saidPicks, saidPicksLine } from "../lib/picks";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
@@ -6367,4 +6368,43 @@ test("a bag of ice goes on once, and leaves when the ice cream does", () => {
   // Out of the delivery count: the bag is the shop's answer to a problem
   // the order created, not another thing somebody asked for.
   assert.deepEqual(withoutIce(many, "ice"), [{ menu_item_id: "sundae", qty: 10 }]);
+});
+
+test("today's run is the one with food in it", () => {
+  const today = "2026-10-24";
+  const run = (one: Partial<RunToPick> & { cut_off_at: string }) => ({
+    run_date: today,
+    stage: "closed" as const,
+    orderCount: 0,
+    ...one,
+  });
+
+  // Two runs today, one of them empty. The empty one is the one day's run
+  // nobody can work on, and it was the one the button kept opening.
+  const empty = run({ cut_off_at: "2026-10-24T10:00:00Z", orderCount: 0 });
+  const real = run({ cut_off_at: "2026-10-24T14:00:00Z", orderCount: 6 });
+  assert.equal(runToWorkOn([empty, real], today), real);
+  assert.equal(runToWorkOn([real, empty], today), real);
+
+  // Both have food: the one further along is the one being worked on.
+  const shopping = run({ cut_off_at: "2026-10-24T14:00:00Z", orderCount: 2, stage: "at_counter" });
+  const waiting = run({ cut_off_at: "2026-10-24T10:00:00Z", orderCount: 3 });
+  assert.equal(runToWorkOn([waiting, shopping], today), shopping);
+
+  // Neither has food: the one closing soonest.
+  const early = run({ cut_off_at: "2026-10-24T10:00:00Z" });
+  const late = run({ cut_off_at: "2026-10-24T18:00:00Z" });
+  assert.equal(runToWorkOn([late, early], today), early);
+
+  // Nothing today: the soonest day after it, and the same question again
+  // within that day.
+  const tomorrowEmpty = { ...run({ cut_off_at: "2026-10-25T09:00:00Z" }), run_date: "2026-10-25" };
+  const tomorrowReal = {
+    ...run({ cut_off_at: "2026-10-25T16:00:00Z", orderCount: 4 }),
+    run_date: "2026-10-25",
+  };
+  const later = { ...run({ cut_off_at: "2026-10-28T16:00:00Z", orderCount: 9 }), run_date: "2026-10-28" };
+  assert.equal(runToWorkOn([later, tomorrowEmpty, tomorrowReal], today), tomorrowReal);
+
+  assert.equal(runToWorkOn([], today), null);
 });

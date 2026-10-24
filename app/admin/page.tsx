@@ -1,4 +1,5 @@
 import PageHeader from "@/components/admin/PageHeader";
+import { runToWorkOn } from "@/lib/which-run";
 import Link from "next/link";
 import Diagnostic from "@/components/Diagnostic";
 import AdminLive from "@/components/admin/AdminLive";
@@ -112,10 +113,11 @@ export default async function AdminHome() {
         batch.status !== "delivered"
     )
     .sort((a, b) => a.run_date.localeCompare(b.run_date));
-  const working =
-    drivable.find((batch) => batch.run_date === lagosToday()) ??
-    drivable.find((batch) => batch.run_date > lagosToday()) ??
-    null;
+  // Two runs on one day is ordinary, and the first of them by date is
+  // whichever the database happened to return: the button kept opening
+  // the empty one, which is the one run of the day nobody can work on.
+  // See lib/which-run.ts.
+  const working = runToWorkOn(drivable, lagosToday());
   const workingLabel =
     working === null
       ? ""
