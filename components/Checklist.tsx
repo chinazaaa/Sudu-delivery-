@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Many from "@/components/Many";
 
 /**
  * A private checklist, kept in this browser only. It is for working through a
@@ -39,6 +40,10 @@ export default function Checklist({
      * and in the display face rather than buried in front of the words.
      */
     lead?: string;
+    /** How many, where the line is a thing being bought. Drawn loud above
+     *  one, because the whole of buying one of a thing somebody asked two
+     *  of is a digit that looks like every other digit on the page. */
+    qty?: number;
     /**
      * Somebody at the counter said this one could not be had.
      *
@@ -158,10 +163,14 @@ export default function Checklist({
               >
                 {had(item) ? "✓" : item.short === true ? "—" : ""}
               </span>
-              {item.lead && (
-                <span className="min-w-[46px] shrink-0 font-display text-[34px] font-black leading-none sm:min-w-[48px] sm:text-[30px]">
-                  {item.lead}
-                </span>
+              {item.qty !== undefined ? (
+                <Many qty={item.qty} />
+              ) : (
+                item.lead && (
+                  <span className="min-w-[46px] shrink-0 font-display text-[34px] font-black leading-none sm:min-w-[48px] sm:text-[30px]">
+                    {item.lead}
+                  </span>
+                )
               )}
               <span className={`min-w-0 ${had(item) ? "line-through" : ""}`}>
                 <span className="block text-[15px] font-semibold leading-[1.25] sm:text-[15.5px]">

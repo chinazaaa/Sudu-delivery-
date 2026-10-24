@@ -3,6 +3,7 @@ import { randomBytes } from "crypto";
 
 import type { CounterGroup } from "./admin";
 import { naira } from "./money";
+import { inWords } from "./counts";
 
 /**
  * The run as whoever drives it sees it.
@@ -229,9 +230,20 @@ export function counterMessage(
   group: CounterGroup,
   when: { shopName: string }
 ): string {
+  /*
+   * The count twice where there is more than one.
+   *
+   * On a screen a count above one is drawn in colour, which a message has
+   * no way of doing. A digit at the front of a line is the easiest thing
+   * on it to skim past, and buying one of a thing somebody ordered two of
+   * costs twice: the customer is short, and the shop hands back money it
+   * already paid at the counter. A number and a word fail differently, so
+   * whoever reads this has to miss both.
+   */
   const lines = group.lines.map((line) => {
     const choices = line.choices.length > 0 ? ` ${line.choices.join(", ")}` : "";
-    return `${line.qty} x ${line.name}${choices}`;
+    const many = line.qty > 1 ? ` (${inWords(line.qty).toUpperCase()})` : "";
+    return `${line.qty} x ${line.name}${choices}${many}`;
   });
 
   return [

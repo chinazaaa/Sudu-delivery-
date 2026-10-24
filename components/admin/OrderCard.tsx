@@ -9,6 +9,7 @@ import { STAGE_LABEL, type BatchStage } from "@/lib/stages";
 import { formatPhone } from "@/lib/phone";
 import { placedLabel } from "@/lib/time";
 import { doorSkin, doorTag } from "@/lib/doors";
+import Many from "@/components/Many";
 
 export type OrderCardLine = {
   id: string;
@@ -470,7 +471,7 @@ export default function OrderCard({
                 >
                   <span className="min-w-0">
                     <span className="font-semibold">
-                      <span className="text-muted">{line.qty} ×</span> {line.name}
+                      <Many qty={line.qty} small /> {line.name}
                     </span>
                     {/* The choices under the name, not trailed after it. On a
                         pizza they are the only thing telling two lines

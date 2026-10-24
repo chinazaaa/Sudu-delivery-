@@ -26,6 +26,7 @@ import {
   type CounterContact,
 } from "@/lib/runner-server";
 import { runDateLabel } from "@/lib/time";
+import Many from "@/components/Many";
 
 export const dynamic = "force-dynamic";
 
@@ -202,9 +203,7 @@ export default async function RunPage({
               <ul className="space-y-1.5 text-[15px]">
                 {bag.lines.map((line, index) => (
                   <li key={`${bag.key}-${index}`} className="flex gap-2.5">
-                    <span className="font-display text-[17px] font-black">
-                      {line.qty}×
-                    </span>
+                    <Many qty={line.qty} small />
                     <span>
                       {line.name}
                       {line.choices.length > 0 && (

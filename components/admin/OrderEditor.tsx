@@ -5,6 +5,7 @@ import ActionButton from "@/components/ActionButton";
 
 import { naira } from "@/lib/money";
 import type { EditedLine } from "@/lib/order-edit";
+import Many from "@/components/Many";
 
 /**
  * What is actually in one order, and how to change it.
@@ -164,7 +165,7 @@ export default function OrderEditor({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-bold leading-tight">
-                    <span className="text-muted">{line.qty} ×</span> {line.name}
+                    <Many qty={line.qty} small /> {line.name}
                   </p>
 
                   {/* Every choice as its own chip. Run together in a

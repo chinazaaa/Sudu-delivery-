@@ -96,6 +96,7 @@ import { EMPTY } from "../lib/settings";
 import { test } from "node:test";
 import { chargedByRestaurant, groupForCounter } from "../lib/admin";
 import { bare, spellings } from "../lib/admin-search";
+import { inWords } from "../lib/counts";
 import { fareFor, parseFares, putOnCard, serialiseFares } from "../lib/transport";
 import { normalisePhone, formatPhone } from "../lib/phone";
 import { countdown, lagosInstant, lagosToday } from "../lib/time";
@@ -6069,4 +6070,59 @@ test("a name is found without its apostrophe", () => {
   // The characters that would break the query are not sent into it.
   assert.deepEqual(spellings("a,b(c)%"), ["a b c"]);
   assert.deepEqual(spellings("   "), []);
+});
+
+test("more than one is said twice", () => {
+  /*
+   * Two hamburger meals were ordered and one was bought, and the whole of
+   * that mistake is a digit that looks exactly like every other digit on
+   * the page. It costs twice: the customer is short a meal, and the shop
+   * hands back money it has already paid at a counter.
+   */
+  assert.equal(inWords(2), "two");
+  assert.equal(inWords(3), "three");
+  assert.equal(inWords(10), "ten");
+  // Past ten the digits read faster than the word, and nobody says
+  // "seventeen" at a till quicker than they read 17.
+  assert.equal(inWords(17), "17");
+  assert.equal(inWords(1), "one");
+
+  // The message to the counter carries it, because a message has no
+  // colour to use. One of a thing stays quiet: a line that shouts on
+  // every row is a line nobody reads.
+  const group = {
+    restaurant: "Burger King",
+    lines: [
+      {
+        name: "Hamburger Meal",
+        choices: [],
+        qty: 2,
+        unitPrice: 9150,
+        key: "a",
+        paid: null,
+        itemId: "x",
+        recovered: 0,
+        menuPrice: 9150,
+        costPrice: 0,
+      },
+      {
+        name: "Coca-Cola",
+        choices: [],
+        qty: 1,
+        unitPrice: 1500,
+        key: "b",
+        paid: null,
+        itemId: "y",
+        recovered: 0,
+        menuPrice: 1500,
+        costPrice: 0,
+      },
+    ],
+    expectedFoodTotal: 19800,
+  };
+
+  const said = counterMessage(group, { shopName: "Sudu" });
+  assert.match(said, /2 x Hamburger Meal \(TWO\)/);
+  assert.equal(said.includes("Coca-Cola (ONE)"), false);
+  assert.match(said, /1 x Coca-Cola/);
 });

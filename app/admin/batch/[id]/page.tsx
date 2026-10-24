@@ -81,6 +81,7 @@ import {
 } from "../../actions";
 import Reorder from "@/components/admin/Reorder";
 import WhenHanded from "@/components/admin/WhenHanded";
+import Many from "@/components/Many";
 
 export const dynamic = "force-dynamic";
 
@@ -1478,7 +1479,7 @@ export default async function BatchPage({
                              note is the part the server does know. */
                           short: couldNotGet.has(line.key),
                           shortSaid: couldNotGet.get(line.key) ?? "",
-                          lead: `${line.qty}×`,
+                          qty: line.qty,
                           text: line.name,
                           detail: line.choices.join(", "),
                           /* What one of them costs at the counter, not what
@@ -1688,8 +1689,8 @@ export default async function BatchPage({
                             <input type="hidden" name="batch_id" value={batch.id} />
                             <input type="hidden" name="line_key" value={line.key} />
                             <span className="min-w-0 text-sm">
-                              <span className="font-semibold">
-                                {line.qty}× {line.name}
+                              <span className="flex items-baseline gap-1.5 font-semibold">
+                                <Many qty={line.qty} small /> {line.name}
                               </span>
                               <span className="block text-xs text-muted">
                                 {group.restaurant} · menu says{" "}

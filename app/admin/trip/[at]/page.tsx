@@ -5,6 +5,7 @@ import Stat from "@/components/admin/Stat";
 import { tripSheet } from "@/lib/admin";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
+import Many from "@/components/Many";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,7 @@ export default async function TripPage({
               <ul className="mt-2 space-y-1 text-sm">
                 {place.lines.map((line, index) => (
                   <li key={`${place.restaurant}-${index}`} className="flex gap-2">
-                    <span className="font-bold text-brand">{line.qty}×</span>
+                    <Many qty={line.qty} small />
                     <span>
                       {line.name}
                       {line.choices.length > 0 && (
@@ -107,8 +108,8 @@ export default async function TripPage({
               </div>
               <ul className="mt-1 text-sm text-ink/80">
                 {order.lines.map((line) => (
-                  <li key={line.id}>
-                    {line.qty}× {line.name}
+                  <li key={line.id} className="flex items-baseline gap-1.5">
+                    <Many qty={line.qty} small /> {line.name}
                     {line.choices.length > 0 && (
                       <span className="text-muted"> · {line.choices.join(", ")}</span>
                     )}
