@@ -150,18 +150,38 @@ export default function CounterLines({
   const [saving, save] = useTransition();
   const was = useRef(done);
 
-  useEffect(() => {
-    if (all === was.current) return;
-    was.current = all;
-
+  function tellTheRun(collected: boolean) {
+    was.current = collected;
     const form = new FormData();
     form.set("token", token);
     form.set("restaurant", restaurant);
-    form.set("collected", all ? "true" : "false");
+    form.set("collected", collected ? "true" : "false");
     save(() => {
       void markStop(form);
     });
+  }
+
+  useEffect(() => {
+    if (all === was.current) return;
+    tellTheRun(all);
+    // Only the ticks changing is a reason to say so again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [all, token, restaurant]);
+
+  /*
+   * Collected, or not after all, said in one go.
+   *
+   * Clearing the ticks is not enough on its own once the run has been
+   * told: `got` reads the run's own answer while it says collected, so
+   * the ticks go and nothing changes, which is how the undo came to be a
+   * button that did nothing at exactly the moment somebody needed it.
+   * So this says both things: the ticks on this phone, and the fact on
+   * the run.
+   */
+  function sayCollected(collected: boolean) {
+    tickEverything(collected);
+    if (done !== collected) tellTheRun(collected);
+  }
 
   // A blank line counts at what it should cost, exactly as it will when
   // it is saved, so what this says and what the shop records cannot
@@ -184,8 +204,8 @@ export default function CounterLines({
             arrived was six taps at a counter with a card machine waiting. */}
         <button
           type="button"
-          onClick={() => tickEverything(!all)}
-          disabled={done || shut || lines.length === 0}
+          onClick={() => sayCollected(!all)}
+          disabled={shut || lines.length === 0}
           aria-label={
             all
               ? `Clear the ticks at ${restaurant}`
@@ -203,7 +223,7 @@ export default function CounterLines({
           </span>
           <span>
             {got}/{lines.length} got
-            {!done && !shut && lines.length > 1 && (
+            {!shut && lines.length > 1 && (
               <span className="block text-[12.5px]">
                 {all ? "tap to clear" : "tap for all of them"}
               </span>
@@ -429,18 +449,35 @@ export default function CounterLines({
         somebody holding the bag who has no wish to confirm it six times.
         It ticks the lines rather than setting a flag of its own, so the
         list above always agrees with it.
+
+        Said in full when it is the undo. Under a button called "Save what
+        the receipt said", two words about collecting read as being about
+        the receipt, and whoever has just ticked everything off is left
+        wondering what the shop thinks they have not done.
       */}
-      <button
-        type="button"
-        onClick={() =>
-          setTicked(
-            all ? {} : Object.fromEntries(lines.map((line) => [line.key, true]))
-          )
-        }
-        className={`w-full py-3.5 text-base ${all ? "btn-quiet" : "btn-primary"}`}
-      >
-        {saving ? "\u2026" : all ? "Not collected after all" : "Got everything here"}
-      </button>
+      {all ? (
+        <div className="soft px-3.5 py-3">
+          <p className="text-[13px] text-muted">
+            Everything here is ticked, so the run has this stop down as
+            collected. Nothing else to do unless that is wrong.
+          </p>
+          <button
+            type="button"
+            onClick={() => sayCollected(false)}
+            className="btn-quiet mt-2 w-full py-3 text-base"
+          >
+            {saving ? "\u2026" : "Not collected after all"}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => sayCollected(true)}
+          className="btn-primary w-full py-3.5 text-base"
+        >
+          {saving ? "\u2026" : "Got everything here"}
+        </button>
+      )}
       <p className="text-[13px] text-muted">
         Leave a box empty where the till asked for exactly this, which is
         most of them.
