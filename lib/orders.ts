@@ -41,7 +41,13 @@ import { OUT_SAID } from "./one-driver";
 import { bandsFor, isSkincareBatch } from "./skincare";
 import { counterHolding } from "./counter";
 import { takingLastMinute } from "./last-minute";
-import { asACar, areaOfCart, stepFeeOfEach } from "./areas-server";
+import { withIce, withoutIce } from "./ice";
+import {
+  asACar,
+  areaOfCart,
+  itemsNeedingIce,
+  stepFeeOfEach,
+} from "./areas-server";
 import { feeAcross } from "./value-bands";
 import { feeRidingAlong, type StepFee } from "./step-fee";
 import { realPromoter } from "./promoters";
@@ -310,6 +316,24 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 
   // Priced here, before anything commits to a car, because an order that
   // cannot go at all should be refused before a car is made for it.
+  /*
+   * The bag of ice block, where anything here has to travel on ice.
+   *
+   * Put on here rather than trusted from the browser: a cart is written
+   * on a phone and a phone can leave it off. One bag for the order
+   * however many tubs are in it, and it is not asked for, because an
+   * order that needs it and does not have it arrives melted. See
+   * lib/ice.ts.
+   */
+  const iceItem = (await safeSettings()).ice_item_id ?? "";
+  input = {
+    ...input,
+    lines: withIce(input.lines, await itemsNeedingIce(), iceItem, (itemId) => ({
+      menu_item_id: itemId,
+      qty: 1,
+    })),
+  };
+
   const priced = await priceLines(input.lines);
   if ("error" in priced) return { ok: false, error: priced.error };
 

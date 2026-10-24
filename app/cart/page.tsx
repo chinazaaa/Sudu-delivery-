@@ -1,4 +1,6 @@
 import CartView from "@/components/CartView";
+import IceInCart from "@/components/IceInCart";
+import { iceForCart } from "@/lib/ice-server";
 import HelpLine from "@/components/HelpLine";
 import ShelfNote from "@/components/ShelfNote";
 import {
@@ -32,12 +34,13 @@ export default async function CartPage({
   // said what they want; asking again on this page was the same button twice.
   const startGroup = (await searchParams).start === "1";
 
-  const [restaurants, batches, settings] = await Promise.all([
+  const [restaurants, batches, settings, { ice, needsIce }] = await Promise.all([
     // The cart is where someone realises they forgot the drinks, so the
     // restaurants are right there rather than back through the home page.
     openRestaurants(),
     openBatches(),
     safeSettings(),
+    iceForCart(),
   ]);
 
   const [slots, bands] = await Promise.all([
@@ -76,6 +79,10 @@ export default async function CartPage({
           href="/pharmacy/checkout"
         />
       )}
+      {/* The bag of ice block, put in by the shop wherever the cart is
+          read, so the figure here and the figure on the bill are one
+          figure. See components/IceInCart.tsx. */}
+      <IceInCart ice={ice} needsIce={needsIce} />
       <CartView
       restaurants={restaurants}
       runs={batches

@@ -18,7 +18,7 @@ import { batchSheet, stillOpen } from "@/lib/admin";
 import { db } from "@/lib/supabase";
 import { STAGES, stageIndex, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
-import { hoursByDay, deliveryWindows, externalUrl, sayWindow } from "@/lib/settings";
+import { hoursByDay, deliveryWindows, externalUrl, safeSettings, sayWindow } from "@/lib/settings";
 import { runSchedule } from "@/lib/schedule";
 import { guessAisle } from "@/lib/aisles";
 import { nextLanding, orderByRef, planById, raiseCycle } from "@/lib/plans";
@@ -1665,6 +1665,10 @@ export async function updateMenuItem(form: FormData): Promise<void> {
     step_fee: String(form.get("step_fee") ?? "").trim(),
     // Where to go and get it, for us, never for the customer.
     source: String(form.get("source") ?? "").trim(),
+    // Has to travel on ice. Ticked item by item rather than guessed from
+    // a counter: Domino's sells one dessert among forty pizzas, and the
+    // small ice creams in the shop ride along in a cool box instead.
+    needs_ice: form.get("needs_ice") === "on",
   };
 
   // Naming a column the database has not got refuses the whole statement, so
@@ -1672,17 +1676,47 @@ export async function updateMenuItem(form: FormData): Promise<void> {
   const id = String(form.get("item_id"));
   let { error } = await db().from("menu_items").update(fields).eq("id", id);
   if (error) {
-    const { step_fee: _noSteps, ...withoutSteps } = fields;
+    const { needs_ice: _noIce, ...withoutIceFlag } = fields;
+    ({ error } = await db().from("menu_items").update(withoutIceFlag).eq("id", id));
+  }
+  if (error) {
+    const { needs_ice: _alsoNoIce, step_fee: _noSteps, ...withoutSteps } = fields;
     ({ error } = await db().from("menu_items").update(withoutSteps).eq("id", id));
   }
   if (error) {
-    const { step_fee: _alsoNoSteps, source: _noSource, ...withoutSource } = fields;
+    const {
+      needs_ice: _neverIce,
+      step_fee: _alsoNoSteps,
+      source: _noSource,
+      ...withoutSource
+    } = fields;
     ({ error } = await db().from("menu_items").update(withoutSource).eq("id", id));
     if (error) {
       const { container_pct: _dropped, ...rest } = withoutSource;
       await db().from("menu_items").update(rest).eq("id", id);
     }
   }
+  /*
+   * Which item the bag of ice block itself is.
+   *
+   * Kept as one setting rather than a column, because there is one of
+   * them in the whole shop and the question is "which item is it", not
+   * "is this one of many". Ticked and untitled from the item's own
+   * editor, where somebody is already looking at the thing.
+   */
+  if (form.get("is_ice__asked") !== null) {
+    const had = (await safeSettings()).ice_item_id ?? "";
+    const wanted = form.get("is_ice") === "on" ? id : "";
+    // Only ever this item's own tick: unticking here must not clear a
+    // pointer that was never about this item.
+    if (wanted !== "" || had === id) {
+      await db()
+        .from("settings")
+        .update({ ice_item_id: wanted, updated_at: new Date().toISOString() })
+        .eq("id", true);
+    }
+  }
+
   revalidatePath("/admin", "layout");
   updateTag("menu");
   revalidatePath("/", "layout");

@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { anythingLeft, stillToGo, takingLastMinute } from "../lib/last-minute";
 import { runCarries } from "../lib/run-places";
+import { withIce, withoutIce } from "../lib/ice";
 import { carsStillDrivable, driverIsOut } from "../lib/one-driver";
 import { saidPick, saidPicks, saidPicksLine } from "../lib/picks";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
@@ -6336,4 +6337,34 @@ test("a counter she has been to is behind her", () => {
     got: ["Burger King", "Chicken Republic", "Domino's Pizza"],
   });
   assert.equal(anythingLeft(done), false);
+});
+
+test("a bag of ice goes on once, and leaves when the ice cream does", () => {
+  const needs = new Set(["sundae"]);
+  const bag = (itemId: string) => ({ menu_item_id: itemId, qty: 1 });
+
+  // Nothing on ice: nothing added.
+  assert.deepEqual(withIce([{ menu_item_id: "pizza", qty: 2 }], needs, "ice", bag), [
+    { menu_item_id: "pizza", qty: 2 },
+  ]);
+
+  // Ten tubs and one tub need the same bag, and it is one bag.
+  const many = withIce([{ menu_item_id: "sundae", qty: 10 }], needs, "ice", bag);
+  assert.deepEqual(many, [
+    { menu_item_id: "sundae", qty: 10 },
+    { menu_item_id: "ice", qty: 1 },
+  ]);
+
+  // Already there: never a second one.
+  assert.equal(withIce(many, needs, "ice", bag).length, 2);
+
+  // The shop has not said which item the bag is. Nothing is added, and
+  // nothing is refused either.
+  assert.deepEqual(withIce([{ menu_item_id: "sundae", qty: 1 }], needs, "", bag), [
+    { menu_item_id: "sundae", qty: 1 },
+  ]);
+
+  // Out of the delivery count: the bag is the shop's answer to a problem
+  // the order created, not another thing somebody asked for.
+  assert.deepEqual(withoutIce(many, "ice"), [{ menu_item_id: "sundae", qty: 10 }]);
 });

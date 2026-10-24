@@ -119,6 +119,10 @@ export type Settings = {
   ribbon_href: string;
   /** Same day delivery is on today, or it is not. "on" or empty. */
   same_day_on: string;
+  /** The menu item that is the bag of ice block, added to any order
+   *  holding something that has to travel on ice. Empty until the shop
+   *  says which item it is, and then nothing is ever added. */
+  ice_item_id: string;
   /** The same day price ladder, as JSON, so it can be changed without a
    *  deploy. Empty means the built in one. */
   same_day_bands: string;
@@ -314,6 +318,7 @@ export const EMPTY: Settings = {
   ribbon_text: "",
   ribbon_href: "",
   same_day_on: "",
+  ice_item_id: "",
   same_day_bands: "",
   same_day_urgent_extra: "",
   group_fee_floor: "",

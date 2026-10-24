@@ -80,6 +80,9 @@ export default async function RestaurantAdmin({
 
   const categoryList = (categories ?? []) as MenuCategory[];
   const aisles = aislesFrom((await safeSettings()).menu_aisles);
+  // Which item is the bag of ice block itself, so its own tick shows as
+  // ticked. One in the whole shop, so it is a setting rather than a column.
+  const iceItemId = (await safeSettings()).ice_item_id ?? "";
   const itemList = (items ?? []) as MenuItem[];
   const groupsByItem = await optionGroupsFor(
     itemList.map((i) => i.id),
@@ -781,6 +784,31 @@ export default async function RestaurantAdmin({
                     <label className="flex items-center gap-2 pb-2 text-sm">
                       <input type="checkbox" name="available" defaultChecked={item.available} />
                       Available
+                    </label>
+                  </div>
+                  {/* Ice cream bought at four and handed over at seven is
+                      soup. The route puts the counter last; this puts a bag
+                      of ice block in the boot with it. Ticked item by item,
+                      because Domino's sells one dessert among forty pizzas
+                      and the small ice creams in the shop ride along in a
+                      cool box and need nothing. */}
+                  <div className="flex flex-wrap gap-x-5 gap-y-1">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        name="needs_ice"
+                        defaultChecked={item.needs_ice === true}
+                      />
+                      Has to travel on ice
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="hidden" name="is_ice__asked" value="1" />
+                      <input
+                        type="checkbox"
+                        name="is_ice"
+                        defaultChecked={iceItemId === item.id}
+                      />
+                      This <em>is</em> the bag of ice block
                     </label>
                   </div>
                   <div>

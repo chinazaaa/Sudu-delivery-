@@ -25,7 +25,7 @@ import {
   type Area,
   type AreaPair,
 } from "@/lib/areas";
-import { runCarries } from "@/lib/run-places";
+import { placesOfRun, runCarries } from "@/lib/run-places";
 import { DAY_NAMES, nextOpenDay, opensOn, weekdayOf } from "@/lib/open-days";
 import { offerShare, pickOffer, type LiveOffer } from "@/lib/offers";
 import { normalisePhone } from "@/lib/phone";
@@ -296,6 +296,42 @@ export default function Checkout({
     stillFine.length === 1
       ? stillFine[0]
       : `${stillFine.slice(0, -1).join(", ")} and ${stillFine[stillFine.length - 1]}`;
+
+  /*
+   * Tonight's closed run, and the counters it has already been to.
+   *
+   * The cart holding one of them is not a cart with nothing going for it:
+   * the rest of it can still go out tonight, and the whole of it can go on
+   * the next run. Saying which half is which is the difference between an
+   * order split by somebody who knows why, and a run that silently is not
+   * on the list. See lib/last-minute.ts.
+   */
+  const lateRun = batches.find((one) => one.lastMinute === true) ?? null;
+  const lateStops = lateRun ? placesOfRun(lateRun.onlyPlaces) : [];
+  const saidList = (names: string[]) =>
+    names.length === 1
+      ? names[0]
+      : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  const beenTo =
+    lateRun === null
+      ? []
+      : [
+          ...new Set(
+            cart
+              .filter((line) => !lateStops.includes(line.restaurantId))
+              .map((line) => line.restaurantName)
+          ),
+        ];
+  const stillToCome =
+    lateRun === null
+      ? []
+      : [
+          ...new Set(
+            cart
+              .filter((line) => lateStops.includes(line.restaurantId))
+              .map((line) => line.restaurantName)
+          ),
+        ];
 
   // When the closed one opens again, for the case where no run at all can
   // carry this cart: "Pick another day" is useless without the day.
@@ -1234,6 +1270,23 @@ export default function Checkout({
             {onARun
               ? "Everybody's food in one car, which is why it costs less."
               : "A car of its own, because no run is going in time for this."}
+          </p>
+        )}
+
+        {/* Half this cart can go out tonight and half of it cannot, and
+            which half is a fact about where the car has got to rather than
+            anything the customer did. Said plainly, with both ways out of
+            it, rather than leaving tonight's run quietly off the list. */}
+        {lateRun !== null && beenTo.length > 0 && stillToCome.length > 0 && (
+          <p className="soft px-3.5 py-2.5 text-sm">
+            <span className="font-semibold">
+              We have already been to {saidList(beenTo)} tonight.
+            </span>{" "}
+            {saidList(stillToCome)} {stillToCome.length === 1 ? "is" : "are"}{" "}
+            still ahead of the car, so {stillToCome.length === 1 ? "that" : "those"}{" "}
+            can go out today as a last minute order: take the rest out of the
+            cart and it comes tonight. For all of it together, pick the next
+            run or a car of its own below.
           </p>
         )}
 

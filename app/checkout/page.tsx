@@ -1,4 +1,6 @@
 import { lagosToday } from "@/lib/time";
+import IceInCart from "@/components/IceInCart";
+import { iceForCart } from "@/lib/ice-server";
 import HelpLine from "@/components/HelpLine";
 import { cookies } from "next/headers";
 import {
@@ -38,9 +40,10 @@ export default async function CheckoutPage({
 }) {
   const params = await searchParams;
 
-  const [batches, justClosed] = await Promise.all([
+  const [batches, justClosed, { ice, needsIce }] = await Promise.all([
     openBatches(),
     recentlyClosedBatch(),
+    iceForCart(),
   ]);
 
   // Every run that is open, not the next few. Which of them can carry this
@@ -119,6 +122,10 @@ export default async function CheckoutPage({
 
   return (
     <>
+      {/* The bag of ice block, put in by the shop wherever the cart is
+          read, so the figure here and the figure on the bill are one
+          figure. See components/IceInCart.tsx. */}
+      <IceInCart ice={ice} needsIce={needsIce} />
       <Checkout
       monies={monies}
       batches={views}

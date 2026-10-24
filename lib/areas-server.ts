@@ -246,6 +246,28 @@ export const stepFeeOfEach = cache(async function stepFeeOfEach(): Promise<
 });
 
 /**
+ * The items that have to travel on ice, by id.
+ *
+ * Ticked item by item in admin rather than guessed from a counter's name:
+ * Cold Stone is all ice cream, Domino's sells one dessert among forty
+ * pizzas, and the small ice creams in the shop ride along in a cool box
+ * and need nothing. See lib/ice.ts.
+ *
+ * Read once per request, and empty before the column exists, which is how
+ * every order worked before this.
+ */
+export const itemsNeedingIce = cache(async function itemsNeedingIce(): Promise<
+  Set<string>
+> {
+  const { data, error } = await db()
+    .from("menu_items")
+    .select("id")
+    .eq("needs_ice", true);
+  if (error) return new Set<string>();
+  return new Set(((data ?? []) as { id: string }[]).map((one) => one.id));
+});
+
+/**
  * The same cart, charged as a car rather than as a run.
  *
  * What a run that has closed but has not been shopped yet costs: the food

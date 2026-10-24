@@ -112,6 +112,9 @@ export type MenuItem = {
    *  is 25 and a three-pizza deal is 300. Undefined before the column exists,
    *  which reads as a whole container and prices exactly as yesterday. */
   container_pct?: number;
+  /** Has to travel on ice, so an order holding it gets a bag of ice block
+   *  put on it. See lib/ice.ts. */
+  needs_ice?: boolean;
   /** Delivery priced by the cool box, as JSON: a first lot at one price and
    *  every further lot at another. For something small that people buy a lot
    *  of, where the container count is the wrong measure and the thing rides
