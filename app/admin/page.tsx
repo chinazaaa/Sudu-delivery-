@@ -120,10 +120,15 @@ export default async function AdminHome() {
       (batch.run_date === lagosToday() || batch.run_date === tomorrow) &&
       batch.kind !== "parcel" &&
       batch.status !== "cancelled" &&
+      // Something on it, or still somebody's to order onto. An empty run
+      // whose closing time has gone is a car that never existed, and it
+      // spent an evening on this card standing in for the one that did.
+      (batch.orderCount > 0 ||
+        (batch.status === "open" &&
+          new Date(batch.cut_off_at).getTime() > Date.now())) &&
       // Tomorrow's that is somehow already finished is history. Today's
       // never is: a day whose driving is done is still the day being
-      // asked about, and leaving it out showed an empty run beside
-      // nothing while the car that earned the evening went unmentioned.
+      // asked about.
       (batch.run_date === lagosToday() ||
         !(batch.status === "delivered" && done(batch)))
   );

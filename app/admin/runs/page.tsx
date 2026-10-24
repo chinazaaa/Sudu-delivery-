@@ -180,13 +180,23 @@ export default async function RunsPage({
    * drove. Listing it puts a card on the page for a car that never existed,
    * and on a quiet week there are more of those than real ones.
    *
-   * Only ones whose day has passed. Today's run and everything after it
-   * stay on the page whether or not anybody has ordered yet: an empty
-   * Friday is a Friday somebody can still order onto, and it is the card
-   * you open to set its costs or move it along.
+   * Kept while somebody could still order onto it, which is the whole of
+   * what an empty run is for: an empty Friday is a Friday somebody can
+   * still use. Once its closing time has gone and nothing came, it is a
+   * car that never existed, and listing it puts a card on the page for
+   * nothing. The schedule is where runs are arranged; this page is for
+   * the ones that happened.
    */
   batches = batches.filter(
-    (batch) => batch.orderCount > 0 || batch.run_date >= todayIs
+    (batch) =>
+      batch.orderCount > 0 ||
+      // Still somebody's to order onto, which is the whole of what an
+      // empty run is for. Today's that has closed with nothing on it is
+      // not that: it is a car that was never going to exist, and it spent
+      // the evening standing in for the one that did.
+      (batch.status === "open" &&
+        new Date(batch.cut_off_at).getTime() > Date.now()) ||
+      batch.run_date > todayIs
   );
 
   const live = batches.filter((batch) => batch.status !== "cancelled");
