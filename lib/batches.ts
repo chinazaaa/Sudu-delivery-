@@ -702,6 +702,9 @@ export async function lastMinuteRun(): Promise<OpenBatch | null> {
       .eq("run_date", lagosToday())
       .in("stage", ["closed", "at_counter"])
       .neq("status", "cancelled")
+      // The books are closed on it: that night is over however the stage
+      // was left.
+      .is("settled_at", null)
       .order("cut_off_at", { ascending: true })
       .limit(4);
     if (error) return null;

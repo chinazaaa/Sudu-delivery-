@@ -29,6 +29,10 @@ export type MaybeLastMinute = {
   kind?: string | null;
   stage: string;
   status?: string | null;
+  /** When the books were closed on it. A run somebody has settled is
+   *  finished whatever its stage says, and the stage is the thing people
+   *  forget to move. */
+  settled_at?: string | null;
 };
 
 /**
@@ -40,6 +44,11 @@ export type MaybeLastMinute = {
 export function takingLastMinute(batch: MaybeLastMinute): boolean {
   if ((batch.kind ?? "run") !== "run") return false;
   if (batch.status === "cancelled" || batch.status === "delivered") return false;
+  // Settled is the shop saying in its own words that this night is over:
+  // the bags are ticked off, the counter prices are confirmed and the
+  // books are closed. Nothing is more finished than that, and it beats a
+  // stage that says "at the counter" because nobody moved it on.
+  if (batch.settled_at !== null && batch.settled_at !== undefined) return false;
   return batch.stage === "closed" || batch.stage === "at_counter";
 }
 

@@ -6488,3 +6488,17 @@ test("a run stops taking last minute orders once its hour has gone", () => {
     false
   );
 });
+
+test("a settled run is finished, whatever its stage says", () => {
+  const run = { kind: "run", stage: "at_counter", status: "closed" };
+
+  assert.equal(takingLastMinute({ ...run, settled_at: null }), true);
+
+  // She ticked the bags off, confirmed the counter prices and pressed
+  // Settle. The stage sat at "at the counter" because moving it on is a
+  // different tap, and the front page went on selling the night.
+  assert.equal(
+    takingLastMinute({ ...run, settled_at: "2026-10-24T16:00:00Z" }),
+    false
+  );
+});
