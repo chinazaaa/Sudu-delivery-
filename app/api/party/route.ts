@@ -4,7 +4,8 @@ import { randomUUID } from "crypto";
 import { takeSeat } from "@/lib/group-carts";
 import { holdsOwnSeat, seatFrom } from "@/lib/seat";
 import { db } from "@/lib/supabase";
-import { createSameDayBatch, getBatch, isOrderable, sameDayOpenNow } from "@/lib/batches";
+import { createSameDayBatch, getBatch, isOrderable, nobodyToDrive } from "@/lib/batches";
+import { OUT_SAID } from "@/lib/one-driver";
 import { hoursByDay, safeSettings } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
 import { SHARE_MINUTES } from "@/lib/groups";
@@ -38,9 +39,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     let batch = null;
 
     if (body.deliverAt) {
-      // Shut while the one driver is out with tonight's run, as well as
-      // when the shop does not do cars of their own at all.
-      if (!(await sameDayOpenNow())) {
+      if ((await safeSettings()).same_day_on !== "on") {
         return NextResponse.json({ error: "Pick a run instead." }, { status: 400 });
       }
       const slot = deliverySlots(new Date(), await hoursByDay()).find(
@@ -48,6 +47,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
       if (!slot) {
         return NextResponse.json({ error: "That time has gone." }, { status: 400 });
+      }
+      // One driver: while she is out with tonight's run there is nobody to
+      // drive today's car. Tomorrow is untouched. See lib/one-driver.ts.
+      if (await nobodyToDrive(slot.date)) {
+        return NextResponse.json({ error: OUT_SAID }, { status: 400 });
       }
       batch = await createSameDayBatch({
         deliverAt: slot.at,

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { driverIsOut } from "../lib/one-driver";
+import { carsStillDrivable, driverIsOut } from "../lib/one-driver";
 import { saidPick, saidPicks, saidPicksLine } from "../lib/picks";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
 import { containersIn } from "../lib/containers";
@@ -6259,5 +6259,24 @@ test("one driver: a car of its own waits while a run is out", () => {
   assert.equal(
     driverIsOut([{ stage: "on_the_road", run_date: today, kind: "same_day" }], today),
     true
+  );
+});
+
+test("a run out tonight shuts today's cars and not tomorrow's", () => {
+  const today = "2026-10-24";
+  const slots = [
+    { date: today, label: "between 4pm and 6pm" },
+    { date: today, label: "between 6pm and 8pm" },
+    { date: "2026-10-25", label: "between 12pm and 3pm" },
+  ];
+
+  // Nobody out: every time stands.
+  assert.deepEqual(carsStillDrivable(slots, false, today), slots);
+
+  // Out with tonight's run: today goes, tomorrow stays. Tomorrow is a
+  // different day and she is not driving tonight's run on it.
+  assert.deepEqual(
+    carsStillDrivable(slots, true, today).map((one) => one.date),
+    ["2026-10-25"]
   );
 });

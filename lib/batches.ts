@@ -8,7 +8,12 @@ import { runSchedule } from "./schedule";
 import { RUN_HORIZON_DAYS, TZ } from "./config";
 import { lagosInstant, lagosToday } from "./time";
 import { stageIndex } from "./stages";
-import { driverIsOut, OUT_STAGES, type DrivingNow } from "./one-driver";
+import {
+  carsStillDrivable,
+  driverIsOut,
+  OUT_STAGES,
+  type DrivingNow,
+} from "./one-driver";
 import type { Batch } from "./types";
 
 /** Weekday number (0 = Sunday) of a YYYY-MM-DD date, read in Lagos. */
@@ -538,24 +543,31 @@ export async function settleEmptyRuns(): Promise<number> {
 export type OpenBatch = Batch & { order_count: number; full: boolean };
 
 /**
- * Whether a car of its own may be sold at this minute.
+ * The times on offer, with the ones nobody is left to drive taken out.
  *
- * The setting says whether the shop does them at all. This says whether
- * the one driver is free to drive one, which is a different question and
- * the one that goes wrong: the run closes in the afternoon and is driven
- * in the evening, and the car was still on sale the whole time she was
- * out with the boot full. See `lib/one-driver.ts`.
+ * The setting says whether the shop does cars of their own at all. This
+ * says which of today's times the one driver is free for, which is a
+ * different question and the one that goes wrong: the run closes in the
+ * afternoon and is driven in the evening, and the car was still on sale
+ * the whole time she was out with the boot full. Tomorrow is untouched,
+ * because tomorrow was never the thing that clashed. See
+ * `lib/one-driver.ts`.
  *
  * Asked for defensively, because every customer-facing page calls it: a
  * query that fails answers "nobody is out", which is how the shop worked
  * before this existed.
  */
-export async function sameDayOpenNow(settings?: {
-  same_day_on: string;
-}): Promise<boolean> {
-  const on = (settings ?? (await safeSettings())).same_day_on === "on";
-  if (!on) return false;
-  return !(await someoneIsDriving());
+export async function carsOnOffer<T extends { date: string }>(
+  slots: T[]
+): Promise<T[]> {
+  if (slots.length === 0) return slots;
+  return carsStillDrivable(slots, await someoneIsDriving(), lagosToday());
+}
+
+/** Whether a time is one nobody is left to drive. */
+export async function nobodyToDrive(date: string): Promise<boolean> {
+  if (date !== lagosToday()) return false;
+  return someoneIsDriving();
 }
 
 /** The run being driven right now, if there is one. */

@@ -1,5 +1,5 @@
 import GroupHub from "@/components/GroupHub";
-import { openBatches, sameDayOpenNow } from "@/lib/batches";
+import { openBatches, carsOnOffer } from "@/lib/batches";
 import { hoursByDay, safeSettings } from "@/lib/settings";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
@@ -19,16 +19,20 @@ export const dynamic = "force-dynamic";
 export default async function GroupPage() {
   const [batches, settings] = await Promise.all([openBatches(), safeSettings()]);
   const [slots] = await Promise.all([
-    (await sameDayOpenNow(settings))
-      ? hoursByDay().then((hours) =>
-          slotsWorthOffering(
-            deliverySlots(new Date(), hours),
-            batches.map((one) => ({
-              run_date: one.run_date,
-              window: one.delivery_window_text,
-            }))
+    settings.same_day_on === "on"
+      ? hoursByDay()
+          .then((hours) =>
+            slotsWorthOffering(
+              deliverySlots(new Date(), hours),
+              batches.map((one) => ({
+                run_date: one.run_date,
+                window: one.delivery_window_text,
+              }))
+            )
           )
-        )
+          // Today's go while somebody is out driving tonight's run, and
+          // tomorrow's stay. See lib/one-driver.ts.
+          .then(carsOnOffer)
       : Promise.resolve([]),
   ]);
 

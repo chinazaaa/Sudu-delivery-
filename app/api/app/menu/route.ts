@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { openBatches, sameDayOpenNow } from "@/lib/batches";
+import { openBatches, carsOnOffer } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
@@ -148,13 +148,15 @@ export async function GET(): Promise<NextResponse> {
 
     const slots =
       // The app offers exactly what the site offers, this rule included.
-      (await sameDayOpenNow(settings))
-        ? slotsWorthOffering(
-            deliverySlots(new Date(), dayHours),
-            batches.map((one) => ({
-              run_date: one.run_date,
-              window: one.delivery_window_text,
-            }))
+      settings.same_day_on === "on"
+        ? await carsOnOffer(
+            slotsWorthOffering(
+              deliverySlots(new Date(), dayHours),
+              batches.map((one) => ({
+                run_date: one.run_date,
+                window: one.delivery_window_text,
+              }))
+            )
           )
         : [];
 

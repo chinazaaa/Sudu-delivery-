@@ -14,7 +14,7 @@ import { WHO_COOKIE } from "@/lib/came-from";
 import Checkout, { type AddingTo, type SignedIn } from "@/components/Checkout";
 import { whoIsSignedIn } from "@/lib/customer";
 import { db } from "@/lib/supabase";
-import { openBatches, recentlyClosedBatch, sameDayOpenNow } from "@/lib/batches";
+import { openBatches, recentlyClosedBatch, carsOnOffer } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
@@ -140,17 +140,19 @@ export default async function CheckoutPage({
       // says, and so a page left open all morning cannot offer a time that
       // has already gone.
       sameDaySlots={
-        // Shut while the one driver is out with tonight's run. See
-        // lib/one-driver.ts: the clock allows both, one person does not.
-        (await sameDayOpenNow())
-          ? slotsWorthOffering(
-              deliverySlots(new Date(), await hoursByDay()),
-              // A window a run already covers is not offered: the run gets
-              // there at the same hour for two and a half thousand less.
-              batches.map((one) => ({
-                run_date: one.run_date,
-                window: one.delivery_window_text,
-              }))
+        // Today's times go while the one driver is out with tonight's run.
+        // See lib/one-driver.ts: the clock allows both, one person does not.
+        (await safeSettings()).same_day_on === "on"
+          ? await carsOnOffer(
+              slotsWorthOffering(
+                deliverySlots(new Date(), await hoursByDay()),
+                // A window a run already covers is not offered: the run gets
+                // there at the same hour for two and a half thousand less.
+                batches.map((one) => ({
+                  run_date: one.run_date,
+                  window: one.delivery_window_text,
+                }))
+              )
             )
           : []
       }

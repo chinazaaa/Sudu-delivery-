@@ -7,7 +7,7 @@ import { cheapestBoxes } from "@/lib/box-view";
 import { naira } from "@/lib/money";
 import { shelfPhotos } from "@/lib/shelf-photo";
 import Home from "@/components/Home";
-import { openBatches, sameDayOpenNow } from "@/lib/batches";
+import { openBatches, carsOnOffer } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
 import { listSlides } from "@/lib/slides";
 import { shownSays } from "@/lib/says";
@@ -56,16 +56,17 @@ export default async function HomePage() {
     safeSettings(),
     activeBands(),
   ]);
-  // On, and nobody out driving it: one driver cannot do tonight's run and
-  // a car of its own at the same time. See lib/one-driver.ts.
-  const sameDayOn = await sameDayOpenNow(settings);
-  const slots =
-    sameDayOn
-      ? slotsWorthOffering(
+  const sameDayOn = settings.same_day_on === "on";
+  // Today's times go while somebody is out driving tonight's run: one
+  // driver cannot do both. Tomorrow's stay. See lib/one-driver.ts.
+  const slots = sameDayOn
+    ? await carsOnOffer(
+        slotsWorthOffering(
           deliverySlots(new Date(), await hoursByDay()),
           batches.map((one) => ({ run_date: one.run_date, window: one.delivery_window_text }))
         )
-      : [];
+      )
+    : [];
 
   /*
    * The menu without its choices.
@@ -224,8 +225,10 @@ export default async function HomePage() {
   const counterSlots =
     dayHours === null
       ? []
-      : deliverySlots(new Date(), dayHours).filter(
-          (one) => one.day === "today" || one.day === "tomorrow"
+      : await carsOnOffer(
+          deliverySlots(new Date(), dayHours).filter(
+            (one) => one.day === "today" || one.day === "tomorrow"
+          )
         );
   // Read once, for both the counter cards and the ticket at the top.
   const sameDayLadder = sameDayOn ? await sameDayPricing() : null;

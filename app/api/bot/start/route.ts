@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { openBatches, sameDayOpenNow } from "@/lib/batches";
+import { openBatches, carsOnOffer } from "@/lib/batches";
 import { hostelNames } from "@/lib/hostels";
 import { shopEmails } from "@/lib/settings";
 import { openRestaurants } from "@/lib/menu";
@@ -82,11 +82,7 @@ export async function GET(): Promise<NextResponse> {
       openRestaurants().catch(() => []),
       safeSettings(),
       activeBands(),
-      // Null when a car of its own cannot go: the shop does not do them,
-      // or the one driver is already out with tonight's run.
-      sameDayOpenNow()
-        .then((open) => (open ? hoursByDay() : null))
-        .catch(() => null),
+      hoursByDay().catch(() => null),
       sameDayPricing().catch(() => null),
       // Whether there is a code anybody could type tonight. A box for a
       // discount code when the shop has none is a box that can only say
@@ -168,7 +164,11 @@ export async function GET(): Promise<NextResponse> {
     const cars =
       hours === null
         ? []
-        : slotsWorthOffering(
+        // Today's times go while somebody is out driving tonight's run:
+        // one driver cannot do both. Tomorrow's stay, because tomorrow is
+        // a different day. See lib/one-driver.ts.
+        : (await carsOnOffer(
+            slotsWorthOffering(
             /*
              * A week, not two days.
              *
@@ -180,11 +180,12 @@ export async function GET(): Promise<NextResponse> {
              * the ordinary flow is untouched.
              */
             deliverySlots(new Date(), hours, 8),
-            batches.map((batch) => ({
-              run_date: batch.run_date,
-              window: batch.delivery_window_text,
-            }))
-          ).slice(0, 24).map((slot) => ({
+              batches.map((batch) => ({
+                run_date: batch.run_date,
+                window: batch.delivery_window_text,
+              }))
+            )
+          )).slice(0, 24).map((slot) => ({
             at: slot.at,
             label: slot.label,
             phrase: slot.phrase,

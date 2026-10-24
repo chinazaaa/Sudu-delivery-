@@ -33,8 +33,8 @@ import {
   createSameDayBatch,
   getBatch,
   isOrderable,
+  nobodyToDrive,
   orderCounts,
-  someoneIsDriving,
 } from "./batches";
 import { OUT_SAID } from "./one-driver";
 import { bandsFor, isSkincareBatch } from "./skincare";
@@ -197,14 +197,6 @@ async function checkSameDay(
     return { error: "Same day delivery is not running today. Pick a run instead." };
   }
 
-  // One driver. While she is out with tonight's run there is nobody to
-  // drive a car of its own, however long the page has been open. This is
-  // the gate that matters: the pages stop offering it, and this stops it
-  // being bought by somebody who was already on the checkout. See
-  // lib/one-driver.ts.
-  if (await someoneIsDriving()) {
-    return { error: OUT_SAID };
-  }
 
   // By the moment rather than by the text: a time kept in the database comes
   // back written differently from the one the code wrote, and comparing the
@@ -219,6 +211,15 @@ async function checkSameDay(
       error: "That time has gone. Pick another time, or put it on a run.",
     };
   }
+
+  // One driver. While she is out with tonight's run there is nobody left
+  // to drive today's car, however long this page has been open. This is
+  // the gate that matters: the pages stop offering today's times, and this
+  // stops one being bought by somebody who was already on the checkout.
+  // Only today's: tomorrow was never the thing that clashed. See
+  // lib/one-driver.ts.
+  if (await nobodyToDrive(slot.date)) return { error: OUT_SAID };
+
   return { slot, pricing: await sameDayPricing() };
 }
 

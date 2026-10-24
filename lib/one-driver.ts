@@ -8,10 +8,14 @@
  * for one bag and be at the hostel for both, and the shop finds that out
  * by having sold it.
  *
- * So while the run is out, cars of their own are shut. Not from the moment
- * the run closes, which is only a deadline and may be hours before she
- * leaves, but from the moment she is actually out buying it: at the
- * counter, on the road, at the drop. Handed out and she is free again.
+ * So while the run is out, today's cars are shut. Not from the moment the
+ * run closes, which is only a deadline and may be hours before she leaves,
+ * but from the moment she is actually out buying it: at the counter, on
+ * the road, at the drop. Handed out and she is free again.
+ *
+ * Today's, and only today's. Tomorrow is a different day and she is not
+ * driving tonight's run on it, so a car booked for tomorrow afternoon was
+ * never the thing that clashed.
  */
 export const OUT_STAGES = ["at_counter", "on_the_road", "at_drop"] as const;
 
@@ -41,7 +45,22 @@ export function driverIsOut(runs: DrivingNow[], today: string): boolean {
   );
 }
 
+/**
+ * The times still worth offering, given who is driving what.
+ *
+ * Whoever is out is out for the rest of today, so today's times go and
+ * every later day stays. Nobody out and nothing is dropped at all.
+ */
+export function carsStillDrivable<T extends { date: string }>(
+  slots: T[],
+  driving: boolean,
+  today: string
+): T[] {
+  if (!driving) return slots;
+  return slots.filter((one) => one.date !== today);
+}
+
 /** Said to whoever is looking at a shut car, so it reads as tonight
  *  rather than as broken. */
 export const OUT_SAID =
-  "Our driver is out on tonight's run, so a car of its own cannot go until she is back. The next run is still open.";
+  "Our driver is out on tonight's run, so a car of its own cannot go today. Pick a time tomorrow, or put it on the next run.";
