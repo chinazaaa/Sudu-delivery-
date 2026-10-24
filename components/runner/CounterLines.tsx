@@ -96,6 +96,28 @@ export default function CounterLines({
     }
   }, [storageKey]);
 
+  /*
+   * Every line at this counter at once.
+   *
+   * The bag comes over the counter in one go, and six lines ticked one at
+   * a time is six taps for a fact that was true the moment it was handed
+   * over. The big circle over the list is the thing that looks like it
+   * means all of them, so it is: tap it and the stop is ticked, tap it
+   * again and the ticks go.
+   */
+  function tickEverything(on: boolean) {
+    const next = on
+      ? Object.fromEntries(lines.map((line) => [line.key, true]))
+      : {};
+    setTicked(next);
+    try {
+      if (on) window.localStorage.setItem(storageKey, JSON.stringify(next));
+      else window.localStorage.removeItem(storageKey);
+    } catch {
+      /* Private mode: ticking still works, it is just forgotten on reload. */
+    }
+  }
+
   function toggle(key: string) {
     setTicked((current) => {
       const next = { ...current, [key]: !current[key] };
@@ -157,19 +179,37 @@ export default function CounterLines({
       <input type="hidden" name="token" value={token} />
 
       <div className="flex items-center justify-between gap-2">
-        <p className="flex items-center gap-2.5 text-sm text-muted">
+        {/* The circle over the list is the whole list. It read as a summary
+            and behaved as one, so the only way to say a bag of six had
+            arrived was six taps at a counter with a card machine waiting. */}
+        <button
+          type="button"
+          onClick={() => tickEverything(!all)}
+          disabled={done || shut || lines.length === 0}
+          aria-label={
+            all
+              ? `Clear the ticks at ${restaurant}`
+              : `Tick everything at ${restaurant}`
+          }
+          className="flex items-center gap-2.5 text-left text-sm text-muted disabled:opacity-100"
+        >
           <span
             aria-hidden
             className={`tick size-[34px] rounded-full text-[17px] font-black ${
-              got === lines.length && lines.length > 0 ? "tick-done" : ""
+              all ? "tick-done" : ""
             }`}
           >
-            {got === lines.length && lines.length > 0 ? "✓" : ""}
+            {all ? "✓" : ""}
           </span>
           <span>
             {got}/{lines.length} got
+            {!done && !shut && lines.length > 1 && (
+              <span className="block text-[12.5px]">
+                {all ? "tap to clear" : "tap for all of them"}
+              </span>
+            )}
           </span>
-        </p>
+        </button>
         {got > 0 && !done && !shut && (
           <button
             type="button"

@@ -78,6 +78,30 @@ export default function Checklist({
     }
   }, [storageKey]);
 
+  /*
+   * Every line at once.
+   *
+   * A bag comes over a counter in one go, and six lines ticked one at a
+   * time is six taps for a fact that was true the moment it was handed
+   * over. The circle over the list is the thing that looks like it means
+   * all of them, so it is. A line nobody could buy is left alone: it was
+   * never got, and ticking it would say it was.
+   */
+  function tickEverything(on: boolean) {
+    const next = on
+      ? Object.fromEntries(
+          items.filter((item) => item.short !== true).map((item) => [item.key, true])
+        )
+      : {};
+    setTicked(next);
+    try {
+      if (on) window.localStorage.setItem(storageKey, JSON.stringify(next));
+      else window.localStorage.removeItem(storageKey);
+    } catch {
+      /* Private mode: ticking still works, it is just forgotten on reload. */
+    }
+  }
+
   function toggle(key: string) {
     setTicked((current) => {
       const next = { ...current, [key]: !current[key] };
@@ -103,10 +127,22 @@ export default function Checklist({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="flex items-center gap-2.5 text-sm text-muted">
-          {/* The whole stop, at a glance. Not a control: ticking every line
-              is what fills it, because a stop is done when the things in it
-              are, and a second way to say so would let the two disagree. */}
+        {/* The whole stop, and the way to say the whole stop. It read as a
+            summary and behaved as one, so a bag of six that arrived in one
+            go took six taps at a counter with a card machine waiting. It
+            still says the same fact as the lines under it, because it is
+            the lines under it that it ticks. */}
+        <button
+          type="button"
+          onClick={() => tickEverything(!(checked === gettable && gettable > 0))}
+          disabled={done || gettable === 0}
+          aria-label={
+            checked === gettable && gettable > 0
+              ? "Clear the ticks"
+              : `Tick all ${gettable}`
+          }
+          className="flex items-center gap-2.5 text-left text-sm text-muted disabled:opacity-100"
+        >
           <span
             aria-hidden
             className={`tick size-[34px] rounded-full text-[17px] font-black ${
@@ -123,8 +159,13 @@ export default function Checklist({
                 · {shortOf} not available
               </span>
             )}
+            {!done && gettable > 1 && (
+              <span className="block text-[12.5px]">
+                {checked === gettable ? "tap to clear" : "tap for all of them"}
+              </span>
+            )}
           </span>
-        </p>
+        </button>
         {checked > 0 && !done && (
           <button
             type="button"
