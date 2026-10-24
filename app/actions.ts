@@ -18,6 +18,7 @@ import { db } from "@/lib/supabase";
 import { closeGroup, getSharedGroup, groupOrders, leaderSeat } from "@/lib/groups";
 import { groupCarts } from "@/lib/group-carts";
 import { shortRef } from "@/lib/links";
+import { forgetCustomer } from "@/lib/forget";
 import {
   actingAs,
   stopActing,
@@ -330,6 +331,35 @@ export async function signInWithPin(
   // Signing in from Order again should land back there, not on the history.
   const next = String(form.get("next") ?? "");
   redirect(next.startsWith("/") ? next : "/orders");
+}
+
+/**
+ * Delete everything the shop has about whoever is signed in here.
+ *
+ * The app has had this since the stores asked for it, and the website
+ * sent people to WhatsApp to ask a human instead: the same request, the
+ * same answer, and a wait while somebody is believed. It is the same
+ * function underneath, so the two can never drift into meaning different
+ * things.
+ *
+ * Signed out afterwards, because the record the cookie points at is gone
+ * and a signed-in browser with nothing behind it is a page of errors.
+ */
+export async function deleteMyData(): Promise<void> {
+  const phone = await currentCustomer();
+  if (!phone) redirect("/orders");
+
+  const done = await forgetCustomer(phone, "the website");
+  if (!done.ok) {
+    // Said on the page they are standing on rather than thrown away: the
+    // one refusal that happens in practice is an order still on its way,
+    // and that is worth reading.
+    redirect(`/orders?delete=${done.stillComing ? "coming" : "failed"}`);
+  }
+
+  await signOutCustomer();
+  await stopActing();
+  redirect("/?deleted=1");
 }
 
 export async function forgetMe(form?: FormData): Promise<void> {

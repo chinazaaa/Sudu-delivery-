@@ -119,10 +119,15 @@ export default async function SupportPage() {
 
       <Section title="Delete everything you have about me">
         <p>
-          In the app: the <span className="font-semibold">You</span> screen, then
-          Delete my data. On the website, message us from your own number and we
-          will do it. Either way it goes, and what we keep and why is set out in
-          the{" "}
+          On the website: sign in on{" "}
+          <Link href="/orders" className="font-semibold text-brand">
+            My orders
+          </Link>
+          , then Delete my data at the bottom. In the app: the{" "}
+          <span className="font-semibold">You</span> screen, then Delete my
+          data. Nobody has to be asked and nothing waits on us. It goes the
+          moment you press it, unless an order is still on its way, and what
+          we keep and why is set out in the{" "}
           <Link href="/privacy" className="font-semibold text-brand">
             privacy policy
           </Link>

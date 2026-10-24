@@ -14,7 +14,7 @@ import { lagosToday, runDateLabel } from "@/lib/time";
 import { STAGE_LABEL } from "@/lib/stages";
 import { takesMoney } from "@/lib/batches";
 import { dayWord } from "@/lib/time";
-import { forgetMe } from "@/app/actions";
+import { deleteMyData, forgetMe } from "@/app/actions";
 import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; delete?: string }>;
 }) {
   const phone = await currentCustomer();
   const settings = await safeSettings();
@@ -31,7 +31,7 @@ export default async function OrdersPage({
   // needs a signed-in customer already passes this; it was being dropped
   // on the floor, which left people signed in and stranded on their own
   // order history wondering what they had clicked.
-  const { next } = await searchParams;
+  const { next, delete: deleted } = await searchParams;
   const back = (next ?? "").startsWith("/") ? next! : "";
 
   /*
@@ -145,6 +145,24 @@ export default async function OrdersPage({
           </ActionButton>
         </form>
       </div>
+
+      {/* The one refusal that happens in practice: a bag with no name on
+          it reaches nobody, so it waits for the food to land. Said here
+          rather than swallowed, because a button that looks like it did
+          nothing is a button somebody presses again. */}
+      {deleted === "coming" && (
+        <p className="soft border-volt-line bg-brand-tint px-4 py-3 text-[14.5px]">
+          <span className="font-bold">Not yet.</span> You have an order still
+          on its way, and we cannot deliver a bag with no name on it. Come back
+          once it has arrived and this goes through straight away.
+        </p>
+      )}
+      {deleted === "failed" && (
+        <p className="soft border-volt-line bg-brand-tint px-4 py-3 text-[14.5px]">
+          <span className="font-bold">That did not go through.</span> Message
+          us and we will do it by hand.
+        </p>
+      )}
 
       {standing.map((plan) => (
         <section
@@ -327,6 +345,45 @@ export default async function OrdersPage({
           , or tap &quot;Order this again&quot; on any order above.
         </p>
       )}
+
+      {/*
+        Delete everything, from here.
+
+        The app has had this since the stores asked for it, and the
+        website answered the same question with "message us from your own
+        number and we will do it": the same request, a human in the way,
+        and a wait while somebody is believed. It is the same deletion
+        underneath, so the two can never come to mean different things.
+
+        Said at the bottom and quietly. It is somebody's to use and
+        nobody's to be nudged towards.
+      */}
+      <details className="border-t-[1.5px] border-rule pt-4 text-sm">
+        <summary className="cursor-pointer list-none text-muted underline decoration-dotted underline-offset-4">
+          Delete everything you have about me
+        </summary>
+        <div className="mt-2 space-y-2">
+          <p className="text-muted">
+            Your name, your number, your block and your PIN go, along with any
+            cart you left behind. Past orders stay as a record of money that
+            changed hands, with your name taken off them, which is what the{" "}
+            <Link href="/privacy" className="underline">
+              privacy policy
+            </Link>{" "}
+            says. It cannot be undone, and we cannot do it while an order is
+            still on its way.
+          </p>
+          <form action={deleteMyData}>
+            <ActionButton
+              className="btn-quiet"
+              busy="Deleting…"
+              done="Deleted ✓"
+            >
+              Delete my data
+            </ActionButton>
+          </form>
+        </div>
+      </details>
     </div>
   );
 }
