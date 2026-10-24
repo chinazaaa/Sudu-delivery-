@@ -770,6 +770,13 @@ export default function Checkout({
     return found ? (found.fee === 0 ? "free delivery" : naira(found.fee)) : null;
   };
 
+  /** The two errands added, before anything riding along is counted. */
+  let beforeRiding = 0;
+  const acrossBoth = (args: Parameters<typeof feeAcross>[0]) => {
+    beforeRiding = feeAcross(args) + farExtra;
+    return beforeRiding;
+  };
+
   const fee = promotion
     ? promotion.fee
     : sameDay
@@ -784,7 +791,7 @@ export default function Checkout({
         // ladder below: the server does it once at the end for every cart,
         // and this branch was the one place the phone did not.
         ridesAlong(
-        feeAcross({
+        acrossBoth({
           marketFood: cartSubtotal(marketHalf),
           // The container count floors at one, which is right for a cart and
           // wrong for half of one: no restaurant lines must mean no
@@ -799,7 +806,7 @@ export default function Checkout({
               : feeFor(containers, selected?.flashFee ?? null, ladderBase);
           })(),
           bands: byValue,
-        }) + farExtra
+        })
         )
       : ridesAlong(
           feeFor(
@@ -958,6 +965,10 @@ export default function Checkout({
     promotion && shares.length > 1
       ? feeShares.reduce((sum, one) => sum + one, 0)
       : fee;
+
+  /** What the cool box added on top of the rest, for the breakdown to say
+   *  out loud. Nought on a cart with nothing riding along. */
+  const ridesAlongAdds = Math.max(0, charged - beforeRiding);
   // One offer to a checkout: a typed code takes the slot if there is one,
   // and the link's own code only fills it when nothing else has.
   const linkOff = !applied && perk.kind === "applied" ? perk.discount : 0;
@@ -1988,6 +1999,18 @@ export default function Checkout({
                   </span>
                 </li>
               )}
+              {/* What the cool box adds, said as its own line. The panel
+                  showed four thousand for the kitchens and four and a half
+                  at the bottom, with nothing anywhere saying where the
+                  five hundred came from. */}
+              {ridesAlongAdds > 0 && (
+                <li className="flex justify-between text-muted">
+                  <span>
+                    {ridingCount} picked up on the way
+                  </span>
+                  <span>{naira(ridesAlongAdds)}</span>
+                </li>
+              )}
               {area.runExtra > 0 && (
                 <li className="flex justify-between text-muted">
                   <span>{area.name} is a longer trip</span>
@@ -2009,11 +2032,19 @@ export default function Checkout({
               </li>
             </ul>
             <p className="mt-2 text-muted">
-              Two errands on one trip. The market shopping is priced by what it
-              comes to, because a trip to the market is one trip whether it is
-              two bags or five. The kitchens are priced by how much room the
-              food takes in the car. One fee either way, however many places
-              are in it.
+              {marketHalf.length > 0 && (
+                <>
+                  Two errands on one trip. The market shopping is priced by what
+                  it comes to, because a trip to the market is one trip whether
+                  it is two bags or five. The kitchens are priced by how much
+                  room the food takes in the car.{" "}
+                </>
+              )}
+              {marketHalf.length === 0 &&
+                "Priced by how much room the food takes in the car. "}
+              {ridesAlongAdds > 0 &&
+                "The ice cream is small and we pass it on the way, so it adds a little rather than a trip of its own. "}
+              One fee either way, however many places are in it.
             </p>
           </details>
         )}
