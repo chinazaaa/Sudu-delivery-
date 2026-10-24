@@ -71,6 +71,9 @@ export type CounterGroup = {
   restaurant: string;
   lines: CounterLine[];
   expectedFoodTotal: number;
+  /** What this counter sells melts, so it is the last stop and cannot be
+   *  moved up the route. See `meltingStops`. */
+  melts?: boolean;
 };
 
 export type HandoutOrder = Order & { lines: OrderLine[] };
@@ -195,9 +198,11 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   // Typed-in figures first, and only for the lines somebody has actually
   // typed: the rest stay at the menu price, so a half-finished reconcile
   // still leaves an honest number rather than a wrong one.
+  const goLast = await meltingStops();
   const counterLines = groupForCounter(
     lines.filter((l) => paidIds.has(l.order_id)),
-    batch.stop_order ?? null
+    batch.stop_order ?? null,
+    goLast
   );
   const everyLine = counterLines.flatMap((place) => place.lines);
   const reconciled = everyLine.filter((line) => spentOn.has(line.key));
@@ -260,7 +265,8 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
     batch,
     counter: groupForCounter(
       lines.filter((l) => paidIds.has(l.order_id)),
-      batch.stop_order ?? null
+      batch.stop_order ?? null,
+      goLast
     ).map(
       (place) => ({
         ...place,
@@ -447,6 +453,33 @@ export async function counterCosts(ids: string[]): Promise<Map<string, number>> 
 }
 
 /**
+ * The counters whose food will not survive the rest of the drive.
+ *
+ * Ice cream bought first is ice cream handed over as soup, and no amount
+ * of arranging the route by hand fixes it reliably: a run is arranged once
+ * and then another order comes in. So it is a thing a counter is rather
+ * than a thing somebody remembers, ticked on the restaurant itself, and
+ * the route puts every one of them at the end whatever else is decided.
+ *
+ * Asked for defensively: a database without the column yet answers "none
+ * of them", which is how the route worked before this existed.
+ */
+export async function meltingStops(): Promise<string[]> {
+  try {
+    const { data, error } = await db()
+      .from("restaurants")
+      .select("name")
+      .eq("melts", true);
+    if (error) return [];
+    return ((data ?? []) as { name: string }[])
+      .map((one) => one.name)
+      .filter((one) => one !== "");
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Orders collapsed by restaurant into totals. This is what she reads aloud at
  * the counter, so it is one line per distinct item, not one per order.
  */
@@ -455,7 +488,10 @@ export function groupForCounter(
   /** The order this run is actually driven in, when somebody has arranged
    *  it. Anything not named keeps its place at the end, alphabetically, so a
    *  restaurant added after the arranging still appears. */
-  stopOrder: string[] | null = null
+  stopOrder: string[] | null = null,
+  /** Counters that have to be the last stops, by name, whatever the
+   *  arrangement says. See `meltingStops`. */
+  goLast: string[] = []
 ): CounterGroup[] {
   const byRestaurant = new Map<string, Map<string, CounterLine>>();
 
@@ -495,16 +531,18 @@ export function groupForCounter(
     byRestaurant.set(line.restaurant, items);
   }
 
+  const melts = new Set(goLast);
   const groups = [...byRestaurant.entries()].map(([restaurant, items]) => {
     const lines = [...items.values()].sort((a, b) => b.qty - a.qty);
     return {
       restaurant,
       lines,
       expectedFoodTotal: lines.reduce((t, l) => t + l.qty * l.unitPrice, 0),
+      melts: melts.has(restaurant),
     };
   });
 
-  return sortStops(groups, stopOrder);
+  return sortStops(groups, stopOrder, goLast);
 }
 
 /**
@@ -521,12 +559,24 @@ export function groupForCounter(
  */
 export function sortStops<T extends { restaurant: string }>(
   groups: T[],
-  stopOrder: string[] | null
+  stopOrder: string[] | null,
+  /** Counters that melt, by name. They go last whatever the arrangement
+   *  says, keeping their own order among themselves. */
+  goLast: string[] = []
 ): T[] {
   const place = new Map((stopOrder ?? []).map((name, index) => [name, index]));
   const last = place.size;
+  const melts = new Set(goLast);
 
   return [...groups].sort((a, b) => {
+    // Nothing beats ice cream to the end of the list. An arrangement that
+    // says otherwise is an arrangement made before somebody added a tub to
+    // the run, and it is not the sort of mistake you get to find out about
+    // until the bag is handed over.
+    const meltsA = melts.has(a.restaurant);
+    const meltsB = melts.has(b.restaurant);
+    if (meltsA !== meltsB) return meltsA ? 1 : -1;
+
     const left = place.get(a.restaurant) ?? last;
     const right = place.get(b.restaurant) ?? last;
     return left === right
@@ -861,7 +911,12 @@ export async function tripSheet(at: string): Promise<TripSheet | null> {
   return {
     at,
     label: cluster.times.join(" and "),
-    counter: groupForCounter(lines.filter((line) => paidIds.has(line.order_id))),
+    // A trip is driven like a run, so ice cream is the last stop here too.
+    counter: groupForCounter(
+      lines.filter((line) => paidIds.has(line.order_id)),
+      null,
+      await meltingStops()
+    ),
     handout: paid.map(withLines),
     unpaid: orders.filter((o) => o.status === "pending").map(withLines),
     items: lines

@@ -22,6 +22,10 @@ export type Restaurant = {
    *  who finds it was already paid is surprised, one who finds it was not
    *  is stuck at a counter with a bag she cannot take. */
   pay_by?: string | null;
+  /** Whether what this counter sells melts. Ice cream bought first is ice
+   *  cream handed over as soup, so a counter ticked here is driven last
+   *  whatever order the rest of the run is arranged in. */
+  melts?: boolean;
   closes_at: string;
   active: boolean;
   /** Whether the chat may put this counter forward when somebody says they

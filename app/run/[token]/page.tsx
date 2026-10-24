@@ -301,6 +301,14 @@ function StopScreen({
         <h1 className="font-display text-[clamp(2rem,9vw,2.8rem)] font-black uppercase leading-[0.92]">
           {stop.restaurant}
         </h1>
+        {/* It is the last stop for a reason, and the reason is worth saying
+            where somebody might otherwise swap two stops to save a turn. */}
+        {stop.melts === true && (
+          <p className="mt-1 text-[14px] font-semibold text-muted">
+            This melts, so it is the last thing bought. Straight home after
+            this one.
+          </p>
+        )}
       </div>
 
       {/*

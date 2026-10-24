@@ -3620,6 +3620,9 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       // Who settles it. A counter the shop pays ahead is a stop with
       // nothing to pay, and saying otherwise strands somebody at a till.
       pay_by: String(form.get("pay_by") ?? "").trim(),
+      // Whether what it sells melts, which puts it last on every run
+      // without anybody having to remember on the night.
+      melts: form.get("melts") === "on",
       closes_at: String(form.get("closes_at") ?? "").trim() || undefined,
       // All seven, or none ticked, both mean "every day": a restaurant
       // nobody has thought about must behave exactly as it always has.

@@ -436,6 +436,11 @@ export default async function BatchPage({
 
   const doneStops = counter.filter(paidFor).length;
 
+  /* How many stops the arrows may actually move. A counter that melts is
+     pinned to the end of the route by rule, so it is not one of them, and
+     the stop above it is the last one with anywhere to go. */
+  const movableStops = counter.filter((group) => group.melts !== true).length;
+
   /*
    * A stop whoever is driving has said they have the food from.
    *
@@ -1235,10 +1240,12 @@ export default async function BatchPage({
 
                 {counter.length > 1 && !shopped && stopShown === null && (
                   <p className="soft px-4 py-3 text-[14px] text-muted">
-                    Put the stops in the order you are driving them. Which one
-                    is nearest depends on where you set off from and which
-                    branch you are using, so it is yours to say rather than
-                    ours to guess.
+                    Put the stops in the order you are driving them with the
+                    arrows beside each one. Which is nearest depends on where
+                    you set off from and which branch you are using, so it is
+                    yours to say rather than ours to guess. Anything that
+                    melts is the last stop whatever you do here, and which
+                    counters those are is ticked on the restaurant itself.
                   </p>
                 )}
 
@@ -1284,10 +1291,13 @@ export default async function BatchPage({
                       const done = paidFor(group);
                       const here = ordersAt.get(group.restaurant) ?? [];
                       return (
-                        <li key={`stop-${group.restaurant}`}>
+                        <li
+                          key={`stop-${group.restaurant}`}
+                          className="flex items-stretch gap-2"
+                        >
                           <Link
                             href={`/admin/batch/${batch.id}?stop=${index + 1}`}
-                            className={`card flex items-center gap-2.5 p-3.5 ${
+                            className={`card flex min-w-0 flex-1 items-center gap-2.5 p-3.5 ${
                               done ? "opacity-60" : ""
                             }`}
                           >
@@ -1309,6 +1319,9 @@ export default async function BatchPage({
                                     paid for
                                   </span>
                                 )}
+                                {group.melts === true && (
+                                  <span className="tag">melts · last</span>
+                                )}
                               </span>
                               <span className="hint block">
                                 {here.length > 0 &&
@@ -1321,6 +1334,30 @@ export default async function BatchPage({
                               {naira(group.expectedFoodTotal)}
                             </span>
                           </Link>
+                          {/* Arranged from the list itself. Opening every
+                              stop in turn to move it one place is four taps
+                              a stop, on the screen where the whole route is
+                              already in front of you. A counter that melts
+                              has no arrows: it is the last stop by rule and
+                              nothing is allowed to move it. */}
+                          {!shopped && group.melts !== true && movableStops > 1 && (
+                            <span className="flex items-center">
+                              <Reorder
+                                action={moveStop}
+                                field="restaurant"
+                                id={group.restaurant}
+                                first={index === 0}
+                                last={index === movableStops - 1}
+                                label={group.restaurant}
+                                extra={{
+                                  batch_id: batch.id,
+                                  stops: counter
+                                    .map((one) => one.restaurant)
+                                    .join("\n"),
+                                }}
+                              />
+                            </span>
+                          )}
                         </li>
                       );
                     })}
@@ -1375,6 +1412,12 @@ export default async function BatchPage({
                           {paidFor(group) && (
                             <span className="tag bg-mint-tint text-mint">paid for</span>
                           )}
+                          {/* Said at the stop as well as on the list, because
+                              the list is read once at the start and this is
+                              what is in front of whoever is driving. */}
+                          {group.melts === true && (
+                            <span className="tag">melts · buy it last</span>
+                          )}
                           <span className="hint">
                             {(ordersAt.get(group.restaurant) ?? []).length} order
                             {(ordersAt.get(group.restaurant) ?? []).length === 1
@@ -1409,13 +1452,13 @@ export default async function BatchPage({
                       {/* Only worth arranging when there is more than one,
                           and not once the food is bought: the route is a
                           plan, and a plan after the fact is clutter. */}
-                      {counter.length > 1 && !shopped && (
+                      {movableStops > 1 && !shopped && group.melts !== true && (
                         <Reorder
                           action={moveStop}
                           field="restaurant"
                           id={group.restaurant}
                           first={index === 0}
-                          last={index === counter.length - 1}
+                          last={index === movableStops - 1}
                           label={group.restaurant}
                           extra={{
                             batch_id: batch.id,

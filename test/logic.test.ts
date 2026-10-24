@@ -95,7 +95,7 @@ import { kitchenTotals } from "../lib/profit";
 import { templateFor } from "../lib/messages";
 import { EMPTY } from "../lib/settings";
 import { test } from "node:test";
-import { chargedByRestaurant, groupForCounter } from "../lib/admin";
+import { chargedByRestaurant, groupForCounter, sortStops } from "../lib/admin";
 import { bare, spellings } from "../lib/admin-search";
 import { inWords } from "../lib/counts";
 import { fareFor, parseFares, putOnCard, serialiseFares } from "../lib/transport";
@@ -6163,5 +6163,48 @@ test("a free choice is written out like a paid one", () => {
       ["Regular", "Coca-Cola"]
     ),
     "Size: Regular, Drink: Coca-Cola"
+  );
+});
+
+test("ice cream is the last stop whatever the run is arranged as", () => {
+  const stops = [
+    { restaurant: "Cold Stone Creamery" },
+    { restaurant: "Burger King" },
+    { restaurant: "The Place" },
+  ];
+
+  // Nobody has arranged it: alphabetical, but ice cream still last.
+  assert.deepEqual(
+    sortStops(stops, null, ["Cold Stone Creamery"]).map((one) => one.restaurant),
+    ["Burger King", "The Place", "Cold Stone Creamery"]
+  );
+
+  // Arranged with ice cream first, which is exactly the mistake the rule
+  // is there to catch.
+  assert.deepEqual(
+    sortStops(
+      stops,
+      ["Cold Stone Creamery", "The Place", "Burger King"],
+      ["Cold Stone Creamery"]
+    ).map((one) => one.restaurant),
+    ["The Place", "Burger King", "Cold Stone Creamery"]
+  );
+
+  // Two that melt keep their own order at the end.
+  assert.deepEqual(
+    sortStops(
+      [...stops, { restaurant: "Hans & Rene" }],
+      ["Hans & Rene", "Cold Stone Creamery", "Burger King", "The Place"],
+      ["Cold Stone Creamery", "Hans & Rene"]
+    ).map((one) => one.restaurant),
+    ["Burger King", "The Place", "Hans & Rene", "Cold Stone Creamery"]
+  );
+
+  // Nothing melts: the arrangement is the whole story, as before.
+  assert.deepEqual(
+    sortStops(stops, ["The Place", "Cold Stone Creamery", "Burger King"], []).map(
+      (one) => one.restaurant
+    ),
+    ["The Place", "Cold Stone Creamery", "Burger King"]
   );
 });

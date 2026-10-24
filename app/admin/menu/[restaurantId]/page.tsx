@@ -187,6 +187,14 @@ export default async function RestaurantAdmin({
             A kitchen the chat can suggest
           </label>
           <label className="flex items-center gap-2 pb-2 text-sm">
+            <input type="checkbox" name="melts" defaultChecked={restaurant.melts === true} />
+            {/* Ice cream bought first is ice cream handed over as soup. The
+                route is arranged once and then another order comes in, so
+                remembering on the night is not a plan: ticked here, this
+                counter is the last stop on every run by itself. */}
+            It melts, so buy it last
+          </label>
+          <label className="flex items-center gap-2 pb-2 text-sm">
             <input type="checkbox" name="active" defaultChecked={restaurant.active} />
             On the site
           </label>
