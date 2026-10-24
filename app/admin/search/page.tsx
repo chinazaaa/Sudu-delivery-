@@ -7,6 +7,14 @@ import ActionButton from "@/components/ActionButton";
 export const dynamic = "force-dynamic";
 
 const KINDS = [
+  /* First, because it is the question nothing could answer before.
+     Somebody rings about the Fantasy ice cream and the shop knows the ice
+     cream, the run and the money, and had no way to say who bought it. */
+  {
+    key: "buyers",
+    title: "Bought it before",
+    empty: "Nobody has bought that yet.",
+  },
   { key: "orders", title: "Orders", empty: "No order matches that." },
   { key: "people", title: "People", empty: "Nobody in the book matches that." },
   { key: "items", title: "On the menu", empty: "Nothing on the menu matches that." },
@@ -55,7 +63,7 @@ export default async function SearchPage({
         search={false}
         detail={
           found.term === ""
-            ? "Orders, people, things on the menu and the kitchens, in one box."
+            ? "Who has bought a thing before, orders, people, the menu and the kitchens, in one box. A dish finds the people who ordered it; a kitchen finds the people who order from it."
             : `${found.total} thing${found.total === 1 ? "" : "s"} match that.`
         }
       />
