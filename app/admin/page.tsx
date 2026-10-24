@@ -1,4 +1,5 @@
 import PageHeader from "@/components/admin/PageHeader";
+import { carLabel } from "@/lib/view";
 import { runToWorkOn } from "@/lib/which-run";
 import Link from "next/link";
 import Diagnostic from "@/components/Diagnostic";
@@ -79,8 +80,27 @@ export default async function AdminHome() {
   const tomorrow = new Date(new Date(`${lagosToday()}T12:00:00Z`).getTime() + 86400000)
     .toISOString()
     .slice(0, 10);
-  const soon = open.filter(
-    (batch) => batch.run_date === lagosToday() || batch.run_date === tomorrow
+  /*
+   * What is going today or tomorrow, whatever state it is in.
+   *
+   * This read only open runs, and open is the state a run is in before
+   * anybody does anything to it: the moment today's closed, it fell out
+   * of the card and did not come back until it was marked delivered. The
+   * run being driven at that minute, the one row on this page worth
+   * having, was the one row the page would not show.
+   *
+   * Cars of their own are here too. They are somebody's own trip rather
+   * than a run anybody joins, but they are a car going out today and the
+   * only place that said so was the runs page. Cancelled is not going.
+   */
+  const soon = batches.filter(
+    (batch) =>
+      (batch.run_date === lagosToday() || batch.run_date === tomorrow) &&
+      batch.kind !== "parcel" &&
+      batch.status !== "cancelled" &&
+      // Delivered and settled is history, and history has its own row
+      // below. Delivered but not settled still wants the costs typing in.
+      !(batch.status === "delivered" && done(batch))
   );
   // Where nothing is going either day, the next one that is, so the answer
   // is never just "no" with nowhere to go from it.
@@ -100,32 +120,40 @@ export default async function AdminHome() {
   // it. Looking only at open runs sent the button past today's closed run to
   // tomorrow's, which is the one day it could not help with.
   //
-  // So: today's run while it is still going, then the next one that is still
+  // So: today's while it is still going, then the next one that is still
   // to come, so the button goes somewhere useful on a quiet day too.
-  // Delivered is done and cancelled is not going, and neither is work. A same
-  // day car is somebody's own order rather than the run being driven.
+  // Delivered is done and cancelled is not going, and neither is work.
+  //
+  // A car of its own counts. It is somebody's own order rather than a run
+  // anybody joins, but it is the car being driven today, and a day whose
+  // only food is on a car sent the button to an empty scheduled run
+  // standing beside it. What is being worked on is a question about where
+  // the food is, not about what the batch is called.
   const drivable = batches
     .filter(
       (batch) =>
-        batch.kind !== "same_day" &&
         batch.kind !== "parcel" &&
         batch.status !== "cancelled" &&
         batch.status !== "delivered"
     )
     .sort((a, b) => a.run_date.localeCompare(b.run_date));
-  // Two runs on one day is ordinary, and the first of them by date is
-  // whichever the database happened to return: the button kept opening
-  // the empty one, which is the one run of the day nobody can work on.
-  // See lib/which-run.ts.
+  // Two of them on one day is ordinary, and the first by date is whichever
+  // the database happened to return: the button kept opening the empty
+  // one, which is the one thing on the day nobody can work on. See
+  // lib/which-run.ts.
   const working = runToWorkOn(drivable, lagosToday());
   const workingLabel =
     working === null
       ? ""
-      : working.run_date === lagosToday()
-        ? "Today's run"
-        : working.run_date === tomorrow
-          ? "Tomorrow's run"
-          : `${runDateLabel(working.run_date)} run`;
+      : working.kind === "same_day"
+        ? working.run_date === lagosToday()
+          ? "Today's car"
+          : "Tomorrow's car"
+        : working.run_date === lagosToday()
+          ? "Today's run"
+          : working.run_date === tomorrow
+            ? "Tomorrow's run"
+            : `${runDateLabel(working.run_date)} run`;
   // Jobs with no run behind them: somebody paid for an errand nobody drove a
   // car for. Counted in the same window as the runs, because a profit that
   // leaves out a fortnight's errands is not the profit.
@@ -224,9 +252,15 @@ export default async function AdminHome() {
   // Carts that could still make today's run: the ones worth a WhatsApp now
   // rather than an apology later. Worked out per cart, from each cart's own
   // last touch against the cut-off, rather than from the clock alone.
+  // Against a run, never a car: a cart cannot join somebody else's car,
+  // so chasing one to make it is chasing it to nothing.
+  const joinable = runToWorkOn(
+    drivable.filter((batch) => batch.kind !== "same_day"),
+    lagosToday()
+  );
   const inTime = cartsInTime(
     left,
-    working ? { id: working.id, cutOffAt: working.cut_off_at } : null
+    joinable ? { id: joinable.id, cutOffAt: joinable.cut_off_at } : null
   );
 
   const jobs = needsDoing({
@@ -576,8 +610,13 @@ export default async function AdminHome() {
               className="flex items-center gap-3 border-t-[1.5px] border-rule py-3"
             >
               <span className="min-w-0 flex-1">
+                {/* A car of its own says the time it was asked for, which
+                    is the whole of what makes it its own car. "Afternoon"
+                    is a run's word and tells nobody when this one leaves. */}
                 <span className="block font-bold">
-                  {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
+                  {batch.kind === "same_day"
+                    ? carLabel(batch)
+                    : `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`}
                 </span>
                 <span className="hint block">
                   {batch.status === "open"
