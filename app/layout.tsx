@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Big_Shoulders, IBM_Plex_Mono, Schibsted_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import BottomNav from "@/components/BottomNav";
 import SuduBot from "@/components/bot/SuduBot";
 import Track from "@/components/Track";
@@ -63,23 +63,43 @@ import "./globals.css";
  * Big Shoulders Display was folded into Big Shoulders when Google
  * reorganised the family; it is the same drawing at display sizes.
  */
-const sans = Schibsted_Grotesk({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+/*
+ * The three faces, kept in the repository rather than fetched.
+ *
+ * next/font/google downloads these at build time, which puts Google on
+ * the critical path of every deployment: a shop that cannot reach
+ * fonts.gstatic.com for a minute is a shop that cannot ship a one line
+ * fix. It failed exactly that way, with a module-not-found on a
+ * stylesheet nobody wrote.
+ *
+ * The files are the same ones Google serves, latin only, which is what
+ * was being asked for before. Schibsted Grotesk and Big Shoulders are
+ * variable faces and carry their whole weight range in one file; IBM
+ * Plex Mono is not, so it is one file per weight. Replacing them means
+ * downloading from fonts.gstatic.com again, which is a thing to do
+ * deliberately rather than on every build.
+ */
+const sans = localFont({
+  src: "./fonts/schibsted-grotesk-latin.woff2",
+  weight: "400 700",
+  style: "normal",
   variable: "--font-sans",
   display: "swap",
 });
 
-const display = Big_Shoulders({
-  subsets: ["latin"],
-  weight: ["700", "800", "900"],
+const display = localFont({
+  src: "./fonts/big-shoulders-latin.woff2",
+  weight: "700 900",
+  style: "normal",
   variable: "--font-display",
   display: "swap",
 });
 
-const mono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["500", "600"],
+const mono = localFont({
+  src: [
+    { path: "./fonts/ibm-plex-mono-500-latin.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/ibm-plex-mono-600-latin.woff2", weight: "600", style: "normal" },
+  ],
   variable: "--font-mono",
   display: "swap",
 });
