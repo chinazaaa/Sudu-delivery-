@@ -756,3 +756,39 @@ export async function createSameDayBatch(args: {
 
   return (data as Batch) ?? null;
 }
+
+/**
+ * Cars of their own that are still going out.
+ *
+ * A car of its own is one person's trip at a time they chose, so it is
+ * nobody else's to join and never appears in the list a customer picks
+ * from. That rule is right for a customer and wrong for the shop: an
+ * order comes in at half past eleven, there is already a car going at
+ * half past two, and the sensible thing is to put the food in the car
+ * that is going. The move list offered six new windows and every run this
+ * week, and not the one trip the driver is actually making.
+ *
+ * Not through openBatches, which is the customer's list and filters these
+ * out on purpose. Admin asks for them by name.
+ *
+ * Anything already handed out is left off: a car that has been and come
+ * back is not a car to put food in.
+ */
+export async function carsStillGoing(): Promise<Batch[]> {
+  try {
+    const { data, error } = await db()
+      .from("batches")
+      .select("*")
+      .eq("kind", "same_day")
+      .gte("run_date", lagosToday())
+      .neq("stage", "handed_out")
+      .order("deliver_at", { ascending: true })
+      .limit(20);
+    // Before the column exists there are no cars of their own at all, and
+    // the move list is what it has always been.
+    if (error) return [];
+    return (data ?? []) as Batch[];
+  } catch {
+    return [];
+  }
+}

@@ -12,11 +12,11 @@ import {
   type SavedCart,
 } from "@/lib/carts";
 import { getSettings } from "@/lib/settings";
-import { isOrderable, openBatches } from "@/lib/batches";
+import { carsStillGoing, isOrderable, openBatches } from "@/lib/batches";
 import { deliverySlots } from "@/lib/same-day";
 import { allAreas } from "@/lib/areas-server";
 import { hoursByDay } from "@/lib/settings";
-import { toBatchView } from "@/lib/view";
+import { carLabel, toBatchView } from "@/lib/view";
 import { db } from "@/lib/supabase";
 import type { Batch } from "@/lib/types";
 import { whatsappTo } from "@/lib/messages";
@@ -152,13 +152,14 @@ export default async function CartsPage({
    * it is picked. Read once for the page rather than per card, because
    * every card offers the same list.
    */
-  const [openRuns, carSlots] = await Promise.all([
+  const [openRuns, carSlots, cars] = await Promise.all([
     openBatches().catch(() => []),
     settings.same_day_on === "on"
       ? hoursByDay()
           .then((hours) => deliverySlots(new Date(), hours))
           .catch(() => [])
       : Promise.resolve([]),
+    carsStillGoing().catch(() => []),
   ]);
   const goingTo = [
     ...openRuns
@@ -169,6 +170,15 @@ export default async function CartsPage({
         label: `${one.deliveryWindow}, ${one.label.split(" \u00b7 ")[0]}`,
         car: false,
       })),
+    /* The cars already going. A car of its own is one person's trip and
+       so never appears in a customer's list, which is right for a
+       customer and wrong here: if a car is going at half two, the
+       sensible place for this basket is in it. */
+    ...cars.map((one) => ({
+      value: `run:${one.id}`,
+      label: carLabel(one),
+      car: false,
+    })),
     ...carSlots.map((one) => ({
       value: one.at,
       label: `A car of its own \u00b7 ${one.label}`,

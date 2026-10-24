@@ -62,10 +62,10 @@ import OrderEditor from "@/components/admin/OrderEditor";
 import { linesToEdit } from "@/lib/order-edit";
 import { repeatSaid } from "@/lib/box-day";
 import { catalogueFor } from "@/lib/box-admin";
-import { openBatches } from "@/lib/batches";
+import { carsStillGoing, openBatches } from "@/lib/batches";
 import { hoursByDay } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
-import { toBatchView } from "@/lib/view";
+import { carLabel, toBatchView } from "@/lib/view";
 import { dayWord, lagosClock, runDateLabel, lagosBoxTime } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -161,7 +161,7 @@ async function orderPage(id: string, said: string) {
    * somebody opens from every order in the list, that was nine lots of
    * latency for one order.
    */
-  const [catalogue, bank, run, standing, feed, reach, them, photos, parcelDay] =
+  const [catalogue, bank, run, standing, feed, reach, them, photos, parcelDay, cars] =
     await Promise.all([
       asking,
       // The account every payment message quotes: the first on the list.
@@ -193,6 +193,9 @@ async function orderPage(id: string, said: string) {
       order.parcel_route
         ? tripGoingOn(order.parcel_route, order.batch.id).catch(() => null)
         : Promise.resolve(null),
+      // The cars already going, which a customer never sees and the shop
+      // nearly always wants: the car is going anyway.
+      carsStillGoing().catch(() => []),
     ]);
 
   const runLabel = run
@@ -944,7 +947,9 @@ async function orderPage(id: string, said: string) {
                 {dayWord(order.batch.run_date)}. A paid order carries its money
                 across: nothing is charged again and nothing is refunded. A run
                 that has already closed is here too, because moving an order by
-                hand is usually about a car that has gone.
+                hand is usually about a car that has gone, and so is a car
+                already going, because the sensible thing at half eleven is
+                often the trip the driver is making at half two.
               </>
             }
           >
@@ -1011,8 +1016,34 @@ async function orderPage(id: string, said: string) {
                       ))}
                   </optgroup>
                 )}
+                {/*
+                  The cars that are already going.
+
+                  A car of its own is one person's trip and so never
+                  appears in a customer's list. The shop is not a customer:
+                  an order comes in at half eleven, there is a car going at
+                  half two, and the sensible thing is to put the food in
+                  the car that is going. This list offered six new windows
+                  and every run this week, and not the one trip the driver
+                  is actually making.
+
+                  A paid order carries its money across, and an unpaid one
+                  keeps whatever it was charged where that is dearer, so
+                  joining a car never hands money back.
+                */}
+                {cars.filter((car) => car.id !== order.batch_id).length > 0 && (
+                  <optgroup label="Already going">
+                    {cars
+                      .filter((car) => car.id !== order.batch_id)
+                      .map((car) => (
+                      <option key={car.id} value={`run:${car.id}`}>
+                        {carLabel(car)}
+                      </option>
+                      ))}
+                  </optgroup>
+                )}
                 {slots.length > 0 && (
-                  <optgroup label="A car of its own">
+                  <optgroup label="A new car of its own">
                     {slots.map((slot) => (
                       <option key={slot.at} value={slot.at}>
                         {slot.label}
