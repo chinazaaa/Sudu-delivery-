@@ -1482,10 +1482,12 @@ export default async function SettingsAdmin() {
                   to read a quiet evening is that something is broken. */}
               {settings.same_day_on === "on" && driving && (
                 <p className="soft px-3.5 py-2.5 text-sm">
-                  Today is shut at this minute: somebody is out driving a run,
-                  and one driver cannot do both. Tomorrow and later are still
-                  on offer, and today opens again on its own once that run is
-                  marked handed out.
+                  Today is shut at this minute: a run is on the road and one
+                  driver cannot do both. Tomorrow and later are still on
+                  offer, and today opens again on its own once that run is
+                  marked handed out. While a run is still at the counters
+                  today stays open, because a counter nobody has reached yet
+                  is one more thing that can be bought on the way.
                 </p>
               )}
 

@@ -8,16 +8,22 @@
  * for one bag and be at the hostel for both, and the shop finds that out
  * by having sold it.
  *
- * So while the run is out, today's cars are shut. Not from the moment the
- * run closes, which is only a deadline and may be hours before she leaves,
- * but from the moment she is actually out buying it: at the counter, on
- * the road, at the drop. Handed out and she is free again.
+ * So while the run is committed, today's cars are shut. Committed means
+ * on the road or at the drop: the boot is full, the car is pointed at PAU
+ * and she cannot drop that lot and come back out for one bag. Handed out
+ * and she is free again.
+ *
+ * Being at the counters is not that, and shutting it there cost the shop
+ * money. A counter she has not reached yet is a counter she can buy one
+ * more thing at on the way, and that order pays the whole fee for driving
+ * the shop was doing anyway. The hour she is shopping is the best hour of
+ * the evening to sell one, not the worst.
  *
  * Today's, and only today's. Tomorrow is a different day and she is not
  * driving tonight's run on it, so a car booked for tomorrow afternoon was
  * never the thing that clashed.
  */
-export const OUT_STAGES = ["at_counter", "on_the_road", "at_drop"] as const;
+export const OUT_STAGES = ["on_the_road", "at_drop"] as const;
 
 export type DrivingNow = {
   /** "same_day", "parcel", or empty for an ordinary run. */
@@ -63,4 +69,4 @@ export function carsStillDrivable<T extends { date: string }>(
 /** Said to whoever is looking at a shut car, so it reads as tonight
  *  rather than as broken. */
 export const OUT_SAID =
-  "Our driver is out on tonight's run, so a car of its own cannot go today. Pick a time tomorrow, or put it on the next run.";
+  "Our driver is on the road with tonight's run, so a car of its own cannot go today. Pick a time tomorrow, or put it on the next run.";

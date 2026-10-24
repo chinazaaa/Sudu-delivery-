@@ -6213,18 +6213,24 @@ test("ice cream is the last stop whatever the run is arranged as", () => {
 test("one driver: a car of its own waits while a run is out", () => {
   const today = "2026-10-24";
 
-  // She has left to buy tonight's run. There is nobody to drive a second car.
-  assert.equal(
-    driverIsOut([{ stage: "at_counter", run_date: today }], today),
-    true
-  );
+  // The boot is full and the car is pointed at PAU. She cannot drop that
+  // lot and come back out for one bag.
   assert.equal(
     driverIsOut([{ stage: "on_the_road", run_date: today }], today),
     true
   );
+  assert.equal(driverIsOut([{ stage: "at_drop", run_date: today }], today), true);
+
+  // At the counters she is still shopping, and a counter she has not
+  // reached is one more thing she can buy on the way. That hour is the
+  // best hour of the evening to sell a car, not the worst.
+  assert.equal(
+    driverIsOut([{ stage: "at_counter", run_date: today }], today),
+    false
+  );
 
   // Closed is only a deadline. The food has not been fetched and she has
-  // not gone anywhere, so a car of its own can still go.
+  // not gone anywhere.
   assert.equal(driverIsOut([{ stage: "closed", run_date: today }], today), false);
   assert.equal(driverIsOut([{ stage: "ordering", run_date: today }], today), false);
 
