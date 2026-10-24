@@ -963,12 +963,20 @@ export type DrivingToday = TripSheet & {
 export async function drivingToday(date?: string): Promise<DrivingToday | null> {
   const day = date ?? lagosToday();
 
+  /*
+   * Everything with that date on it, finished or not.
+   *
+   * Delivered and settled were left out of this, on the reasoning that a
+   * finished run is not work. It is still today: the sheet came up empty
+   * on the evening of a day whose driving was done, and the one thing it
+   * was being opened for was what had just gone out. Cancelled is the
+   * only thing that never happened.
+   */
   const { data: rows } = await db()
     .from("batches")
     .select("*")
     .eq("run_date", day)
-    .neq("status", "cancelled")
-    .neq("status", "delivered");
+    .neq("status", "cancelled");
 
   // A parcel is its own trip on a day agreed with whoever sent it, and
   // the skincare drop is its own shop on its own day.

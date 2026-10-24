@@ -120,9 +120,12 @@ export default async function AdminHome() {
       (batch.run_date === lagosToday() || batch.run_date === tomorrow) &&
       batch.kind !== "parcel" &&
       batch.status !== "cancelled" &&
-      // Delivered and settled is history, and history has its own row
-      // below. Delivered but not settled still wants the costs typing in.
-      !(batch.status === "delivered" && done(batch))
+      // Tomorrow's that is somehow already finished is history. Today's
+      // never is: a day whose driving is done is still the day being
+      // asked about, and leaving it out showed an empty run beside
+      // nothing while the car that earned the evening went unmentioned.
+      (batch.run_date === lagosToday() ||
+        !(batch.status === "delivered" && done(batch)))
   );
   // Where nothing is going either day, the next one that is, so the answer
   // is never just "no" with nowhere to go from it.
@@ -156,7 +159,11 @@ export default async function AdminHome() {
       (batch) =>
         batch.kind !== "parcel" &&
         batch.status !== "cancelled" &&
-        batch.status !== "delivered"
+        batch.status !== "delivered" &&
+        // Settled is the night being over in the shop's own words, and an
+        // empty run settles itself the moment its closing time passes.
+        // The button kept opening one of those.
+        batch.settled_at === null
     )
     .sort((a, b) => a.run_date.localeCompare(b.run_date));
   // Two of them on one day is ordinary, and the first by date is whichever

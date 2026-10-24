@@ -1,4 +1,5 @@
 import PageHeader from "@/components/admin/PageHeader";
+import { runToWorkOn } from "@/lib/which-run";
 import Link from "next/link";
 import Diagnostic from "@/components/Diagnostic";
 import Figure from "@/components/admin/Figure";
@@ -232,13 +233,22 @@ export default async function RunsPage({
    * is something to go back into.
    */
   const happening =
-    batches.find(
-      (batch) =>
-        batch.status !== "cancelled" &&
-        batch.kind !== "parcel" &&
-        batch.run_date === todayIs &&
-        stageIndex(batch.stage) > stageIndex("ordering") &&
-        batch.stage !== "handed_out"
+    runToWorkOn(
+      batches.filter(
+        (batch) =>
+          batch.status !== "cancelled" &&
+          batch.kind !== "parcel" &&
+          // Settled is the shop saying the night is over in its own
+          // words, and an empty run settles itself the moment its
+          // closing time passes. Both of them went on being "happening
+          // now" over a card reading nought paid, nought in, nought
+          // orders, beside the car that had actually earned the evening.
+          batch.settled_at === null &&
+          batch.run_date === todayIs &&
+          stageIndex(batch.stage) > stageIndex("ordering") &&
+          batch.stage !== "handed_out"
+      ),
+      todayIs
     ) ?? null;
   /** How far through the stages it is, for the bar under the title. */
   const howFar = happening

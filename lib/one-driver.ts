@@ -84,3 +84,40 @@ export const OUT_SAID =
  */
 export const RUN_INSTEAD_SAID =
   "A run is going today, so this goes on that: it gets there the same evening and costs less than a car of its own.";
+
+/**
+ * How long before the run a car has to land to be worth driving.
+ *
+ * She has to be back, park, and set off again with a boot to fill. An
+ * hour is the smallest gap that is a gap at all: a car landing at three
+ * for a run landing at half past is one trip pretending to be two.
+ */
+export const BACK_IN_TIME_HOURS = 1;
+
+/**
+ * The car times still worth offering on a day a run is going.
+ *
+ * Not none of them, which is where this started and was too blunt. The
+ * run lands between half past three and five; somebody who wants lunch
+ * at one is not being offered a dearer version of that drive, they are
+ * asking for a different drive, and she can make it and be back.
+ *
+ * What is not worth offering is a car at the run's own hour. Two ways to
+ * get the same food at the same time, one of them two and a half
+ * thousand naira dearer, is not a choice anybody means to make and some
+ * people will make by accident.
+ *
+ * `runStart` is the hour the soonest run of that day begins its window.
+ * A day with no run is not in it, and everything on that day stands.
+ */
+export function carsBeforeTheRun<T extends { date: string; hour: number }>(
+  slots: T[],
+  runStart: Record<string, number>,
+  gap = BACK_IN_TIME_HOURS
+): T[] {
+  return slots.filter((one) => {
+    const starts = runStart[one.date];
+    if (starts === undefined) return true;
+    return one.hour <= starts - gap;
+  });
+}
