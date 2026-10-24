@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Many from "@/components/Many";
 
 /**
@@ -21,9 +21,14 @@ export default function Checklist({
   items,
   label,
   done = false,
+  arrived,
 }: {
   /** Anything unique to this list, so two lists never share their ticks. */
   id: string;
+  /** Called the first time anything here is ticked, where ticking means
+   *  standing at a counter. Left off on a list that is not about being
+   *  somewhere, and never called twice. */
+  arrived?: () => void;
   items: {
     key: string;
     text: string;
@@ -87,7 +92,15 @@ export default function Checklist({
    * all of them, so it is. A line nobody could buy is left alone: it was
    * never got, and ticking it would say it was.
    */
+  const told = useRef(false);
+  function sayWeAreHere() {
+    if (arrived === undefined || told.current) return;
+    told.current = true;
+    arrived();
+  }
+
   function tickEverything(on: boolean) {
+    if (on) sayWeAreHere();
     const next = on
       ? Object.fromEntries(
           items.filter((item) => item.short !== true).map((item) => [item.key, true])
@@ -103,6 +116,7 @@ export default function Checklist({
   }
 
   function toggle(key: string) {
+    if (!ticked[key]) sayWeAreHere();
     setTicked((current) => {
       const next = { ...current, [key]: !current[key] };
       try {

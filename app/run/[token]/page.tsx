@@ -1,3 +1,4 @@
+import { stageIndex } from "@/lib/stages";
 import type { Metadata } from "next";
 import { saidPicks, saidPicksLine } from "@/lib/picks";
 import { notFound } from "next/navigation";
@@ -115,6 +116,9 @@ export default async function RunPage({
   // Past the counters, the stops are history. Everything that buys or
   // ticks goes quiet rather than asking after the fact.
   const shut = buyingDone(batch.stage);
+  // Ticking anything is standing at a till with it in your hand, so the
+  // first tick moves the run on by itself. See the action it calls.
+  const beforeCounter = stageIndex(batch.stage) < stageIndex("at_counter");
 
   const when = `${runDateLabel(batch.run_date)}, ${SLOT_LABEL[batch.slot] ?? ""}`.trim();
 
@@ -156,6 +160,7 @@ export default async function RunPage({
               stop={group}
               got={hasGot(batch.runner_got, group.restaurant)}
               shut={shut}
+              beforeCounter={beforeCounter}
               contact={reach[group.restaurant]}
               buyers={buyers}
               notes={notes}
@@ -258,6 +263,7 @@ function StopScreen({
   stop,
   got,
   shut,
+  beforeCounter,
   contact,
   buyers,
   notes,
@@ -270,6 +276,9 @@ function StopScreen({
   got: boolean;
   /** The run has left the counters: show this stop, ask nothing of it. */
   shut: boolean;
+  /** The run has not been moved on to the counters yet, so the first thing
+   *  ticked off is what says it has. */
+  beforeCounter: boolean;
   contact: CounterContact | undefined;
   /** Who ordered each line, by the key the line was grouped under. */
   buyers: Record<string, Buyer[]>;
@@ -390,6 +399,7 @@ function StopScreen({
         storageId={`run-${batchId}-${stop.restaurant}`}
         done={got}
         shut={shut}
+        beforeCounter={beforeCounter}
         expected={toPay}
         lines={stop.lines.map((line) => ({
           key: line.key,

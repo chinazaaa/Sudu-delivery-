@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/supabase";
 import { withGot } from "@/lib/runner";
 import { runForAction, setStopCollected } from "@/lib/runner-server";
+import { setBatchStage } from "@/app/admin/actions";
+import { stageIndex } from "@/lib/stages";
 
 /**
  * What whoever is driving may do, and nothing else.
@@ -134,4 +136,32 @@ export async function leaveNote(form: FormData): Promise<void> {
 
   revalidatePath(`/run/${batch.runner_token}`);
   revalidatePath("/admin", "layout");
+}
+
+/**
+ * The first tick at a counter says where the run has got to.
+ *
+ * Ticking something off is standing at a till with it in your hand. The
+ * run said "orders closed, getting ready to go" for the whole of that,
+ * because moving it on is a separate tap on a separate card and nobody
+ * holding a bag goes looking for it. So the tick moves it: closed, or
+ * still open and closed by this, becomes at the counter.
+ *
+ * Only forwards. A run already on the road is not put back to a counter
+ * by somebody correcting a tick at the stop they have just left.
+ *
+ * Through the shop's own stage action rather than a second copy of it: a
+ * stage carries the status, the cut-off and two notifications with it,
+ * and a second copy of that would drift from this one inside a month.
+ */
+export async function atTheCounter(form: FormData): Promise<void> {
+  const batch = await runForAction(String(form.get("token") ?? ""));
+  if (!batch) return;
+  if (stageIndex(batch.stage) >= stageIndex("at_counter")) return;
+
+  const move = new FormData();
+  move.set("batch_id", batch.id);
+  move.set("runner_token", batch.runner_token ?? "");
+  move.set("stage", "at_counter");
+  await setBatchStage(move);
 }

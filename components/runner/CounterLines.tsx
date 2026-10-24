@@ -4,7 +4,12 @@ import { useEffect, useRef, useState, useTransition } from "react";
 
 import SaveButton from "@/components/SaveButton";
 import { naira } from "@/lib/money";
-import { leaveNote, markStop, sayWhatItCost } from "@/app/run/[token]/actions";
+import {
+  atTheCounter,
+  leaveNote,
+  markStop,
+  sayWhatItCost,
+} from "@/app/run/[token]/actions";
 
 /**
  * What to collect at one counter, and what it came to.
@@ -31,6 +36,7 @@ export default function CounterLines({
   storageId,
   done,
   shut,
+  beforeCounter,
   expected,
   lines,
 }: {
@@ -44,6 +50,9 @@ export default function CounterLines({
   /** The run has left the counters, so there is nothing left to buy here
    *  and nothing to ask. Read only. */
   shut: boolean;
+  /** The run has not been moved on to the counters yet, so the first thing
+   *  ticked off here is what says it has. */
+  beforeCounter: boolean;
   /** What this stop should cost at the till, for checking the receipt.
    *  The cost, not the menu: the menu is what the customer paid. */
   expected: number;
@@ -105,7 +114,27 @@ export default function CounterLines({
    * means all of them, so it is: tap it and the stop is ticked, tap it
    * again and the ticks go.
    */
+  /*
+   * Ticking anything is being at the counter.
+   *
+   * The run sat on "orders closed, getting ready to go" through the whole
+   * of the shopping, because moving it on is a separate tap on a separate
+   * card and nobody holding a bag at a till goes looking for it. So the
+   * first tick says it: the run closes if it has not, and moves to the
+   * counter. Only forwards, and only once, because the page comes back
+   * saying it is there already.
+   */
+  const told = useRef(false);
+  function sayWeAreHere() {
+    if (!beforeCounter || told.current) return;
+    told.current = true;
+    const form = new FormData();
+    form.set("token", token);
+    void atTheCounter(form);
+  }
+
   function tickEverything(on: boolean) {
+    if (on) sayWeAreHere();
     const next = on
       ? Object.fromEntries(lines.map((line) => [line.key, true]))
       : {};
@@ -119,6 +148,7 @@ export default function CounterLines({
   }
 
   function toggle(key: string) {
+    if (!ticked[key]) sayWeAreHere();
     setTicked((current) => {
       const next = { ...current, [key]: !current[key] };
       try {

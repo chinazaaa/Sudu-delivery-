@@ -16,7 +16,7 @@ import {
 } from "@/lib/admin-gate";
 import { batchSheet, stillOpen } from "@/lib/admin";
 import { db } from "@/lib/supabase";
-import { STAGES, type BatchStage } from "@/lib/stages";
+import { STAGES, stageIndex, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
 import { hoursByDay, deliveryWindows, externalUrl, sayWindow } from "@/lib/settings";
 import { runSchedule } from "@/lib/schedule";
@@ -3342,6 +3342,34 @@ export async function setFlashFee(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
   updateTag("menu");
   revalidatePath("/", "layout");
+}
+
+/**
+ * The first thing ticked off at a counter says where the run has got to.
+ *
+ * Ticking something is standing at a till with it in your hand, and the
+ * run said "getting ready to go" for the whole of that because moving it
+ * on is a separate tap on a separate card. So the tick moves it, and only
+ * ever forwards: a run already on the road is not put back to a counter
+ * by somebody correcting a tick at the stop they have just left.
+ */
+export async function nowAtTheCounter(batchId: string): Promise<void> {
+  await assertAdmin();
+
+  if (batchId === "") return;
+
+  const { data } = await db()
+    .from("batches")
+    .select("stage")
+    .eq("id", batchId)
+    .maybeSingle();
+  const stage = (data as { stage?: BatchStage } | null)?.stage;
+  if (!stage || stageIndex(stage) >= stageIndex("at_counter")) return;
+
+  const move = new FormData();
+  move.set("batch_id", batchId);
+  move.set("stage", "at_counter");
+  await setBatchStage(move);
 }
 
 /**

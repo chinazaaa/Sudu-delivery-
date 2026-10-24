@@ -79,6 +79,7 @@ import {
   updateRun,
   deleteRun,
   moveStop,
+  nowAtTheCounter,
 } from "../../actions";
 import Reorder from "@/components/admin/Reorder";
 import WhenHanded from "@/components/admin/WhenHanded";
@@ -322,6 +323,8 @@ export default async function BatchPage({
   // Past the counter, the shopping is done and the list is history. Past the
   // handout, so is the run.
   const shopped = stageIndex(batch.stage) >= stageIndex("on_the_road");
+  // Not moved on to the counters yet, so the first thing ticked off says so.
+  const beforeCounter = stageIndex(batch.stage) < stageIndex("at_counter");
 
   // The run's closing time, said exactly the way the reopen notice says it,
   // so the two can be compared rather than one of them trusted.
@@ -1538,6 +1541,16 @@ export default async function BatchPage({
                         id={`counter-${batch.id}-${group.restaurant}`}
                         label="bought"
                         done={shopped}
+                        /* Ticking something off is standing at a till with
+                           it in your hand, so the first tick moves the run
+                           to the counter by itself rather than leaving it
+                           on "getting ready to go" through the shopping.
+                           Nothing to call once it is already there. */
+                        arrived={
+                          beforeCounter
+                            ? nowAtTheCounter.bind(null, batch.id)
+                            : undefined
+                        }
                         items={group.lines.map((line) => ({
                           key: `${line.name}|${line.choices.join("|")}`,
                           /* The per line ticks live in the browser of
