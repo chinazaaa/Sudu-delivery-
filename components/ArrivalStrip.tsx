@@ -68,18 +68,25 @@ export default function ArrivalStrip({
 
       <span className="mt-4 block border-t-2 border-dashed border-shell/25" />
 
+      {/* Three columns on a phone is barely a hundred pixels each, and
+          "Sangotedo/Ajah" is wider than that: it ran straight over "Your
+          block" beside it. Each cell is allowed to be narrow and the words
+          to break where they can, so a longer name wraps rather than
+          climbing over its neighbour. */}
       <span className="mt-4 grid grid-cols-3 gap-3 text-sm">
-        <span>
+        <span className="min-w-0">
           <span className="ticket block text-shell/60">From</span>
-          <span className="font-bold">{from || "Sangotedo"}</span>
+          <span className="block font-bold [overflow-wrap:anywhere]">
+            {from || "Sangotedo"}
+          </span>
         </span>
-        <span>
+        <span className="min-w-0">
           <span className="ticket block text-shell/60">To</span>
-          <span className="font-bold">Your block</span>
+          <span className="block font-bold [overflow-wrap:anywhere]">Your block</span>
         </span>
-        <span>
+        <span className="min-w-0">
           <span className="ticket block text-shell/60">Fee from</span>
-          <span className="font-bold">
+          <span className="block font-bold [overflow-wrap:anywhere]">
             {feeFrom > 0 ? `${naira(feeFrom)} / car` : "see fees"}
           </span>
         </span>
