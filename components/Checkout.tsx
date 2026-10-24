@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LAST_MINUTE_SAID, payWithinSaid } from "@/lib/last-minute";
 import Empty from "@/components/Empty";
 import { useActionState, useEffect, useState } from "react";
 import { submitOrder, type SubmitState } from "@/app/actions";
@@ -193,7 +194,8 @@ export default function Checkout({
   // two they are. Sangotedo is not one of them: every run passes it anyway.
   const secondStop = mixedExtra(cartAreas, areaPairs);
   const farExtra = area.runExtra + secondStop;
-  const bands = withExtra(baseBands, farExtra);
+  const sameDayBands = withExtra(baseSameDayBands, area.sameDayExtra + secondStop);
+  const runBands = withExtra(baseBands, farExtra);
   // A kitchen that charges by what the shopping comes to rather than by how
   // many things it is. A market trip is one trip and two bags, and the
   // container ladder would call eleven peppers eleven containers.
@@ -219,7 +221,6 @@ export default function Checkout({
   /** What the rest of the cart costs, with what rides along left out. */
   const ridesAlong = (otherFee: number) =>
     feeRidingAlong({ stepCount: ridingCount, steps, otherFee });
-  const sameDayBands = withExtra(baseSameDayBands, area.sameDayExtra + secondStop);
   // One thing from a far area makes the whole order a run: a car cannot be
   // in two places in three hours.
   // A car of its own goes today, so a counter shut today cannot be fetched
@@ -557,6 +558,19 @@ export default function Checkout({
   const badPhone = Boolean(state.error?.toLowerCase().includes("phone"));
   const selected = batches.find((b) => b.id === batchId) ?? null;
 
+  /*
+   * A run that has closed but has not been shopped is charged as a car.
+   *
+   * The food has not been bought, so this order really is going out
+   * today, and what it buys is a car's worth of driving at the moment
+   * the shop happens to be doing it. Four thousand is the price of
+   * sharing a trip planned around everybody; this one was not planned at
+   * all. See lib/last-minute.ts.
+   */
+  const lastMinute = selected?.lastMinute === true;
+  const bands = lastMinute ? sameDayBands : runBands;
+  const ladderBase = lastMinute ? baseSameDayBands : baseBands;
+
   // A month of Fridays is a wall, not a choice, so only the next few are
   // offered. Counted out of the runs that can carry this cart rather than out
   // of every run there is, which is what let the one run going to Lekki fall
@@ -730,7 +744,7 @@ export default function Checkout({
             // holding both a market and a kitchen twice for one car.
             return containers === 0
               ? 0
-              : feeFor(containers, selected?.flashFee ?? null, baseBands);
+              : feeFor(containers, selected?.flashFee ?? null, ladderBase);
           })(),
           bands: byValue,
         }) +
@@ -1023,16 +1037,34 @@ export default function Checkout({
           {shownRuns.map((batch) => (
             <option key={batch.id} value={batch.id}>
               {batch.label}
-              {now !== null &&
-                ` · closes in ${countdown(new Date(batch.cutOffISO).getTime() - now)}`}
+              {batch.lastMinute === true
+                ? ` · ${LAST_MINUTE_SAID.toLowerCase()}`
+                : now !== null &&
+                  ` · closes in ${countdown(new Date(batch.cutOffISO).getTime() - now)}`}
             </option>
           ))}
         </select>
-        {selected && (
-          <p className="text-sm text-muted">
-            Orders close {selected.cutOffLabel}. {selected.deliveryWindow}.
-          </p>
-        )}
+        {selected &&
+          (selected.lastMinute === true ? (
+            /*
+              The closed run that has not been shopped yet.
+              
+              It cannot say "orders close at half past four" when that was
+              an hour ago, and the thing worth saying is the hurry: she is
+              about to stand at the counter, and an order that is not paid
+              for by then is an order she cannot buy.
+            */
+            <p className="soft px-3.5 py-2.5 text-sm">
+              <span className="font-semibold">{LAST_MINUTE_SAID}.</span> This
+              run has closed and the food is about to be bought, so it goes
+              out with tonight&rsquo;s car. {payWithinSaid()}. Only the
+              counters it has not been to yet are on it.
+            </p>
+          ) : (
+            <p className="text-sm text-muted">
+              Orders close {selected.cutOffLabel}. {selected.deliveryWindow}.
+            </p>
+          ))}
       </div>
     );
   }

@@ -9,6 +9,13 @@ import { RUN_HORIZON_DAYS, TZ } from "./config";
 import { lagosInstant, lagosToday } from "./time";
 import { stageIndex } from "./stages";
 import {
+  anythingLeft,
+  PAY_WITHIN_MINUTES,
+  stillToGo,
+  takingLastMinute,
+} from "./last-minute";
+import { gotList } from "./runner";
+import {
   carsStillDrivable,
   driverIsOut,
   OUT_STAGES,
@@ -540,7 +547,13 @@ export async function settleEmptyRuns(): Promise<number> {
   }
 }
 
-export type OpenBatch = Batch & { order_count: number; full: boolean };
+export type OpenBatch = Batch & {
+  order_count: number;
+  full: boolean;
+  /** A run that has closed but has not been shopped yet, still taking
+   *  orders from the counters it has not been to. See lib/last-minute.ts. */
+  lastMinute?: boolean;
+};
 
 /**
  * The times on offer, with the ones nobody is left to drive taken out.
@@ -584,6 +597,92 @@ export async function someoneIsDriving(): Promise<boolean> {
     return driverIsOut((data ?? []) as DrivingNow[], today);
   } catch {
     return false;
+  }
+}
+
+/**
+ * The counters a late order on this run may still draw on.
+ *
+ * Everything it was willing to stop at, less everything it has been to.
+ * Null where the shop cannot be asked, which reads as "do not take a late
+ * order" rather than as "take it from anywhere".
+ */
+export async function countersStillAhead(batch: Batch): Promise<string | null> {
+  try {
+    const { data, error } = await db()
+      .from("restaurants")
+      .select("id, name")
+      .eq("active", true);
+    if (error) return null;
+    return stillToGo({
+      onlyPlaces: batch.only_places,
+      everyPlace: (data ?? []) as { id: string; name: string }[],
+      got: gotList(batch.runner_got),
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The run that has closed but has not been shopped yet, if there is one.
+ *
+ * This is the last minute window: the car has not gone, the food has not
+ * been bought, and a counter she has not ticked off is a counter she is
+ * still going to stand at. See `lib/last-minute.ts` for the rule.
+ *
+ * It comes back shaped like any other open batch, with `only_places`
+ * narrowed to the counters still ahead, so every check that keeps a cart
+ * off the wrong run keeps it off the counters she has already left
+ * without knowing this exists.
+ *
+ * Asked for defensively: the home page and the checkout both call it, and
+ * a query that fails answers "there is not one", which is how the shop
+ * worked before this existed.
+ */
+export async function lastMinuteRun(): Promise<OpenBatch | null> {
+  try {
+    const { data, error } = await db()
+      .from("batches")
+      .select("*")
+      .eq("run_date", lagosToday())
+      .in("stage", ["closed", "at_counter"])
+      .neq("status", "cancelled")
+      .order("cut_off_at", { ascending: true })
+      .limit(4);
+    if (error) return null;
+
+    const run = ((data ?? []) as Batch[]).find((one) => takingLastMinute(one));
+    if (!run) return null;
+
+    const left = await countersStillAhead(run);
+    if (left === null || !anythingLeft(left)) return null;
+
+    const counts = await orderCounts([run.id]);
+    return {
+      ...run,
+      only_places: left,
+      /*
+       * The deadline this order actually has.
+       *
+       * The stored one went hours ago and every clock on the site reads
+       * it: a countdown to a time in the past is the shop saying the run
+       * is gone on the one screen offering it. What is true instead is
+       * that she is about to stand at the counter, so the deadline is a
+       * few minutes from whenever somebody is looking. The row itself is
+       * untouched: this is what the pages are handed, never what is
+       * written back.
+       */
+      cut_off_at: new Date(Date.now() + PAY_WITHIN_MINUTES * 60_000).toISOString(),
+      order_count: counts.get(run.id) ?? 0,
+      // A run already shopping is past the point where a capacity cap
+      // means anything: the question is whether the counter is still
+      // ahead, and that is what `only_places` now answers.
+      full: false,
+      lastMinute: true,
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -637,10 +736,22 @@ export async function openBatches(days?: number): Promise<OpenBatch[]> {
   const batches = (data ?? []) as Batch[];
   const counts = await orderCounts(batches.map((b) => b.id));
 
-  return batches.map((b) => {
+  const open = batches.map((b) => {
     const order_count = counts.get(b.id) ?? 0;
     return { ...b, order_count, full: b.capacity !== null && order_count >= b.capacity };
   });
+
+  /*
+   * Tonight's closed run, while the food is still to be bought.
+   *
+   * First in the list, because it is the soonest thing going by hours and
+   * because it is the one with a clock on it. It is here rather than in
+   * each page so that every way into the shop offers it the same: the
+   * home page, the cart, a counter's own page, the app and the chat.
+   */
+  const late = await lastMinuteRun();
+  if (!late || open.some((one) => one.id === late.id)) return open;
+  return [late, ...open];
 }
 
 /** Paid + pending order counts per batch. Used only for real capacity caps. */
@@ -704,7 +815,13 @@ export function takesMoney(batch: Batch): boolean {
 }
 
 export function isOrderable(batch: Batch): boolean {
-  return batch.status === "open" && new Date(batch.cut_off_at).getTime() > Date.now();
+  if (batch.status === "open" && new Date(batch.cut_off_at).getTime() > Date.now()) {
+    return true;
+  }
+  // Closed is not the same as gone. Until the food is bought there is a
+  // car going, and a counter it has not reached is one it can still buy
+  // at. See lib/last-minute.ts.
+  return takingLastMinute(batch);
 }
 
 /**

@@ -41,6 +41,7 @@ export default function Home({
   arriving,
   alsoArriving = null,
   closesAt = "",
+  lastMinute = false,
   buckets,
   packs = [],
   slides,
@@ -63,6 +64,9 @@ export default function Home({
   /** When the run named above stops taking orders. Empty for a car of its
    *  own, which is not a queue anybody has to make. */
   closesAt?: string;
+  /** The run in the sentence has closed and is still being shopped, so it
+   *  is taking last minute orders at a car’s price. */
+  lastMinute?: boolean;
   /** The other way of getting it here, for whoever the headline does not
    *  suit. Null when there is only one way. */
   alsoArriving?: { said: string; sooner: boolean } | null;
@@ -328,6 +332,7 @@ export default function Home({
                     said={arriving}
                     also={alsoArriving}
                     closesAt={closesAt}
+                    lastMinute={lastMinute}
                     from={runFrom}
                     feeFrom={arrivalFee || (fees[0]?.fee ?? 0)}
                   />

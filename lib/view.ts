@@ -94,6 +94,10 @@ export type BatchView = {
   runDate: string;
   /** A batch whose cut-off has passed: shown, but not orderable. */
   closed?: boolean;
+  /** A run that has closed but has not been shopped yet. Still orderable,
+   *  from the counters it has not been to, at a car's fee rather than a
+   *  run's, and with a clock on it. See lib/last-minute.ts. */
+  lastMinute?: boolean;
   cutOffISO: string;
   cutOffLabel: string;
   deliveryWindow: string;
@@ -141,6 +145,7 @@ export function toBatchView(batch: OpenBatch): BatchView {
     cutOffLabel: `${dayWord(batch.run_date)}, ${clockLabel(batch.cut_off_at)}`,
     deliveryWindow: batch.delivery_window_text,
     full: batch.full,
+    lastMinute: batch.lastMinute === true,
     flashFee: batch.flash_fee,
     flashReason: batch.flash_fee_reason,
   };

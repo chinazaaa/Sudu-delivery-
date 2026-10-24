@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import CutOff from "./CutOff";
 import { naira } from "@/lib/money";
+import { LAST_MINUTE_SAID, payWithinSaid } from "@/lib/last-minute";
 
 /**
  * The one thing worth saying at the top of a food shop: when it arrives.
@@ -26,6 +27,7 @@ export default function ArrivalStrip({
   said,
   also,
   closesAt = "",
+  lastMinute = false,
   from = "",
   feeFrom = 0,
 }: {
@@ -40,6 +42,10 @@ export default function ArrivalStrip({
   /** When the run in the sentence above stops taking orders. Empty where
    *  this is a car of its own, which has no queue to make. */
   closesAt?: string;
+  /** That run has closed and the food is still to be bought, so it is
+   *  taking last minute orders. There is no deadline left to count down
+   *  to and a different hurry to say. See lib/last-minute.ts. */
+  lastMinute?: boolean;
 }) {
   return (
     <Link
@@ -50,7 +56,9 @@ export default function ArrivalStrip({
           food shop wants, and on Ink with a torn red edge behind it, it is
           the thing on the page that cannot be scrolled past. */}
       <span className="flex items-baseline justify-between gap-3">
-        <span className="ticket text-volt">Next run to PAU</span>
+        <span className="ticket text-volt">
+          {lastMinute ? LAST_MINUTE_SAID : "Next run to PAU"}
+        </span>
         <span className="ticket text-shell/60">Tap to browse</span>
       </span>
 
@@ -80,6 +88,11 @@ export default function ArrivalStrip({
       <span className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
         <span className="min-w-0">
           {closesAt !== "" && <CutOff at={closesAt} tone="light" />}
+          {lastMinute && (
+            <span className="block font-bold text-volt">
+              {payWithinSaid()}
+            </span>
+          )}
           {also && (
             <span className="block text-shell/75">
               {also.sooner

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+import { anythingLeft, stillToGo, takingLastMinute } from "../lib/last-minute";
+import { runCarries } from "../lib/run-places";
 import { carsStillDrivable, driverIsOut } from "../lib/one-driver";
 import { saidPick, saidPicks, saidPicksLine } from "../lib/picks";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
@@ -6285,4 +6287,53 @@ test("a run out tonight shuts today's cars and not tomorrow's", () => {
     carsStillDrivable(slots, true, today).map((one) => one.date),
     ["2026-10-25"]
   );
+});
+
+test("a closed run still takes orders until it has been shopped", () => {
+  const run = { kind: "run", stage: "closed", status: "closed" };
+  assert.equal(takingLastMinute(run), true);
+  assert.equal(takingLastMinute({ ...run, stage: "at_counter" }), true);
+
+  // The boot is full and the car has gone. Nothing more can be added.
+  assert.equal(takingLastMinute({ ...run, stage: "on_the_road" }), false);
+  assert.equal(takingLastMinute({ ...run, stage: "handed_out" }), false);
+  assert.equal(takingLastMinute({ ...run, status: "cancelled" }), false);
+
+  // A car of its own is one person's trip and has nobody to be late for.
+  assert.equal(takingLastMinute({ ...run, kind: "same_day" }), false);
+});
+
+test("a counter she has been to is behind her", () => {
+  const every = [
+    { id: "bk", name: "Burger King" },
+    { id: "cr", name: "Chicken Republic" },
+    { id: "dp", name: "Domino's Pizza" },
+  ];
+
+  // Nothing ticked yet: every counter is still on.
+  const all = stillToGo({ onlyPlaces: "", everyPlace: every, got: [] });
+  assert.equal(runCarries(all, ["bk", "cr", "dp"]), true);
+
+  // Burger King is collected, so nothing from there can be ordered again
+  // today. Chicken Republic is still ahead, which is the whole point.
+  const after = stillToGo({ onlyPlaces: "", everyPlace: every, got: ["Burger King"] });
+  assert.equal(runCarries(after, ["cr"]), true);
+  assert.equal(runCarries(after, ["bk"]), false);
+  assert.equal(runCarries(after, ["cr", "bk"]), false);
+  assert.equal(anythingLeft(after), true);
+
+  // A run kept to its own counters never widens: this one was never
+  // stopping at Domino's, and a late order cannot send it there.
+  const fussy = stillToGo({ onlyPlaces: "|bk|cr|", everyPlace: every, got: ["Burger King"] });
+  assert.equal(runCarries(fussy, ["dp"]), false);
+  assert.equal(runCarries(fussy, ["cr"]), true);
+
+  // Everything ticked. An empty list reads as "anywhere" everywhere else,
+  // so it must never be handed on as one.
+  const done = stillToGo({
+    onlyPlaces: "",
+    everyPlace: every,
+    got: ["Burger King", "Chicken Republic", "Domino's Pizza"],
+  });
+  assert.equal(anythingLeft(done), false);
 });

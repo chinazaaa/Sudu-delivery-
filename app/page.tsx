@@ -102,6 +102,12 @@ export default async function HomePage() {
   // run tomorrow, tomorrow's first window. Worked out here so the clock is
   // the shop's rather than the phone's.
   const decided = nextArrival(runViews, slots, lagosToday());
+  // The run the sentence above actually names, where it names one. Two
+  // things on the ticket read off it: the deadline, and whether this is a
+  // last minute order at a car's price rather than a run's.
+  const decidedRun = decided?.onARun
+    ? (batches.map(toBatchView).find((one) => one.id === decided.runId) ?? null)
+    : null;
 
   // What is packed, said as the thing itself rather than as a category.
   // Two shelves, named separately: an occasion has a date on it and a
@@ -356,13 +362,11 @@ export default async function HomePage() {
       // the run the sentence actually names rather than the soonest one,
       // or the clock counts down to a car that is not the one being
       // offered.
-      closesAt={
-        decided?.onARun
-          ? batches
-              .map(toBatchView)
-              .find((one) => one.id === decided.runId)?.cutOffISO ?? ""
-          : ""
-      }
+      // A run that has closed and is still being shopped has no deadline
+      // left to count down to, and the hurry it does have is a different
+      // one: see lib/last-minute.ts.
+      closesAt={decidedRun !== null && !decidedRun.lastMinute ? decidedRun.cutOffISO : ""}
+      lastMinute={decidedRun?.lastMinute === true}
       // The other way, for whoever the headline does not suit. Somebody who
       // wants dinner tonight and somebody who wants it cheap both open this
       // page, and one sentence naming a run five days out sends the first of
@@ -415,7 +419,9 @@ export default async function HomePage() {
        * follow it.
        */
       arrivalFee={
-        decided?.onARun === false ? sameDayFirst : (bands[0]?.fee ?? 0)
+        decided?.onARun === false || decidedRun?.lastMinute === true
+          ? sameDayFirst
+          : (bands[0]?.fee ?? 0)
       }
       fees={bandTable(null, bands).map((row, at, all) => ({
         label: row.label,

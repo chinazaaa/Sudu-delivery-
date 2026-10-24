@@ -70,6 +70,9 @@ export type CartArea = {
    *  charges a mixed cart twice for one car. */
   baseBands: Band[];
   sameDayBands: Band[];
+  /** The car ladder before the distance is added, for the same reason
+   *  `baseBands` exists. */
+  baseSameDayBands: Band[];
   urgentExtra: number;
   /** Where a kitchen prices by what the shopping comes to rather than by how
    *  many things it is, its ladder. Empty is the ordinary one. */
@@ -111,6 +114,7 @@ export async function areaOfCart(restaurantIds: string[]): Promise<CartArea> {
     bands: withExtra(base, dearest.runExtra + mixed),
     baseBands: base,
     sameDayBands: withExtra(sameDay.bands, dearest.sameDayExtra + mixed),
+    baseSameDayBands: sameDay.bands,
     urgentExtra: sameDay.urgentExtra,
   };
 }
@@ -240,3 +244,22 @@ export const stepFeeOfEach = cache(async function stepFeeOfEach(): Promise<
   }
   return found;
 });
+
+/**
+ * The same cart, charged as a car rather than as a run.
+ *
+ * What a run that has closed but has not been shopped yet costs: the food
+ * is not bought, the car is about to go, and the order is buying a trip
+ * at the moment the shop happens to be making it. See lib/last-minute.ts.
+ *
+ * Done by swapping the ladders rather than by a second sum, so everything
+ * that prices an order, the ice cream riding along and the mixed carts
+ * included, goes on working without knowing this exists.
+ */
+export function asACar(where: CartArea): CartArea {
+  return {
+    ...where,
+    bands: where.sameDayBands,
+    baseBands: where.baseSameDayBands,
+  };
+}

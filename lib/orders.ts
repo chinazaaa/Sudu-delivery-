@@ -30,6 +30,7 @@ import { naira, orderRef } from "./money";
 import { SLOT_LABEL } from "./config";
 import { runDateLabel, weekdayLabel } from "./time";
 import {
+  countersStillAhead,
   createSameDayBatch,
   getBatch,
   isOrderable,
@@ -39,7 +40,8 @@ import {
 import { OUT_SAID } from "./one-driver";
 import { bandsFor, isSkincareBatch } from "./skincare";
 import { counterHolding } from "./counter";
-import { areaOfCart, stepFeeOfEach } from "./areas-server";
+import { takingLastMinute } from "./last-minute";
+import { asACar, areaOfCart, stepFeeOfEach } from "./areas-server";
 import { feeAcross } from "./value-bands";
 import { feeRidingAlong, type StepFee } from "./step-fee";
 import { realPromoter } from "./promoters";
@@ -315,7 +317,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // what this order is allowed to go on. Looked up here rather than trusted
   // from the browser: a cart is written on a phone and a phone can say
   // anything, and this is the sentence the bill comes from.
-  const where = await areaOfCart(placesIn(priced.lines));
+  let where = await areaOfCart(placesIn(priced.lines));
   /*
    * What is priced by the cool box rather than by the container.
    *
@@ -390,6 +392,16 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
 
   if (!batch) return { ok: false, error: "That batch no longer exists." };
 
+  /*
+   * A run that has closed but has not been shopped yet is charged as a
+   * car. The food is not bought, the trip is about to be made, and this
+   * order is buying driving at the moment the shop happens to be doing
+   * it rather than sharing a trip planned around everybody. The ladders
+   * are swapped rather than the sum, so everything downstream, the ice
+   * cream riding along and the mixed carts included, prices itself.
+   */
+  if (takingLastMinute(batch) && !sameDay && !party) where = asACar(where);
+
   // A run is a car with a route. It always passes Sangotedo and it goes
   // anywhere else only because somebody said so when it was made, so a
   // Thursday run that was never going to Lekki cannot pick up a Lekki order
@@ -447,6 +459,27 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
         "Pick one that is, or take those things out.",
     };
   }
+  /*
+   * A counter she has already been to.
+   *
+   * On a last minute order this is the whole rule: the run closed hours
+   * ago and is still worth ordering onto because the food has not been
+   * bought, and the moment a stop is ticked off it is behind her. Checked
+   * against the shop's own record rather than the list the browser was
+   * handed, which may be a minute old and is in any case a browser.
+   */
+  if (takingLastMinute(batch) && !sameDay && !party) {
+    const ahead = await countersStillAhead(batch);
+    if (ahead === null || !runCarries(ahead, placesIn(priced.lines))) {
+      return {
+        ok: false,
+        error:
+          "That run has already been to one of these counters, so it cannot " +
+          "pick this up. Put it on the next run, or ask for a car of its own.",
+      };
+    }
+  }
+
   if (!sameDay && !party && !isOrderable(batch)) {
     return { ok: false, error: "That batch has closed. Pick the next one." };
   }
@@ -810,8 +843,13 @@ export async function quote(args: {
   const priced = await priceLines(args.lines);
   if ("error" in priced) return { error: priced.error };
 
-  const where = await areaOfCart(placesIn(priced.lines));
   const batch = args.batchId ? await getBatch(args.batchId) : null;
+  // A run that has closed but has not been shopped yet is a car: the food
+  // is not bought and the trip is about to be made. See lib/last-minute.ts.
+  const where = ((plain) =>
+    batch && takingLastMinute(batch) ? asACar(plain) : plain)(
+    await areaOfCart(placesIn(priced.lines))
+  );
 
   /*
    * What rides along, kept out of the count.
