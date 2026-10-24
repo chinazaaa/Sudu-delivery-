@@ -502,6 +502,15 @@ export default async function AdminHome() {
             Open {workingLabel.toLowerCase()} →
           </Link>
         )}
+
+        {/* Two things going on one evening is one drive. Offered only when
+            there are two, because on an ordinary day the run's own page is
+            the whole of it and a second door to the same food is clutter. */}
+        {soon.filter((batch) => batch.run_date === lagosToday()).length > 1 && (
+          <Link href="/admin/today" className="btn-admin min-h-[48px] w-full text-base">
+            One sheet for everything today →
+          </Link>
+        )}
       </div>
 
       {problem && !problem.ok && (

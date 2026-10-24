@@ -39,6 +39,9 @@ export const DAILY: Item[] = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/runs", label: "Runs" },
+  // Everything going out today as one shopping list, however many
+  // batches it came in on. See app/admin/today.
+  { href: "/admin/today", label: "Driving today" },
   { href: "/admin/schedule", label: "Schedule" },
 ];
 

@@ -3407,6 +3407,47 @@ export async function nowAtTheCounter(batchId: string): Promise<void> {
 }
 
 /**
+ * Everything going out today, at the counter at once.
+ *
+ * A run and a car of its own on one evening are two batches because they
+ * were two promises, and they are one drive. She stands at one counter
+ * for all of them, so the first thing ticked off the day's sheet moves
+ * all of them, rather than leaving half the day saying "getting ready to
+ * go" while she is standing at the till.
+ *
+ * Only to the counter, and only forwards. The stages after it are where
+ * the promises differ: a car of its own is on the road to one person
+ * while a run is still being packed for ten.
+ */
+export async function everythingAtTheCounter(day: string): Promise<void> {
+  await assertAdmin();
+
+  const { data } = await db()
+    .from("batches")
+    .select("id, kind, stage, status")
+    .eq("run_date", day)
+    .neq("status", "cancelled")
+    .neq("status", "delivered");
+
+  const going = ((data ?? []) as {
+    id: string;
+    kind?: string | null;
+    stage: BatchStage;
+  }[]).filter(
+    (one) =>
+      ((one.kind ?? "run") === "run" || one.kind === "same_day") &&
+      stageIndex(one.stage) < stageIndex("at_counter")
+  );
+
+  for (const one of going) {
+    const move = new FormData();
+    move.set("batch_id", one.id);
+    move.set("stage", "at_counter");
+    await setBatchStage(move);
+  }
+}
+
+/**
  * One tap per stage of the run, shared by everyone in the batch. This is the
  * whole of tracking: no rider app, no GPS, nothing to go wrong on the road.
  */
