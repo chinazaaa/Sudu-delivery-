@@ -646,7 +646,24 @@ export default async function AdminHome() {
             ...soon,
             ...(after && soon.length === 0 ? [after] : []),
             ...(went ? [went] : []),
-          ].map((batch) => (
+          ]
+            /*
+             * What is still to come, soonest first, and then what has
+             * been, most recent first.
+             *
+             * It was in cut-off order, which put this afternoon's
+             * finished car above tomorrow's open run: a list read to
+             * find out what is next, led by something that is not.
+             */
+            .sort((a, b) => {
+              const aDone = a.status === "delivered" || done(a);
+              const bDone = b.status === "delivered" || done(b);
+              if (aDone !== bDone) return aDone ? 1 : -1;
+              return aDone
+                ? b.run_date.localeCompare(a.run_date)
+                : a.cut_off_at.localeCompare(b.cut_off_at);
+            })
+            .map((batch) => (
             <Link
               key={batch.id}
               href={`/admin/batch/${batch.id}`}
@@ -685,7 +702,7 @@ export default async function AdminHome() {
                 )}
               </span>
             </Link>
-          ))}
+            ))}
         </Panel>
 
         <Panel
