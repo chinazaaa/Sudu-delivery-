@@ -3485,6 +3485,38 @@ export async function nowAtTheCounter(batchId: string): Promise<void> {
 }
 
 /**
+ * No more orders on this one, said by hand.
+ *
+ * The shop works out whether another order could still be fetched: the
+ * run has not left, these counters have not been reached, there is time.
+ * None of that can see how much room is left in the boot. She can, so
+ * there is a button, and what she says wins over the lot.
+ *
+ * It goes both ways, because the mistake to expect is pressing it on the
+ * wrong run, and a thing that cannot be taken back is a thing nobody
+ * presses.
+ */
+export async function noMoreOrders(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const id = String(form.get("batch_id") ?? "");
+  if (id === "") return;
+
+  const shut = form.get("open_again") === null;
+  const { error } = await db()
+    .from("batches")
+    .update({ no_more_orders: shut })
+    .eq("id", id);
+  // Before the column exists there is nothing to say, and nothing to
+  // break: the run goes on taking orders the way it always did.
+  if (error) return;
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/", "layout");
+  updateTag("menu");
+}
+
+/**
  * Everything going out today, at the counter at once.
  *
  * A run and a car of its own on one evening are two batches because they

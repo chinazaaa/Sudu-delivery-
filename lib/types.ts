@@ -174,6 +174,10 @@ export type Batch = {
   /** The order the stops are driven in on this run, by restaurant name.
    *  Null until somebody arranges it, which falls back to alphabetical. */
   stop_order?: string[] | null;
+  /** Said by hand: no more orders on this one, whatever else is true.
+   *  The car is full, or there is no room for another bag, and that is a
+   *  thing only the person standing next to it can see. */
+  no_more_orders?: boolean | null;
   /** Opens this one run at /run/<token> with no admin login, so somebody
    *  who is not trusted with the shop can still drive it. Null means
    *  nobody is, and the link stops working the moment the run settles. */

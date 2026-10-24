@@ -33,6 +33,10 @@ export type MaybeLastMinute = {
    *  finished whatever its stage says, and the stage is the thing people
    *  forget to move. */
   settled_at?: string | null;
+  /** Somebody said the car is full. The counters left to go are the
+   *  shop's guess at whether more will fit; this is the answer from the
+   *  person standing next to the boot, and it wins. */
+  no_more_orders?: boolean | null;
 };
 
 /**
@@ -49,6 +53,10 @@ export function takingLastMinute(batch: MaybeLastMinute): boolean {
   // books are closed. Nothing is more finished than that, and it beats a
   // stage that says "at the counter" because nobody moved it on.
   if (batch.settled_at !== null && batch.settled_at !== undefined) return false;
+  // The car is full, said by the person who can see it. Everything else
+  // here is the shop working out whether another order could be fetched;
+  // none of it can see how much room is left in the boot.
+  if (batch.no_more_orders === true) return false;
   return batch.stage === "closed" || batch.stage === "at_counter";
 }
 

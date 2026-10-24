@@ -42,10 +42,20 @@ export function rateFor(settings: Settings, money: Money): number {
   return Number.isFinite(rate) && rate >= SURELY_WRONG ? rate : 0;
 }
 
-/** The currencies worth offering: switched on, and with a rate behind them. */
+/**
+ * The currencies worth offering: switched on, and with a rate behind them.
+ *
+ * None, for now. Paying in pounds or dollars is not something the shop
+ * does any more, and the way to stop offering it is to stop answering
+ * this question with anything. Everything behind it stays: an order
+ * already paid in pounds still says so on its own page and in the books,
+ * and the settings that switch it back on are untouched. Put the line
+ * below back and it works exactly as it did.
+ */
 export function moniesOn(settings: Settings): Money[] {
   if (!abroadOn(settings)) return [];
-  return (["GBP", "USD"] as Money[]).filter((one) => rateFor(settings, one) > 0);
+  return [];
+  // return (["GBP", "USD"] as Money[]).filter((one) => rateFor(settings, one) > 0);
 }
 
 /**

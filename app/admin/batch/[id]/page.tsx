@@ -79,6 +79,7 @@ import {
   updateRun,
   deleteRun,
   moveStop,
+  noMoreOrders,
   nowAtTheCounter,
 } from "../../actions";
 import Reorder from "@/components/admin/Reorder";
@@ -598,10 +599,41 @@ export default async function BatchPage({
                   sheetAsText(sheet, batchLabel)
                 )}
               />
+
+              {/* The car is full, said by the person who can see it.
+                  Everything else about whether this run can take another
+                  order is the shop reasoning from a stage and a list of
+                  counters, and none of it can see how much room is left
+                  in the boot. Both ways, because the mistake to expect is
+                  pressing it on the wrong run, and a thing that cannot be
+                  taken back is a thing nobody presses. */}
+              {!shopped || batch.no_more_orders === true ? (
+                <form action={noMoreOrders}>
+                  <input type="hidden" name="batch_id" value={batch.id} />
+                  {batch.no_more_orders === true && (
+                    <input type="hidden" name="open_again" value="1" />
+                  )}
+                  <ActionButton
+                    className="btn-admin btn-admin-sm"
+                    done={batch.no_more_orders === true ? "Open ✓" : "Shut ✓"}
+                  >
+                    {batch.no_more_orders === true
+                      ? "Take orders again"
+                      : "No more orders · the car is full"}
+                  </ActionButton>
+                </form>
+              ) : null}
             </>
           ) : null
         }
       />
+
+      {batch.no_more_orders === true && (
+        <p className="mb-[18px] rounded-2xl border-[1.5px] border-ink bg-wash px-3.5 py-2.5 text-[14.5px] font-semibold">
+          No more orders on this one. Nothing else can be added to it,
+          whatever counters are still to go, until somebody says otherwise.
+        </p>
+      )}
 
       {/* The notice below is only true while the closing time it names is
           still the one on the run. Changing the time under Times is exactly
