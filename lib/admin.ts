@@ -147,10 +147,37 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   // already correct by the time she reads the sheet.
   await settleGroupFees(batch);
 
+  /*
+   * Everything going out the same evening, not just this batch.
+   *
+   * A scheduled run and a car of its own on one night are two batches
+   * because they were two promises, and they are one drive. Kept apart,
+   * the sheet sent her to Burger King twice and told her to buy three
+   * burgers in two readings, when it is two hamburgers and a chicken on
+   * one visit. So the shopping, the bags and the people are the day's;
+   * the stage, the costs and the books stay this batch's own.
+   */
+  const alsoGoing = await db()
+    .from("batches")
+    .select("id, kind, status")
+    .eq("run_date", batch.run_date)
+    .neq("status", "cancelled");
+  const sameEvening = ((alsoGoing.data ?? []) as {
+    id: string;
+    kind?: string | null;
+  }[])
+    .filter((one) => (one.kind ?? "run") === "run" || one.kind === "same_day")
+    .map((one) => one.id);
+  // A parcel or a box day is its own trip and keeps its own sheet.
+  const driving =
+    (batch.kind ?? "run") === "run" || batch.kind === "same_day"
+      ? [...new Set([batchId, ...sameEvening])]
+      : [batchId];
+
   const { data, error } = await db()
     .from("orders")
     .select("*")
-    .eq("batch_id", batchId)
+    .in("batch_id", driving)
     .not("status", "in", NOT_ORDERS_SQL)
     .order("customer_name", { ascending: true });
   if (error) throw new Error(error.message);
@@ -171,14 +198,29 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
 
   // Unpaid orders do not travel, so they are not on the counter sheet either.
   const paid = orders.filter((o) => isPaid(o.status));
-  const unpaid = orders.filter((o) => o.status === "pending");
+  const unpaid = orders.filter(
+    (o) => o.status === "pending" && o.batch_id === batchId
+  );
   const paidIds = new Set(paid.map((o) => o.id));
 
+  /*
+   * The money is this batch's own, the shopping is the evening's.
+   *
+   * What she buys and who she hands it to is one trip whatever door the
+   * orders came through. What was taken, what it cost and what it earned
+   * belongs to the promise somebody paid for: a car's fee is a car's fee
+   * and a run's is a run's, and putting the evening's takings on both
+   * pages would be the same money counted twice.
+   */
+  const mineOnly = paid.filter((o) => o.batch_id === batchId);
+
   // What each thing really cost, where somebody has said.
+  // Read across the evening, written against the batch whose page it was
+  // typed on: one shopping trip, one set of receipts.
   const { data: spendRows } = await db()
     .from("counter_spend")
     .select("line_key, paid, recovered")
-    .eq("batch_id", batchId);
+    .in("batch_id", driving);
   const rows = (spendRows ?? []) as {
     line_key: string;
     paid: number;
@@ -188,14 +230,14 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   // Money the customer handed back, which the shop is therefore not out.
   const gotBack = new Map(rows.map((row) => [row.line_key, row.recovered ?? 0]));
 
-  const { total: commission, by: commissionBy } = await commissionFor(paid);
+  const { total: commission, by: commissionBy } = await commissionFor(mineOnly);
   const costs =
     batch.fuel_cost + batch.driver_cost + (batch.transport_cost ?? 0) + batch.other_cost;
 
   // What the food actually cost. The menu price is only a guess at it: buy
   // enough from one counter and they give it to you for less, and that
   // difference is margin the sheet was throwing away.
-  const menuCost = sum(paid, (o) => o.subtotal_food);
+  const menuCost = sum(mineOnly, (o) => o.subtotal_food);
 
   // Typed-in figures first, and only for the lines somebody has actually
   // typed: the rest stay at the menu price, so a half-finished reconcile
@@ -259,7 +301,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
       : batch.food_spend > 0
         ? batch.food_spend
         : reckoned;
-  const margin = sum(paid, (o) => o.total) - foodCost;
+  const margin = sum(mineOnly, (o) => o.total) - foodCost;
 
   const onMenu = await menuPrices(everyLine.map((line) => line.itemId));
 
@@ -291,9 +333,9 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
     pins: await pinsFor(orders.map((o) => o.customer_phone)),
     callsThem: await callsThemFor(orders.map((o) => o.customer_phone)),
     summary: {
-      paidCount: paid.length,
+      paidCount: mineOnly.length,
       unpaidCount: unpaid.length,
-      gross: sum(paid, (o) => o.total),
+      gross: sum(mineOnly, (o) => o.total),
       foodCost,
       /** What the menu said it would cost, so the saving can be shown. */
       menuCost,
