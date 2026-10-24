@@ -15,6 +15,7 @@ import { STAGE_LABEL } from "@/lib/stages";
 import { takesMoney } from "@/lib/batches";
 import { dayWord } from "@/lib/time";
 import { deleteMyData, forgetMe } from "@/app/actions";
+import DeleteMyData from "@/components/DeleteMyData";
 import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
@@ -373,15 +374,7 @@ export default async function OrdersPage({
             says. It cannot be undone, and we cannot do it while an order is
             still on its way.
           </p>
-          <form action={deleteMyData}>
-            <ActionButton
-              className="btn-quiet"
-              busy="Deleting…"
-              done="Deleted ✓"
-            >
-              Delete my data
-            </ActionButton>
-          </form>
+          <DeleteMyData action={deleteMyData} />
         </div>
       </details>
     </div>
