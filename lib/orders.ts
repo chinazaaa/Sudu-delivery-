@@ -350,7 +350,17 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // what this order is allowed to go on. Looked up here rather than trusted
   // from the browser: a cart is written on a phone and a phone can say
   // anything, and this is the sentence the bill comes from.
-  let where = await areaOfCart(placesIn(priced.lines));
+  /*
+   * The bag of ice is not a counter the car goes to.
+   *
+   * It is bought beside the ice cream it travels with, so it must not
+   * decide anything about the trip: not how far the car goes, and above
+   * all not which ladder the cart is priced on. Sitting on a shelf that
+   * prices by what the shopping comes to, a twelve hundred and fifty
+   * naira bag would have dragged a Domino's order onto the market
+   * ladder and added four thousand to it. See lib/ice.ts.
+   */
+  let where = await areaOfCart(placesIn(withoutIce(priced.lines, iceItem)));
   /*
    * What is priced by the cool box rather than by the container.
    *
@@ -909,7 +919,10 @@ export async function quote(args: {
   // is not bought and the trip is about to be made. See lib/last-minute.ts.
   const where = ((plain) =>
     batch && takingLastMinute(batch) ? asACar(plain) : plain)(
-    await areaOfCart(placesIn(priced.lines))
+    // The bag of ice decides nothing about the trip: see the order path.
+    await areaOfCart(
+      placesIn(withoutIce(priced.lines, (await safeSettings()).ice_item_id ?? ""))
+    )
   );
 
   /*

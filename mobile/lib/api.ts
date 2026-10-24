@@ -376,6 +376,20 @@ export type Shop = {
   /** The currencies a card link can be made out in, for somebody abroad
    *  paying. Older servers send none, and then the question is not asked. */
   monies?: { code: string; label: string; symbol: string; rate: number }[];
+  /** The bag of ice block that goes with ice cream, and the items that
+   *  need one. The shop puts it in the cart and takes it out again; it is
+   *  never offered and never removed by hand. Absent on an older server,
+   *  which is a shop that does not do this. */
+  ice?: {
+    itemId: string;
+    name: string;
+    restaurantId: string;
+    restaurantName: string;
+    imageUrl: string;
+    unitPrice: number;
+    containerPct: number;
+  } | null;
+  needsIce?: string[];
   /** The order of the front page, as admin set it, and what is switched off.
    *  Older servers send none, and then the app keeps the order it shipped
    *  with, which is the same one the website ships with. */

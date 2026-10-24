@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useIceInCart } from "@/lib/ice";
 import {
   ActivityIndicator,
   Modal,
@@ -78,6 +79,9 @@ export default function Checkout() {
   /** The blocks admin delivers to. Older servers do not send them, and then
    *  the checkout asks for a typed answer as it always did. */
   const hostels = shop?.hostels ?? [];
+  // The bag of ice block, put in by the shop and taken out again, so the
+  // figure on this screen is the figure on the bill. See lib/ice.ts.
+  useIceInCart(shop, lines);
 
   useEffect(() => {
     void api

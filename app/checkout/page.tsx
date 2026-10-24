@@ -127,6 +127,7 @@ export default async function CheckoutPage({
           figure. See components/IceInCart.tsx. */}
       <IceInCart ice={ice} needsIce={needsIce} />
       <Checkout
+      iceItemId={ice?.itemId ?? ""}
       monies={monies}
       batches={views}
       today={lagosToday()}

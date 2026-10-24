@@ -835,20 +835,33 @@ export default function CartView({
                     of something read as one item in the cart. */}
                 <p className="truncate font-bold">
                   {line.qty > 1 && <span className="text-brand">{line.qty}× </span>}
-                  <Link
-                    href={`/p/${line.itemId}?line=${encodeURIComponent(line.key)}`}
-                    className="hover:underline"
-                  >
-                    {line.name}
-                  </Link>
+                  {line.itemId === iceItemId ? (
+                    line.name
+                  ) : (
+                    <Link
+                      href={`/p/${line.itemId}?line=${encodeURIComponent(line.key)}`}
+                      className="hover:underline"
+                    >
+                      {line.name}
+                    </Link>
+                  )}
                 </p>
                 <p className="text-sm text-muted">
+                  {/* No counter on the bag of ice. It is bought beside
+                      whichever of them the ice cream came from, and a cart
+                      holding a Domino's dessert reading "Cold Stone
+                      Creamery" under the ice says the car is going
+                      somewhere it is not. */}
+                  {line.itemId === iceItemId ? (
+                    <span className="font-semibold">Added by us</span>
+                  ) : (
                   <Link
                     href={`/r/${line.restaurantId}`}
                     className="font-semibold hover:text-ink hover:underline"
                   >
                     {line.restaurantName}
                   </Link>
+                  )}
                   {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
                   {people.length > 0 && !inParty && ` · for ${line.forName || "you"}`}
                 </p>

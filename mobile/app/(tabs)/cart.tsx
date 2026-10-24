@@ -19,6 +19,7 @@ import {
 } from "@/lib/api";
 import { cart, cartTotal, countItems, party, people, useStored, type Line } from "@/lib/store";
 import { useShop } from "@/lib/use-shop";
+import { useIceInCart } from "@/lib/ice";
 import Thumb from "@/components/Thumb";
 import { Button, Card, Display, FloatingBar, Stepper, Ticket } from "@/components/ui";
 import { F, T } from "@/lib/theme";
@@ -31,6 +32,10 @@ export default function Cart() {
   // moment the cart opens rather than "at checkout" for as long as the
   // network takes and then a figure that appears from nowhere.
   const shop = useShop();
+  // The bag of ice block, put in by the shop and taken out again, so the
+  // figure here is the figure on the bill. See lib/ice.ts.
+  useIceInCart(shop, lines);
+  const iceId = shop?.ice?.itemId ?? "";
   const [friends] = useStored(people.read, []);
   // In a car, this cart is their part of it: it is finalised into the group
   // rather than checked out, and nobody has a delivery fee until it closes.
@@ -414,7 +419,13 @@ export default function Cart() {
                         {line.name}
                       </Text>
                       <Text style={{ fontFamily: F.mono, fontSize: 11, color: T.muted }}>
-                        {line.restaurant} · {naira(line.unitPrice * line.qty)}
+                        {/* No counter on the bag of ice. It is bought beside
+                            whichever of them the ice cream came from, and a
+                            cart holding a Domino's dessert reading "Cold
+                            Stone" under the ice says the car is going
+                            somewhere it is not. */}
+                        {line.itemId === iceId ? "Added by us" : line.restaurant} ·{" "}
+                        {naira(line.unitPrice * line.qty)}
                       </Text>
                       {line.choices.length > 0 && (
                         <Text style={{ fontFamily: F.body, fontSize: 12, color: T.muted }}>
@@ -423,13 +434,25 @@ export default function Cart() {
                       )}
                     </Pressable>
 
-                    <Stepper
-                      qty={line.qty}
-                      name={line.name}
-                      tone="chalk"
-                      onLess={() => cart.setQty(line.key, line.qty - 1)}
-                      onMore={() => cart.setQty(line.key, line.qty + 1)}
-                    />
+                    {/* The bag of ice is not somebody's to change: it
+                        arrives with the ice cream and leaves with it, so a
+                        stepper on it undoes itself the moment it is
+                        pressed. */}
+                    {line.itemId === iceId ? (
+                      <Text
+                        style={{ fontFamily: F.bodySemi, fontSize: 11, color: T.muted }}
+                      >
+                        Goes with the ice cream
+                      </Text>
+                    ) : (
+                      <Stepper
+                        qty={line.qty}
+                        name={line.name}
+                        tone="chalk"
+                        onLess={() => cart.setQty(line.key, line.qty - 1)}
+                        onMore={() => cart.setQty(line.key, line.qty + 1)}
+                      />
+                    )}
                   </View>
 
                   {/* Taking something out had no button of its own: the only
@@ -446,6 +469,7 @@ export default function Cart() {
                       paddingLeft: 64,
                     }}
                   >
+                    {line.itemId !== iceId && (
                     <Pressable
                       onPress={() => cart.setQty(line.key, 0)}
                       hitSlop={8}
@@ -462,6 +486,7 @@ export default function Cart() {
                         Remove
                       </Text>
                     </Pressable>
+                    )}
 
                     {friends.length > 0 &&
                       ["", ...friends.map((friend) => friend.name)].map((name) => {

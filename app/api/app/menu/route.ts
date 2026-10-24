@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { openBatches, carsOnOffer } from "@/lib/batches";
+import { iceForCart } from "@/lib/ice-server";
 import { menuView } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
@@ -126,6 +127,7 @@ export async function GET(): Promise<NextResponse> {
       stepFeeOf,
       promoters,
       nudge,
+      iceFor,
     ] = await Promise.all([
       // The strip, checked against what it points at, so a banner for a
       // match that has been played takes itself down on the phone the same
@@ -144,6 +146,7 @@ export async function GET(): Promise<NextResponse> {
       stepFeeOfEach(),
       namedPromoters(),
       appNudge(),
+      iceForCart(),
     ]);
 
     const slots =
@@ -189,6 +192,11 @@ export async function GET(): Promise<NextResponse> {
         urgentExtra: pricing.urgentExtra,
       },
       runs: batches.map(toBatchView),
+      /* The bag of ice block, and what needs one. The order puts it on
+         whatever the phone says, so a phone that cannot see it quotes a
+         total twelve hundred and fifty short of the bill. See lib/ice.ts. */
+      ice: iceFor.ice,
+      needsIce: iceFor.needsIce,
       // Keyed by restaurant, so the app can look one up without walking a
       // list on every card it draws.
       offers: Object.fromEntries(

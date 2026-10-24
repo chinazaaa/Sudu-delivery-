@@ -129,8 +129,12 @@ export default function Checkout({
   sentBy = "",
   sentByName = "",
   monies = [],
+  iceItemId = "",
 }: {
   batches: BatchView[];
+  /** The bag of ice block the shop puts in and takes out itself. Named
+   *  here only so the cart listing does not print a counter on it. */
+  iceItemId?: string;
   /** Today in Lagos, from the shop's clock: it decides whether a run going
    *  today opens instead of a time of their own. */
   today: string;
@@ -1912,7 +1916,12 @@ export default function Checkout({
               <span className="min-w-0">
                 <span className="font-mono font-semibold">{line.qty}×</span>{" "}
                 {line.name}
-                <span className="text-muted"> · {line.restaurantName}</span>
+                {/* No counter on the bag of ice: it is bought beside
+                    whichever of them the ice cream came from, and naming
+                    one says the car is going somewhere it is not. */}
+                <span className="text-muted">
+                  {" "}· {line.itemId === iceItemId ? "added by us" : line.restaurantName}
+                </span>
                 {line.choices.length > 0 && (
                   <span className="text-muted"> · {line.choices.join(", ")}</span>
                 )}
