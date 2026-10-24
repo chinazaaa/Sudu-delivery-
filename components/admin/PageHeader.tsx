@@ -65,7 +65,7 @@ export default function PageHeader({
               <form action="/admin/search" className="hidden sm:block">
                 <input
                   name="q"
-                  placeholder="Search orders, people, items…"
+                  placeholder="A name, a dish, a kitchen, a number…"
                   aria-label="Search everything in admin"
                   className="field min-h-[42px] w-[248px] border-[1.5px] border-line bg-paper px-3 py-0 text-[14.5px]"
                 />

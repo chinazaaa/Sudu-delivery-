@@ -90,6 +90,16 @@ export const GROUPS: Group[] = [
     name: "Customers & reviews",
     items: [
       { href: "/admin/customers", label: "Customers" },
+      /*
+       * Who has bought a thing before.
+       *
+       * The box in the header answers this and the header has no box on a
+       * phone, where there is no room for one beside the page. So the
+       * page it goes to is listed like any other, under the people it is
+       * about: somebody's sister rings about the Fantasy ice cream and
+       * the question is whose name to look for.
+       */
+      { href: "/admin/search", label: "Who bought what" },
       // Beside the customers rather than under the money, because it is a
       // fact about people: who introduced them, and what that was worth.
       // Analytics counts visits, which is a different question with a
