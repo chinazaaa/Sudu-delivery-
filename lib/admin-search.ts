@@ -104,10 +104,12 @@ export async function lookFor(asked: string): Promise<Results> {
 /** Things on the menu, with the kitchen they belong to. */
 async function searchMenu(term: string): Promise<Found[]> {
   try {
+    const ways = spellings(term);
+    if (ways.length === 0) return [];
     const { data } = await db()
       .from("menu_items")
       .select("id, name, price, restaurant_id, available")
-      .ilike("name", `%${term}%`)
+      .or(ways.map((one) => `name.ilike.%${one}%`).join(","))
       .limit(8)
       .overrideTypes<
         { id: string; name: string; price: number; restaurant_id: string; available: boolean }[]
@@ -138,16 +140,68 @@ async function searchMenu(term: string): Promise<Found[]> {
   }
 }
 
+/**
+ * A name with the punctuation taken out of it, for comparing.
+ *
+ * "Dominos" found nothing, because the kitchen is called Domino's Pizza
+ * and the apostrophe is in the shop's name rather than in anybody's
+ * typing. Nobody types the apostrophe, and expecting them to is the search
+ * asking to be told the answer before it will give it.
+ *
+ * Spaces go too, so "coldstone" finds Cold Stone Creamery and "burgerking"
+ * finds Burger King. Nothing is lost by it: two kitchens whose names
+ * differ only by a space are not a thing this shop has.
+ */
+export const bare = (said: string): string =>
+  String(said ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+/**
+ * The ways somebody might have typed a name that has punctuation in it.
+ *
+ * A hundred and thirty things on this menu have an apostrophe in them and
+ * nobody types one. The whole menu is four thousand rows, so it cannot be
+ * read and matched here the way the ten kitchens can; what it can do is
+ * ask for the obvious spellings at once.
+ *
+ * The possessive is the one that matters: "dominos" for Domino's,
+ * "jays" for Jay's. Anything cleverer than that is a guess about what
+ * somebody meant, and a search that invents matches is worse than one
+ * that misses.
+ */
+export function spellings(term: string): string[] {
+  const safe = term.replace(/[%,()]/g, " ").trim();
+  if (safe === "") return [];
+
+  const out = new Set<string>([safe]);
+  // "dominos" is also "domino's", which is how the shop files it.
+  if (/[a-z]s$/i.test(safe)) out.add(`${safe.slice(0, -1)}'s`);
+  // And the other way round, for somebody who did type one.
+  if (safe.includes("'")) out.add(safe.replace(/'/g, ""));
+  return [...out];
+}
+
+/**
+ * Every kitchen, read whole and matched here.
+ *
+ * Ten rows, so fetching them costs nothing and the comparison can be the
+ * forgiving one. Asking the database to do it would mean an ilike, and an
+ * ilike cannot see past an apostrophe it is not given.
+ */
+async function kitchensLike(term: string): Promise<{ id: string; name: string; active: boolean }[]> {
+  const { data } = await db()
+    .from("restaurants")
+    .select("id, name, active")
+    .limit(200)
+    .overrideTypes<{ id: string; name: string; active: boolean }[]>();
+
+  const needle = bare(term);
+  if (needle === "") return [];
+  return (data ?? []).filter((row) => bare(row.name).includes(needle));
+}
+
 async function searchKitchens(term: string): Promise<Found[]> {
   try {
-    const { data } = await db()
-      .from("restaurants")
-      .select("id, name, active, kind")
-      .ilike("name", `%${term}%`)
-      .limit(6)
-      .overrideTypes<{ id: string; name: string; active: boolean; kind?: string }[]>();
-
-    return (data ?? []).map((row) => ({
+    return (await kitchensLike(term)).slice(0, 6).map((row) => ({
       kind: "kitchen" as const,
       href: `/admin/menu/${row.id}`,
       title: row.name,
@@ -180,21 +234,15 @@ async function searchKitchens(term: string): Promise<Found[]> {
 async function searchBuyers(term: string): Promise<Found[]> {
   try {
     // The kitchens whose name matches, so "Dominos" finds everything they
-    // sell rather than nothing: no dish is called Domino's.
-    const { data: shops } = await db()
-      .from("restaurants")
-      .select("id, name")
-      .ilike("name", `%${term}%`)
-      .limit(5)
-      .overrideTypes<{ id: string; name: string }[]>();
-
-    const shopIds = (shops ?? []).map((one) => one.id);
+    // sell rather than nothing: no dish is called Domino's, and the
+    // apostrophe is in the shop's name rather than in anybody's typing.
+    const shopIds = (await kitchensLike(term)).slice(0, 5).map((one) => one.id);
 
     const [named, theirs] = await Promise.all([
       db()
         .from("menu_items")
         .select("id, name")
-        .ilike("name", `%${term}%`)
+        .or(spellings(term).map((one) => `name.ilike.%${one}%`).join(",") || "id.is.null")
         .limit(60)
         .overrideTypes<{ id: string; name: string }[]>(),
       shopIds.length > 0

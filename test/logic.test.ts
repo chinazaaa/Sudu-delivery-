@@ -95,6 +95,7 @@ import { templateFor } from "../lib/messages";
 import { EMPTY } from "../lib/settings";
 import { test } from "node:test";
 import { chargedByRestaurant, groupForCounter } from "../lib/admin";
+import { bare, spellings } from "../lib/admin-search";
 import { fareFor, parseFares, putOnCard, serialiseFares } from "../lib/transport";
 import { normalisePhone, formatPhone } from "../lib/phone";
 import { countdown, lagosInstant, lagosToday } from "../lib/time";
@@ -6033,4 +6034,39 @@ test("a word that names a whole shelf is a question, not an answer", () => {
   // A word on only one or two things is not a kind. "Pepperoni" here is
   // the dish, and asking about it would be the chat being unhelpful.
   assert.equal(botFind("pepperoni", dominos, 3).how, "sure");
+});
+
+test("a name is found without its apostrophe", () => {
+  /*
+   * "Dominos" found nothing, because the kitchen is called Domino's Pizza
+   * and the apostrophe is in the shop's name rather than in anybody's
+   * typing. Expecting it is the search asking to be told the answer
+   * before it will give it.
+   */
+  const matches = (term: string, name: string) => bare(name).includes(bare(term));
+
+  assert.equal(matches("dominos", "Domino's Pizza"), true);
+  assert.equal(matches("domino", "Domino's Pizza"), true);
+  assert.equal(matches("domino's", "Domino's Pizza"), true);
+  // Spaces go too, so a name typed as one word still lands.
+  assert.equal(matches("coldstone", "Cold Stone Creamery"), true);
+  assert.equal(matches("burgerking", "Burger King"), true);
+  assert.equal(matches("cold stone", "Cold Stone Creamery"), true);
+  // And it is still a search, not a shrug: a different shop is a miss.
+  assert.equal(matches("dominos", "Burger King"), false);
+  assert.equal(matches("", "Domino's Pizza"), true);
+  assert.equal(bare("  "), "");
+
+  /*
+   * The menu is four thousand rows, so it cannot be read and matched the
+   * way ten kitchens can. It asks for the obvious spellings instead, and
+   * the possessive is the one that matters.
+   */
+  assert.deepEqual(spellings("dominos").sort(), ["domino's", "dominos"]);
+  assert.deepEqual(spellings("jay's").sort(), ["jay's", "jays"]);
+  // Nothing clever on a word that needs nothing.
+  assert.deepEqual(spellings("pizza"), ["pizza"]);
+  // The characters that would break the query are not sent into it.
+  assert.deepEqual(spellings("a,b(c)%"), ["a b c"]);
+  assert.deepEqual(spellings("   "), []);
 });
