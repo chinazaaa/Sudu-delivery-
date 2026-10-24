@@ -3,9 +3,10 @@ import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
 import Checklist from "@/components/Checklist";
+import StagePicker from "@/components/admin/StagePicker";
 import Many from "@/components/Many";
 import ActionButton from "@/components/ActionButton";
-import { everythingAtTheCounter, setDayCosts } from "@/app/admin/actions";
+import { everythingAtTheCounter, setDayCosts, setDayStage } from "@/app/admin/actions";
 import { dayCostSoFar } from "@/lib/day-costs";
 import { dayToDrive, daysGoing, drivingToday } from "@/lib/admin";
 import { naira } from "@/lib/money";
@@ -105,6 +106,109 @@ export default async function DrivingTodayPage({
         </div>
       )}
 
+      {/*
+        Where the food has got to, moved for the whole day at once.
+
+        A run and a car of its own on one evening are one drive, so this
+        is one fact. Moving each of them separately is the same tap twice
+        for a thing that happened once, and the half somebody forgets
+        sits there telling its own customers the wrong story.
+      */}
+      {sheet.parts.length > 0 && (
+        <section className="card mb-4">
+          <StagePicker
+            batchId={day}
+            stage={sheet.parts[0].stage}
+            action={setDayStage}
+            field="day"
+          />
+        </section>
+      )}
+
+      <section className="card mb-4 space-y-3">
+        <div>
+          <h2 className="font-bold">What to buy</h2>
+          <p className="text-sm text-muted">
+            Added up across everything going today, so a counter is one stop
+            however many of them ordered from it. Unpaid orders are not on it,
+            because their food is not bought.
+          </p>
+        </div>
+
+        {sheet.counter.length === 0 ? (
+          <p className="text-sm text-muted">Nothing paid for yet.</p>
+        ) : (
+          sheet.counter.map((place) => (
+            <div key={place.restaurant} className="rounded-2xl border border-black/10 p-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="font-bold">
+                  {place.restaurant}
+                  {place.melts === true && (
+                    <span className="tag ml-2">melts · buy it last</span>
+                  )}
+                </h3>
+                <span className="text-sm font-semibold">
+                  {naira(place.expectedFoodTotal)}
+                </span>
+              </div>
+              {/* The ticks are this browser's own, as they are everywhere
+                  else. The first one says she is at a counter, and moves
+                  everything going today on with it: she is standing at one
+                  till for all of them. */}
+              <div className="mt-2">
+                <Checklist
+                  id={`today-${day}-${place.restaurant}`}
+                  label="bought"
+                  arrived={everythingAtTheCounter.bind(null, day)}
+                  items={place.lines.map((line) => ({
+                    key: `${line.name}|${line.choices.join("|")}`,
+                    qty: line.qty,
+                    text: line.name,
+                    detail: saidPicksLine(line.picks, line.choices),
+                  }))}
+                />
+              </div>
+            </div>
+          ))
+        )}
+      </section>
+
+      <section className="card mb-4 space-y-3">
+        <div>
+          <h2 className="font-bold">Bags</h2>
+          <p className="text-sm text-muted">
+            Who gets what. Marking them delivered still happens on each one&apos;s
+            own page above, which is also where its costs and profit live.
+          </p>
+        </div>
+        <ul className="space-y-2">
+          {sheet.handout.map((order) => (
+            <li key={order.id} className="rounded-2xl border border-black/10 p-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="font-bold">
+                  {order.for_name ?? order.customer_name}
+                </span>
+                <span className="text-sm text-muted">
+                  {order.hostel} · {formatPhone(order.customer_phone)}
+                </span>
+              </div>
+              <ul className="mt-1 text-sm text-ink/80">
+                {order.lines.map((line) => (
+                  <li key={line.id} className="flex items-baseline gap-1.5">
+                    <Many qty={line.qty} small /> {line.name}
+                    {line.choices.length > 0 && (
+                      <span className="text-muted">
+                        {" "}· {saidPicksLine(line.picks, line.choices)}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Bags" value={sheet.handout.length} />
         <Stat label="Items" value={sheet.items} />
@@ -200,90 +304,6 @@ export default async function DrivingTodayPage({
                   {part.paid} paid →
                 </span>
               </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="card mb-4 space-y-3">
-        <div>
-          <h2 className="font-bold">What to buy</h2>
-          <p className="text-sm text-muted">
-            Added up across everything going today, so a counter is one stop
-            however many of them ordered from it. Unpaid orders are not on it,
-            because their food is not bought.
-          </p>
-        </div>
-
-        {sheet.counter.length === 0 ? (
-          <p className="text-sm text-muted">Nothing paid for yet.</p>
-        ) : (
-          sheet.counter.map((place) => (
-            <div key={place.restaurant} className="rounded-2xl border border-black/10 p-3">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="font-bold">
-                  {place.restaurant}
-                  {place.melts === true && (
-                    <span className="tag ml-2">melts · buy it last</span>
-                  )}
-                </h3>
-                <span className="text-sm font-semibold">
-                  {naira(place.expectedFoodTotal)}
-                </span>
-              </div>
-              {/* The ticks are this browser's own, as they are everywhere
-                  else. The first one says she is at a counter, and moves
-                  everything going today on with it: she is standing at one
-                  till for all of them. */}
-              <div className="mt-2">
-                <Checklist
-                  id={`today-${day}-${place.restaurant}`}
-                  label="bought"
-                  arrived={everythingAtTheCounter.bind(null, day)}
-                  items={place.lines.map((line) => ({
-                    key: `${line.name}|${line.choices.join("|")}`,
-                    qty: line.qty,
-                    text: line.name,
-                    detail: saidPicksLine(line.picks, line.choices),
-                  }))}
-                />
-              </div>
-            </div>
-          ))
-        )}
-      </section>
-
-      <section className="card mb-4 space-y-3">
-        <div>
-          <h2 className="font-bold">Bags</h2>
-          <p className="text-sm text-muted">
-            Who gets what. Marking them delivered still happens on each one&apos;s
-            own page above, which is also where its costs and profit live.
-          </p>
-        </div>
-        <ul className="space-y-2">
-          {sheet.handout.map((order) => (
-            <li key={order.id} className="rounded-2xl border border-black/10 p-3">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="font-bold">
-                  {order.for_name ?? order.customer_name}
-                </span>
-                <span className="text-sm text-muted">
-                  {order.hostel} · {formatPhone(order.customer_phone)}
-                </span>
-              </div>
-              <ul className="mt-1 text-sm text-ink/80">
-                {order.lines.map((line) => (
-                  <li key={line.id} className="flex items-baseline gap-1.5">
-                    <Many qty={line.qty} small /> {line.name}
-                    {line.choices.length > 0 && (
-                      <span className="text-muted">
-                        {" "}· {saidPicksLine(line.picks, line.choices)}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
             </li>
           ))}
         </ul>

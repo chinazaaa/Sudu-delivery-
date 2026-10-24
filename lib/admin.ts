@@ -5,6 +5,7 @@ import { feeFor } from "./fees";
 import { activeBands } from "./settings";
 import { getBatch } from "./batches";
 import { lagosToday, runDateLabel } from "./time";
+import type { BatchStage } from "./stages";
 import { carLabel } from "./view";
 import { counterKey } from "./runner";
 import { DEFAULT_MARKUP, lineCost, markupOf } from "./cost-price";
@@ -1034,6 +1035,7 @@ export type DrivingToday = TripSheet & {
     label: string;
     kind: string;
     paid: number;
+    stage: BatchStage;
     /** Its share of what the day cost, so the whole can be added back up
      *  and typed once. See lib/day-costs.ts. */
     fuel: number;
@@ -1134,6 +1136,7 @@ export async function drivingToday(date?: string): Promise<DrivingToday | null> 
       label: carLabel(one),
       kind: one.kind ?? "run",
       paid: paid.filter((order) => order.batch_id === one.id).length,
+      stage: one.stage,
       fuel: one.fuel_cost,
       transport: one.transport_cost ?? 0,
       driver: one.driver_cost,

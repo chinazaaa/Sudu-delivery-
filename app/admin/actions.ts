@@ -3517,6 +3517,42 @@ export async function noMoreOrders(form: FormData): Promise<void> {
 }
 
 /**
+ * Move the whole day along in one press.
+ *
+ * A run and a car of its own on one evening are one drive, so where the
+ * food has got to is one fact. Moving each batch separately is the same
+ * tap twice for a thing that happened once, and the half somebody
+ * forgets sits there telling its customers the wrong story.
+ *
+ * Each batch still goes through the shop's own stage action, which
+ * carries the status, the cut-off and the notifications with it.
+ */
+export async function setDayStage(form: FormData): Promise<void> {
+  await assertAdmin();
+
+  const day = String(form.get("day") ?? "").trim();
+  const stage = String(form.get("stage") ?? "");
+  if (day === "" || !STAGES.includes(stage as BatchStage)) return;
+
+  const { data } = await db()
+    .from("batches")
+    .select("id, kind, status")
+    .eq("run_date", day)
+    .neq("status", "cancelled");
+
+  const going = ((data ?? []) as { id: string; kind?: string | null }[]).filter(
+    (one) => (one.kind ?? "run") === "run" || one.kind === "same_day"
+  );
+
+  for (const one of going) {
+    const move = new FormData();
+    move.set("batch_id", one.id);
+    move.set("stage", stage);
+    await setBatchStage(move);
+  }
+}
+
+/**
  * Everything going out today, at the counter at once.
  *
  * A run and a car of its own on one evening are two batches because they

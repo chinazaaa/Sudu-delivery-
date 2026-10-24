@@ -26,10 +26,15 @@ export default function StagePicker({
   batchId,
   stage,
   action,
+  field = "batch_id",
   parcel = false,
   primary = true,
 }: {
   batchId: string;
+  /** What the action calls the thing being moved. A run is a batch_id; a
+   *  whole evening's driving is a day, because a run and a car of its own
+   *  on one night are one drive and so one stage. */
+  field?: string;
   stage: BatchStage;
   action: (form: FormData) => Promise<void>;
   /** A parcel is not cooked and is handed to one person, so the same six
@@ -60,7 +65,7 @@ export default function StagePicker({
 
       {next && (
         <form action={action}>
-          <input type="hidden" name="batch_id" value={batchId} />
+          <input type="hidden" name={field} value={batchId} />
           <input type="hidden" name="stage" value={next} />
           {/* The single Tomato button on the page: the one thing to do
                next. Everything else here is an outline. */}
@@ -76,7 +81,7 @@ export default function StagePicker({
 
       {/* Everything else, for putting right what was pressed by mistake. */}
       <form ref={form} action={action}>
-        <input type="hidden" name="batch_id" value={batchId} />
+        <input type="hidden" name={field} value={batchId} />
         <label className="sr-only" htmlFor="stage">
           {parcel ? "Where the parcel is" : "Where the run is"}
         </label>
