@@ -194,7 +194,7 @@ export default function Checkout() {
   // second stop, and a second stop costs the same whichever two they are.
   const secondStop = mixedExtra(cartAreas, shop?.areaPairs ?? []);
   const farExtra = area.runExtra + secondStop;
-  const runBands = withExtra(shop?.bands ?? [], farExtra);
+  const plainRunBands = withExtra(shop?.bands ?? [], farExtra);
   const sameDayBands = withExtra(shop?.sameDay?.bands ?? [], area.sameDayExtra + secondStop);
 
   const runsHere = (shop?.runs ?? []).filter(
@@ -243,6 +243,16 @@ export default function Checkout() {
   })();
 
   const run = runsHere.find((one) => one.id === runId) ?? null;
+
+  /*
+   * A run that has closed but has not been shopped yet is charged as a
+   * car: six and a half, not four. The app was quoting the run ladder
+   * and the server was charging the car one, which is the one thing a
+   * checkout must never do. See lib/last-minute.ts on the server.
+   */
+  const lastMinute = run?.lastMinute === true;
+  const runBands = lastMinute ? sameDayBands : plainRunBands;
+  const ladderBase = lastMinute ? (shop?.sameDay?.bands ?? []) : (shop?.bands ?? []);
   const picked: Slot | null = slots.find((one) => one.at === deliverAt) ?? null;
 
   // When it lands, worked out rather than asked for: a run going today, a
@@ -298,7 +308,7 @@ export default function Checkout() {
             // holding both a market and a kitchen twice for one car.
             return containers === 0
               ? 0
-              : feeFrom(containers, shop?.bands ?? [], flash);
+              : feeFrom(containers, ladderBase, flash);
           })(),
           bands: byValue,
         }) + farExtra

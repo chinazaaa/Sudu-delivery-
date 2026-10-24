@@ -305,6 +305,11 @@ export type Run = {
    *  out, and then a run is offered and the order itself refuses it. */
   closed?: boolean;
   full?: boolean;
+  /** Closed but not shopped yet: still taking orders, from the counters
+   *  it has not been to, at a car's fee rather than a run's, and with a
+   *  clock on it. Older servers leave it out, which reads as an ordinary
+   *  run, which is what every run was before this existed. */
+  lastMinute?: boolean;
 };
 
 /**

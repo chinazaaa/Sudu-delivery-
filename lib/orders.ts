@@ -873,6 +873,22 @@ export async function quote(args: {
   /** A car of its own instead, at this moment, and whether that is urgent. */
   sameDay?: { urgent: boolean } | null;
 }): Promise<{ quote: Quote } | { error: string }> {
+  /*
+   * The bag of ice block, on the quote as it will be on the bill.
+   *
+   * This is what the chat prices from, and a quote that leaves it off is
+   * a quote the order will not match. See lib/ice.ts.
+   */
+  args = {
+    ...args,
+    lines: withIce(
+      args.lines,
+      await itemsNeedingIce(),
+      (await safeSettings()).ice_item_id ?? "",
+      (itemId) => ({ menu_item_id: itemId, qty: 1 })
+    ),
+  };
+
   const priced = await priceLines(args.lines);
   if ("error" in priced) return { error: priced.error };
 
