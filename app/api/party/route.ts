@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { takeSeat } from "@/lib/group-carts";
 import { holdsOwnSeat, seatFrom } from "@/lib/seat";
 import { db } from "@/lib/supabase";
-import { createSameDayBatch, getBatch, isOrderable } from "@/lib/batches";
+import { createSameDayBatch, getBatch, isOrderable, sameDayOpenNow } from "@/lib/batches";
 import { hoursByDay, safeSettings } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
 import { SHARE_MINUTES } from "@/lib/groups";
@@ -38,7 +38,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     let batch = null;
 
     if (body.deliverAt) {
-      if ((await safeSettings()).same_day_on !== "on") {
+      // Shut while the one driver is out with tonight's run, as well as
+      // when the shop does not do cars of their own at all.
+      if (!(await sameDayOpenNow())) {
         return NextResponse.json({ error: "Pick a run instead." }, { status: 400 });
       }
       const slot = deliverySlots(new Date(), await hoursByDay()).find(

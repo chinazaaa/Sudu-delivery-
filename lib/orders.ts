@@ -29,7 +29,14 @@ import { siteUrl } from "./admin-templates";
 import { naira, orderRef } from "./money";
 import { SLOT_LABEL } from "./config";
 import { runDateLabel, weekdayLabel } from "./time";
-import { createSameDayBatch, getBatch, isOrderable, orderCounts } from "./batches";
+import {
+  createSameDayBatch,
+  getBatch,
+  isOrderable,
+  orderCounts,
+  someoneIsDriving,
+} from "./batches";
+import { OUT_SAID } from "./one-driver";
 import { bandsFor, isSkincareBatch } from "./skincare";
 import { counterHolding } from "./counter";
 import { areaOfCart, stepFeeOfEach } from "./areas-server";
@@ -188,6 +195,15 @@ async function checkSameDay(
 ): Promise<{ slot: Slot; pricing: Awaited<ReturnType<typeof sameDayPricing>> } | { error: string }> {
   if (((await safeSettings()).same_day_on || "") !== "on") {
     return { error: "Same day delivery is not running today. Pick a run instead." };
+  }
+
+  // One driver. While she is out with tonight's run there is nobody to
+  // drive a car of its own, however long the page has been open. This is
+  // the gate that matters: the pages stop offering it, and this stops it
+  // being bought by somebody who was already on the checkout. See
+  // lib/one-driver.ts.
+  if (await someoneIsDriving()) {
+    return { error: OUT_SAID };
   }
 
   // By the moment rather than by the text: a time kept in the database comes

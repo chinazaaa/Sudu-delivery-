@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { openBatches } from "@/lib/batches";
+import { openBatches, sameDayOpenNow } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
@@ -147,7 +147,8 @@ export async function GET(): Promise<NextResponse> {
     ]);
 
     const slots =
-      settings.same_day_on === "on"
+      // The app offers exactly what the site offers, this rule included.
+      (await sameDayOpenNow(settings))
         ? slotsWorthOffering(
             deliverySlots(new Date(), dayHours),
             batches.map((one) => ({

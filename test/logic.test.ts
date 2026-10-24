@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+import { driverIsOut } from "../lib/one-driver";
 import { saidPick, saidPicks, saidPicksLine } from "../lib/picks";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
 import { containersIn } from "../lib/containers";
@@ -6206,5 +6207,57 @@ test("ice cream is the last stop whatever the run is arranged as", () => {
       (one) => one.restaurant
     ),
     ["The Place", "Cold Stone Creamery", "Burger King"]
+  );
+});
+
+test("one driver: a car of its own waits while a run is out", () => {
+  const today = "2026-10-24";
+
+  // She has left to buy tonight's run. There is nobody to drive a second car.
+  assert.equal(
+    driverIsOut([{ stage: "at_counter", run_date: today }], today),
+    true
+  );
+  assert.equal(
+    driverIsOut([{ stage: "on_the_road", run_date: today }], today),
+    true
+  );
+
+  // Closed is only a deadline. The food has not been fetched and she has
+  // not gone anywhere, so a car of its own can still go.
+  assert.equal(driverIsOut([{ stage: "closed", run_date: today }], today), false);
+  assert.equal(driverIsOut([{ stage: "ordering", run_date: today }], today), false);
+
+  // Back from the drop, free again.
+  assert.equal(
+    driverIsOut([{ stage: "handed_out", run_date: today }], today),
+    false
+  );
+
+  // Another day's run is not what she is doing tonight.
+  assert.equal(
+    driverIsOut([{ stage: "on_the_road", run_date: "2026-10-23" }], today),
+    false
+  );
+
+  // A parcel is its own trip on a day agreed with whoever sent it, and a
+  // cancelled run is nothing at all.
+  assert.equal(
+    driverIsOut([{ stage: "on_the_road", run_date: today, kind: "parcel" }], today),
+    false
+  );
+  assert.equal(
+    driverIsOut(
+      [{ stage: "on_the_road", run_date: today, status: "cancelled" }],
+      today
+    ),
+    false
+  );
+
+  // A car of its own already out blocks the next one just the same: it is
+  // still one person driving.
+  assert.equal(
+    driverIsOut([{ stage: "on_the_road", run_date: today, kind: "same_day" }], today),
+    true
   );
 });

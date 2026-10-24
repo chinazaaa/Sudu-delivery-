@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { someoneIsDriving } from "@/lib/batches";
 import KeepFields from "@/components/admin/KeepFields";
 import PageHeader from "@/components/admin/PageHeader";
 import Panel from "@/components/admin/Panel";
@@ -52,6 +53,9 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsAdmin() {
   const settings = await getSettings();
+  // Whether anybody is out driving a run right now, which shuts cars of
+  // their own by itself. See lib/one-driver.ts.
+  const driving = await someoneIsDriving();
   const hostels = await listHostels(true);
   // Asked up front, so a box whose column is not there says why rather than
   // taking a line and throwing on save.
@@ -1470,6 +1474,19 @@ export default async function SettingsAdmin() {
                   </span>
                 </span>
               </label>
+
+              {/* Why it is shut tonight although the switch is on. One
+                  driver cannot do tonight's run and a car of its own at
+                  once, so it holds itself shut while she is out and comes
+                  back by itself. Worth saying here, because the other way
+                  to read a quiet evening is that something is broken. */}
+              {settings.same_day_on === "on" && driving && (
+                <p className="soft px-3.5 py-2.5 text-sm">
+                  Shut at this minute: somebody is out driving a run, and one
+                  driver cannot do both. It opens again on its own once that
+                  run is marked handed out.
+                </p>
+              )}
 
               <div className="border-t-[1.5px] border-rule pt-3.5">
                 <p className="label">What it costs</p>

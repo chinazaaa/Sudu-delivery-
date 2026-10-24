@@ -7,7 +7,7 @@ import { cheapestBoxes } from "@/lib/box-view";
 import { naira } from "@/lib/money";
 import { shelfPhotos } from "@/lib/shelf-photo";
 import Home from "@/components/Home";
-import { openBatches } from "@/lib/batches";
+import { openBatches, sameDayOpenNow } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
 import { listSlides } from "@/lib/slides";
 import { shownSays } from "@/lib/says";
@@ -56,8 +56,11 @@ export default async function HomePage() {
     safeSettings(),
     activeBands(),
   ]);
+  // On, and nobody out driving it: one driver cannot do tonight's run and
+  // a car of its own at the same time. See lib/one-driver.ts.
+  const sameDayOn = await sameDayOpenNow(settings);
   const slots =
-    settings.same_day_on === "on"
+    sameDayOn
       ? slotsWorthOffering(
           deliverySlots(new Date(), await hoursByDay()),
           batches.map((one) => ({ run_date: one.run_date, window: one.delivery_window_text }))
@@ -207,7 +210,7 @@ export default async function HomePage() {
     : "";
 
   // The hours, off the settings already read rather than a trip of its own.
-  const dayHours = settings.same_day_on === "on" ? await hoursByDay() : null;
+  const dayHours = sameDayOn ? await hoursByDay() : null;
 
   // One car a week, on a Saturday. Empty when that shelf is off, and then the
   // page does not mention it at all.
@@ -225,8 +228,7 @@ export default async function HomePage() {
           (one) => one.day === "today" || one.day === "tomorrow"
         );
   // Read once, for both the counter cards and the ticket at the top.
-  const sameDayLadder =
-    settings.same_day_on === "on" ? await sameDayPricing() : null;
+  const sameDayLadder = sameDayOn ? await sameDayPricing() : null;
   const sameDayFirst = sameDayLadder?.bands[0]?.fee ?? 0;
   const sameDayFrom = counterSlots.length > 0 ? sameDayFirst : 0;
   const soonest = counterSlots.some((one) => one.day === "today") ? "today" : "tomorrow";

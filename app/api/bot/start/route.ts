@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { openBatches } from "@/lib/batches";
+import { openBatches, sameDayOpenNow } from "@/lib/batches";
 import { hostelNames } from "@/lib/hostels";
 import { shopEmails } from "@/lib/settings";
 import { openRestaurants } from "@/lib/menu";
@@ -82,7 +82,11 @@ export async function GET(): Promise<NextResponse> {
       openRestaurants().catch(() => []),
       safeSettings(),
       activeBands(),
-      hoursByDay().catch(() => null),
+      // Null when a car of its own cannot go: the shop does not do them,
+      // or the one driver is already out with tonight's run.
+      sameDayOpenNow()
+        .then((open) => (open ? hoursByDay() : null))
+        .catch(() => null),
       sameDayPricing().catch(() => null),
       // Whether there is a code anybody could type tonight. A box for a
       // discount code when the shop has none is a box that can only say

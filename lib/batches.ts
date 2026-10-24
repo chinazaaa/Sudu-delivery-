@@ -8,6 +8,7 @@ import { runSchedule } from "./schedule";
 import { RUN_HORIZON_DAYS, TZ } from "./config";
 import { lagosInstant, lagosToday } from "./time";
 import { stageIndex } from "./stages";
+import { driverIsOut, OUT_STAGES, type DrivingNow } from "./one-driver";
 import type { Batch } from "./types";
 
 /** Weekday number (0 = Sunday) of a YYYY-MM-DD date, read in Lagos. */
@@ -535,6 +536,44 @@ export async function settleEmptyRuns(): Promise<number> {
 }
 
 export type OpenBatch = Batch & { order_count: number; full: boolean };
+
+/**
+ * Whether a car of its own may be sold at this minute.
+ *
+ * The setting says whether the shop does them at all. This says whether
+ * the one driver is free to drive one, which is a different question and
+ * the one that goes wrong: the run closes in the afternoon and is driven
+ * in the evening, and the car was still on sale the whole time she was
+ * out with the boot full. See `lib/one-driver.ts`.
+ *
+ * Asked for defensively, because every customer-facing page calls it: a
+ * query that fails answers "nobody is out", which is how the shop worked
+ * before this existed.
+ */
+export async function sameDayOpenNow(settings?: {
+  same_day_on: string;
+}): Promise<boolean> {
+  const on = (settings ?? (await safeSettings())).same_day_on === "on";
+  if (!on) return false;
+  return !(await someoneIsDriving());
+}
+
+/** The run being driven right now, if there is one. */
+export async function someoneIsDriving(): Promise<boolean> {
+  try {
+    const today = lagosToday();
+    const { data, error } = await db()
+      .from("batches")
+      .select("kind, stage, run_date, status")
+      .eq("run_date", today)
+      .in("stage", [...OUT_STAGES])
+      .limit(20);
+    if (error) return false;
+    return driverIsOut((data ?? []) as DrivingNow[], today);
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Every batch still taking orders, soonest cut-off first. This is what makes

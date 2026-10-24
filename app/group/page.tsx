@@ -1,5 +1,5 @@
 import GroupHub from "@/components/GroupHub";
-import { openBatches } from "@/lib/batches";
+import { openBatches, sameDayOpenNow } from "@/lib/batches";
 import { hoursByDay, safeSettings } from "@/lib/settings";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 export default async function GroupPage() {
   const [batches, settings] = await Promise.all([openBatches(), safeSettings()]);
   const [slots] = await Promise.all([
-    settings.same_day_on === "on"
+    (await sameDayOpenNow(settings))
       ? hoursByDay().then((hours) =>
           slotsWorthOffering(
             deliverySlots(new Date(), hours),
