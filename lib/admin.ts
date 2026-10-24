@@ -4,7 +4,8 @@ import { WINDOW_DAYS } from "./other-money";
 import { feeFor } from "./fees";
 import { activeBands } from "./settings";
 import { getBatch } from "./batches";
-import { lagosToday } from "./time";
+import { lagosToday, runDateLabel } from "./time";
+import { carLabel } from "./view";
 import { counterKey } from "./runner";
 import { DEFAULT_MARKUP, lineCost, markupOf } from "./cost-price";
 import { safeSettings } from "./settings";
@@ -923,6 +924,89 @@ export async function tripSheet(at: string): Promise<TripSheet | null> {
       .filter((line) => paidIds.has(line.order_id))
       .reduce((sum, line) => sum + line.qty, 0),
     gross: sum(paid, (o) => o.total),
+  };
+}
+
+export type DrivingToday = TripSheet & {
+  /** Every batch this sheet is made of, each keeping its own page: the
+   *  costs, the profit and the stage all belong to one of them, and
+   *  nothing here moves an order from the one it was ordered onto. */
+  parts: { id: string; label: string; kind: string; paid: number }[];
+};
+
+/**
+ * Everything going out today, as one shopping trip.
+ *
+ * A scheduled run and a car of its own are two batches because they were
+ * two promises: one shared trip at a run's price, one person's own trip
+ * at a car's. They are not two drives. Nobody goes to Chicken Republic
+ * twice in an evening because the orders arrived through different doors,
+ * and the answer was to move orders from one batch onto the other by
+ * hand, which quietly rewrites what each of them paid for.
+ *
+ * So nothing is moved. The counter list is added up across all of them
+ * here, once, and each batch keeps its own page for its own costs and its
+ * own stage. What is driven is one list; what is counted stays two.
+ */
+export async function drivingToday(date?: string): Promise<DrivingToday | null> {
+  const day = date ?? lagosToday();
+
+  const { data: rows } = await db()
+    .from("batches")
+    .select("*")
+    .eq("run_date", day)
+    .neq("status", "cancelled")
+    .neq("status", "delivered");
+
+  // A parcel is its own trip on a day agreed with whoever sent it, and
+  // the skincare drop is its own shop on its own day.
+  const batches = ((rows ?? []) as Batch[]).filter(
+    (one) => (one.kind ?? "run") === "run" || one.kind === "same_day"
+  );
+  if (batches.length === 0) return null;
+
+  const { data } = await db()
+    .from("orders")
+    .select("*")
+    .in("batch_id", batches.map((one) => one.id))
+    .not("status", "in", NOT_ORDERS_SQL)
+    .order("customer_name");
+
+  const orders = (data ?? []) as Order[];
+  const lines = await linesFor(orders.map((o) => o.id));
+  const byOrder = new Map<string, OrderLine[]>();
+  for (const line of lines) {
+    byOrder.set(line.order_id, [...(byOrder.get(line.order_id) ?? []), line]);
+  }
+  const withLines = (o: Order): HandoutOrder => ({ ...o, lines: byOrder.get(o.id) ?? [] });
+
+  // Unpaid food is not bought, here as everywhere else.
+  const paid = orders.filter((o) => isPaid(o.status));
+  const paidIds = new Set(paid.map((o) => o.id));
+
+  return {
+    at: day,
+    label: runDateLabel(day),
+    // Driven like a run, so ice cream is the last stop here too.
+    counter: groupForCounter(
+      lines.filter((line) => paidIds.has(line.order_id)),
+      // No one arrangement to read: these are several batches, and the
+      // order they were arranged in belongs to each of them separately.
+      null,
+      await meltingStops()
+    ),
+    handout: paid.map(withLines),
+    unpaid: orders.filter((o) => o.status === "pending").map(withLines),
+    items: lines
+      .filter((line) => paidIds.has(line.order_id))
+      .reduce((sum, line) => sum + line.qty, 0),
+    gross: sum(paid, (o) => o.total),
+    parts: batches.map((one) => ({
+      id: one.id,
+      label: carLabel(one),
+      kind: one.kind ?? "run",
+      paid: paid.filter((order) => order.batch_id === one.id).length,
+    })),
   };
 }
 

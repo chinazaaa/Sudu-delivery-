@@ -93,6 +93,28 @@ export default async function AdminHome() {
    * than a run anybody joins, but they are a car going out today and the
    * only place that said so was the runs page. Cancelled is not going.
    */
+  /*
+   * A run counts as done when somebody has pressed Settle on it, or when
+   * some cost has been typed into it. Declared up here because the list of
+   * what is going today reads it, and a const read above where it is
+   * written throws rather than reading as nothing: the dashboard went to
+   * the error page on exactly that.
+   *
+   * The button first, because it is the one that actually means "I have
+   * finished the books on this": it refuses to go through until every bag
+   * is ticked off and the counter prices are confirmed, so a run carrying
+   * it has been looked at by a person. A cost on its own is the older test
+   * and stays, for a run half-done where the fuel is in and the button has
+   * not been pressed.
+   */
+  const done = (batch: (typeof batches)[number]) =>
+    batch.settled_at !== null ||
+    batch.fuel_cost +
+      batch.driver_cost +
+      (batch.transport_cost ?? 0) +
+      batch.other_cost >
+      0;
+
   const soon = batches.filter(
     (batch) =>
       (batch.run_date === lagosToday() || batch.run_date === tomorrow) &&
@@ -220,13 +242,6 @@ export default async function AdminHome() {
    * wait for, and the only way to say so was to type a cost that was not
    * paid.
    */
-  const done = (batch: (typeof batches)[number]) =>
-    batch.settled_at !== null ||
-    batch.fuel_cost +
-      batch.driver_cost +
-      (batch.transport_cost ?? 0) +
-      batch.other_cost >
-      0;
   const waiting = batches.filter((batch) => batch.paidCount > 0 && !done(batch));
   const profit =
     batches
