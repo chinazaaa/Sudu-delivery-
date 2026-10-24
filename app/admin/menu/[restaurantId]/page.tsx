@@ -772,6 +772,12 @@ export default async function RestaurantAdmin({
                         defaultValue={String(item.container_pct ?? 100)}
                         className="field"
                       >
+                        {/* Something the car carries without it costing
+                            anybody room: the bag of ice block that goes
+                            with ice cream is the shop's answer to a
+                            problem the order created, not another thing
+                            somebody asked for. */}
+                        <option value="0">No room · rides in the gap</option>
                         <option value="25">A drink · 4 make one</option>
                         <option value="50">Half a container</option>
                         <option value="100">One container</option>
