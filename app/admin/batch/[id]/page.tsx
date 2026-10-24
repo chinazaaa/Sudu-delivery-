@@ -1288,7 +1288,19 @@ export default async function BatchPage({
                 {counter.length > 1 && stopShown === null && (
                   <ul className="space-y-2.5 lg:hidden">
                     {counter.map((group, index) => {
-                      const done = paidFor(group);
+                      /*
+                       * The same thing the count above the list is counting.
+                       *
+                       * The tick used to mean priced while the line over it
+                       * said collected, so a run whose driver had ticked
+                       * four stops off on the link read "4 of 7 collected"
+                       * above seven empty circles. Two answers to one
+                       * question on one screen, and the one with the big
+                       * number is the one somebody believes.
+                       */
+                      const got = hasGot(batch.runner_got, group.restaurant);
+                      const priced = paidFor(group);
+                      const done = gotStops > 0 ? got : priced;
                       const here = ordersAt.get(group.restaurant) ?? [];
                       return (
                         <li
@@ -1314,10 +1326,19 @@ export default async function BatchPage({
                                 <span className="text-[15.5px] font-bold">
                                   {group.restaurant}
                                 </span>
-                                {done && (
+                                {/* Collected and priced are different
+                                    answers and both are worth having: the
+                                    driver has the food, and we know what it
+                                    cost. The circle carries whichever the
+                                    count is about; the tag carries the
+                                    other. */}
+                                {priced && (
                                   <span className="tag bg-mint-tint text-mint">
                                     paid for
                                   </span>
+                                )}
+                                {got && !priced && (
+                                  <span className="tag">collected</span>
                                 )}
                                 {group.melts === true && (
                                   <span className="tag">melts · last</span>
@@ -1411,6 +1432,12 @@ export default async function BatchPage({
                         <span className="mt-1 flex flex-wrap items-center gap-1.5">
                           {paidFor(group) && (
                             <span className="tag bg-mint-tint text-mint">paid for</span>
+                          )}
+                          {/* What whoever is driving has said, which until
+                              now only ever reached the count at the top of
+                              the list. */}
+                          {hasGot(batch.runner_got, group.restaurant) && (
+                            <span className="tag">collected</span>
                           )}
                           {/* Said at the stop as well as on the list, because
                               the list is read once at the start and this is
