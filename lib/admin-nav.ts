@@ -171,11 +171,7 @@ export const EVERY = [...DAILY, ...GROUPS.flatMap((one) => one.items), ...YOU];
 export const TABS: Item[] = [
   { href: "/admin", label: "Dash" },
   { href: "/admin/orders", label: "Orders" },
-  /* The day's one shopping list, which is what the tab is wanted for
-     ninety evenings in a hundred. The list of runs is a tap further on,
-     at the top of it, because that page is the books and the history
-     rather than the thing being driven. */
-  { href: "/admin/today", label: "Runs" },
+  { href: "/admin/runs", label: "Runs" },
   { href: "/admin/schedule", label: "Diary" },
   { href: "/admin/more", label: "More" },
 ];
