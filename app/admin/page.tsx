@@ -164,6 +164,15 @@ export default async function AdminHome() {
   // one, which is the one thing on the day nobody can work on. See
   // lib/which-run.ts.
   const working = runToWorkOn(drivable, lagosToday());
+  // More than one thing going today is one drive with two sets of books.
+  const driveTheDay =
+    batches.filter(
+      (batch) =>
+        batch.run_date === lagosToday() &&
+        batch.kind !== "parcel" &&
+        batch.status !== "cancelled" &&
+        batch.status !== "delivered"
+    ).length > 1;
   const workingLabel =
     working === null
       ? ""
@@ -427,10 +436,10 @@ export default async function AdminHome() {
             </Link>
             {working && (
               <Link
-                href={`/admin/batch/${working.id}`}
+                href={driveTheDay ? "/admin/today" : `/admin/batch/${working.id}`}
                 className="btn-admin-go hidden sm:inline-flex"
               >
-                Open {workingLabel.toLowerCase()} →
+                Open {driveTheDay ? "today's driving" : workingLabel.toLowerCase()} →
               </Link>
             )}
           </>
@@ -494,21 +503,19 @@ export default async function AdminHome() {
         {working && (
           /* The board gives the phone one full width tomato button at
              fifty-four pixels, under the two tiles, because it is the
-             thumb's first stop in the morning. */
+             thumb's first stop in the morning.
+
+             Two things going on one evening is one drive, so the button
+             opens the day rather than one of them: going to the market is
+             going to the market, and which door an order came through is
+             a fact about what it paid, not about the driving. One thing
+             going and the day sheet would be a second door to the same
+             food, so it opens that one directly. */
           <Link
-            href={`/admin/batch/${working.id}`}
+            href={driveTheDay ? "/admin/today" : `/admin/batch/${working.id}`}
             className="btn-admin-go min-h-[54px] w-full text-base"
           >
-            Open {workingLabel.toLowerCase()} →
-          </Link>
-        )}
-
-        {/* Two things going on one evening is one drive. Offered only when
-            there are two, because on an ordinary day the run's own page is
-            the whole of it and a second door to the same food is clutter. */}
-        {soon.filter((batch) => batch.run_date === lagosToday()).length > 1 && (
-          <Link href="/admin/today" className="btn-admin min-h-[48px] w-full text-base">
-            One sheet for everything today →
+            Open {driveTheDay ? "today's driving" : workingLabel.toLowerCase()} →
           </Link>
         )}
       </div>

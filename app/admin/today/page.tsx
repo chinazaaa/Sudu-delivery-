@@ -59,11 +59,7 @@ export default async function DrivingTodayPage() {
     <div>
       <PageHeader
         title={`Driving ${runDateLabel(day).toLowerCase()}`}
-        detail={
-          sheet.parts.length === 1
-            ? "Everything going out today."
-            : `${sheet.parts.length} of them going today, as one shopping trip.`
-        }
+        detail="Everything going out today, as one shopping trip."
         actions={
           <Link href="/admin/runs" className="btn-quiet px-4 py-2.5 text-sm">
             All runs
@@ -75,19 +71,25 @@ export default async function DrivingTodayPage() {
         <Stat label="Bags" value={sheet.handout.length} />
         <Stat label="Items" value={sheet.items} />
         <Stat label="The card" value={toPay} money />
-        <Stat
-          label="Not paid"
-          value={sheet.unpaid.length}
-          tone={sheet.unpaid.length > 0 ? "warn" : undefined}
-        />
       </div>
 
-      {/* What this sheet is made of, and where the rest of each one lives.
-          Nothing here moves an order between them: the fee somebody paid
-          and the time they were promised belong to the batch they ordered
-          onto, and so do its costs and its stage. */}
+      {/*
+        Where the books live, and nothing else.
+
+        Going to the market is going to the market. Whether somebody
+        bought through the run or asked for a car of its own is a fact
+        about what they paid and when they were promised it, not about
+        the driving, and the driving is what this page is. So the split
+        is down here, named for what it is actually for: each one holds
+        its own costs, its own stage and its own Settle, and nothing on
+        this page moves an order between them.
+      */}
       <section className="card mb-4 space-y-2">
-        <h2 className="font-bold">What is going</h2>
+        <h2 className="font-bold">Costs and stages</h2>
+        <p className="text-sm text-muted">
+          One evening, driven once. These are only where each order&apos;s
+          money and timeline live.
+        </p>
         <ul className="space-y-1.5">
           {sheet.parts.map((part) => (
             <li key={part.id}>
@@ -97,7 +99,7 @@ export default async function DrivingTodayPage() {
               >
                 <span className="min-w-0 font-semibold">{part.label}</span>
                 <span className="shrink-0 text-sm text-muted">
-                  {part.paid} paid · costs and stage →
+                  {part.paid} paid →
                 </span>
               </Link>
             </li>
@@ -189,22 +191,13 @@ export default async function DrivingTodayPage() {
         </ul>
       </section>
 
-      {sheet.unpaid.length > 0 && (
-        <section className="card space-y-2">
-          <h2 className="font-bold">Not paid, not travelling</h2>
-          <ul className="space-y-1 text-sm">
-            {sheet.unpaid.map((order) => (
-              <li key={order.id} className="flex justify-between gap-3">
-                <span>
-                  {order.for_name ?? order.customer_name} ·{" "}
-                  {formatPhone(order.customer_phone)}
-                </span>
-                <span className="font-semibold">{naira(order.total)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {/* Nothing about unpaid orders. This is the sheet somebody reads
+          while driving, and an order nobody paid for is not in the car:
+          it is not bought, not bagged and not dropped. Chasing it is the
+          shop's job at a desk, where the dashboard and the orders page
+          already keep it. A list of food that is not coming, on the list
+          of food that is, is the one thing on this page that can be
+          misread at a counter. */}
     </div>
   );
 }

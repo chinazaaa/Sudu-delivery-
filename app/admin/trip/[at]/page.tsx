@@ -43,11 +43,6 @@ export default async function TripPage({
         <Stat label="Orders" value={sheet.handout.length} />
         <Stat label="Items" value={sheet.items} />
         <Stat label="Taken" value={sheet.gross} money tone="good" />
-        <Stat
-          label="Not paid"
-          value={sheet.unpaid.length}
-          tone={sheet.unpaid.length > 0 ? "warn" : undefined}
-        />
       </div>
 
       <section className="card mb-4 space-y-3">
@@ -122,22 +117,8 @@ export default async function TripPage({
         </ul>
       </section>
 
-      {sheet.unpaid.length > 0 && (
-        <section className="card space-y-2">
-          <h2 className="font-bold">Not paid, not travelling</h2>
-          <ul className="space-y-1 text-sm">
-            {sheet.unpaid.map((order) => (
-              <li key={order.id} className="flex justify-between gap-3">
-                <span>
-                  {order.for_name ?? order.customer_name} ·{" "}
-                  {formatPhone(order.customer_phone)}
-                </span>
-                <span className="font-semibold">{naira(order.total)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {/* No unpaid list. This is read while driving, and an order nobody
+          paid for is not in the car. Chasing it belongs at a desk. */}
     </div>
   );
 }
