@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { saidPicksLine, type Chosen } from "@/lib/picks";
 import { useState } from "react";
 import ConfirmButton from "./ConfirmButton";
 import SaveButton from "@/components/SaveButton";
@@ -17,6 +18,9 @@ export type OrderCardLine = {
   name: string;
   restaurant: string;
   choices: string[];
+  /** The same choices with the question each one answers, where the menu
+   *  still knows it. */
+  picks?: Chosen[];
   for_name: string | null;
   unit_price_at_order: number;
   /** Where to go and get it, where it is one of ours rather than a
@@ -478,7 +482,9 @@ export default function OrderCard({
                         apart, and run into one sentence they are
                         unreadable. */}
                     {line.choices.length > 0 && (
-                      <span className="hint mt-0.5 block">{line.choices.join(" · ")}</span>
+                      <span className="hint mt-0.5 block">
+                        {saidPicksLine(line.picks, line.choices, " · ")}
+                      </span>
                     )}
                     <span className="hint block">{line.restaurant}</span>
                     {(line.for_name || order.lines.some((l) => l.for_name)) && (

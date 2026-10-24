@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+import { saidPick, saidPicks, saidPicksLine } from "../lib/picks";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
 import { containersIn } from "../lib/containers";
 import { runShouldBe } from "../lib/run-follow";
@@ -6125,4 +6126,42 @@ test("more than one is said twice", () => {
   assert.match(said, /2 x Hamburger Meal \(TWO\)/);
   assert.equal(said.includes("Coca-Cola (ONE)"), false);
   assert.match(said, /1 x Coca-Cola/);
+});
+
+test("a choice is said with the question it answers", () => {
+  assert.equal(saidPick({ group: "Size", name: "Regular" }), "Size: Regular");
+  // Nothing to label it with: the bare word is still better than nothing.
+  assert.equal(saidPick({ group: "", name: "Regular" }), "Regular");
+  // No stuttering where the group is named after the choice.
+  assert.equal(saidPick({ group: "Regular", name: "regular" }), "regular");
+});
+
+test("choices fall back to their bare names", () => {
+  assert.deepEqual(saidPicks(undefined, ["Large", "Fries"]), ["Large", "Fries"]);
+  assert.deepEqual(saidPicks([], ["Large"]), ["Large"]);
+  assert.deepEqual(
+    saidPicks(
+      [
+        { group: "Size", name: "Regular" },
+        { group: "Side", name: "Fries" },
+      ],
+      ["Regular", "Fries"]
+    ),
+    ["Size: Regular", "Side: Fries"]
+  );
+});
+
+test("a free choice is written out like a paid one", () => {
+  // The whole bug: Regular cost nothing extra, so the run sheet said
+  // nothing about it and somebody had to ring to ask which size it was.
+  assert.equal(
+    saidPicksLine(
+      [
+        { group: "Size", name: "Regular" },
+        { group: "Drink", name: "Coca-Cola" },
+      ],
+      ["Regular", "Coca-Cola"]
+    ),
+    "Size: Regular, Drink: Coca-Cola"
+  );
 });

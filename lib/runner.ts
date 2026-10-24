@@ -1,4 +1,5 @@
 import { STAGES } from "./stages";
+import { saidPicksLine } from "./picks";
 import { randomBytes } from "crypto";
 
 import type { CounterGroup } from "./admin";
@@ -241,7 +242,10 @@ export function counterMessage(
    * whoever reads this has to miss both.
    */
   const lines = group.lines.map((line) => {
-    const choices = line.choices.length > 0 ? ` ${line.choices.join(", ")}` : "";
+    // With the question each choice answers: a kitchen reading a bare
+    // "Regular" has to guess which of its questions that was.
+    const choices =
+      line.choices.length > 0 ? ` ${saidPicksLine(line.picks, line.choices)}` : "";
     const many = line.qty > 1 ? ` (${inWords(line.qty).toUpperCase()})` : "";
     return `${line.qty} x ${line.name}${choices}${many}`;
   });

@@ -27,17 +27,27 @@ export type EditedLine = {
    *  price and never once said whether it was a Domino's night. */
   restaurant: string;
   source: string;
-  options: { id: string; name: string; delta: number }[];
+  options: { id: string; name: string; delta: number; group: string }[];
 };
 
 /** Everything in one order, as the editor needs it. */
 export async function linesToEdit(orderId: string): Promise<EditedLine[]> {
-  const { data, error } = await db()
+  const bare =
+    "id, menu_item_id, qty, unit_price_at_order, menu_items(name, source, restaurants(name)), order_item_options(id, name_at_order, price_delta_at_order)";
+  // Which question each choice answers, so a free "Regular" on the page
+  // reads as the size. A database that cannot do the join refuses the whole
+  // statement, so the plain version is still there to fall back on.
+  let { data, error } = await db()
     .from("order_items")
     .select(
-      "id, menu_item_id, qty, unit_price_at_order, menu_items(name, source, restaurants(name)), order_item_options(id, name_at_order, price_delta_at_order)"
+      "id, menu_item_id, qty, unit_price_at_order, menu_items(name, source, restaurants(name)), order_item_options(id, name_at_order, price_delta_at_order, item_options(item_option_groups(name)))"
     )
     .eq("order_id", orderId);
+  if (error) {
+    const again = await db().from("order_items").select(bare).eq("order_id", orderId);
+    data = again.data as typeof data;
+    error = again.error;
+  }
   if (error) return [];
 
   return (data ?? []).map((row: Record<string, any>) => ({
@@ -52,6 +62,7 @@ export async function linesToEdit(orderId: string): Promise<EditedLine[]> {
       id: one.id as string,
       name: (one.name_at_order as string) ?? "",
       delta: Number(one.price_delta_at_order ?? 0),
+      group: (one.item_options?.item_option_groups?.name as string) ?? "",
     })),
   }));
 }

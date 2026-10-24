@@ -1,4 +1,5 @@
 import PageHeader from "@/components/admin/PageHeader";
+import { saidPicksLine } from "@/lib/picks";
 import { COUNTERS } from "@/lib/counter";
 import SaveButton from "@/components/SaveButton";
 import type { Batch } from "@/lib/types";
@@ -1481,7 +1482,7 @@ export default async function BatchPage({
                           shortSaid: couldNotGet.get(line.key) ?? "",
                           qty: line.qty,
                           text: line.name,
-                          detail: line.choices.join(", "),
+                          detail: saidPicksLine(line.picks, line.choices),
                           /* What one of them costs at the counter, not what
                              it sells for. The menu price is the cost with
                              the shop's markup on, so printing it here had
@@ -1816,7 +1817,8 @@ export default async function BatchPage({
                       .map((line) => (
                         <p key={`choices-${line.key}`} className="hint">
                           <span className="font-semibold">{line.name}</span> came
-                          with {line.choices.join(", ")}, so what you handed over
+                          with {saidPicksLine(line.picks, line.choices)}, so what you
+                          handed over
                           covers the whole plate. If it has gone up, put the dish
                           or the choice up on the menu itself.
                         </p>
@@ -1848,7 +1850,8 @@ export default async function BatchPage({
                               {group.lines.map((line) => (
                                 <option key={line.key} value={line.key}>
                                   {line.qty}× {line.name}
-                                  {line.choices.length > 0 && ` (${line.choices.join(", ")})`}
+                                  {line.choices.length > 0 &&
+                                    ` (${saidPicksLine(line.picks, line.choices)})`}
                                   {" · menu "}
                                   {naira(line.qty * line.unitPrice)}
                                 </option>
@@ -2005,7 +2008,9 @@ export default async function BatchPage({
                       items: bag.lines.map(
                         (l) =>
                           `${l.qty}× ${l.name}` +
-                          (l.choices.length > 0 ? ` (${l.choices.join(", ")})` : "") +
+                          (l.choices.length > 0
+                            ? ` (${saidPicksLine(l.picks, l.choices)})`
+                            : "") +
                           ` · ${l.restaurant}` +
                           (l.for_name && l.for_name !== bag.name
                             ? ` · for ${l.for_name}`

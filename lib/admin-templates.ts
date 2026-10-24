@@ -314,6 +314,7 @@ export function toCard(
       name: line.name,
       restaurant: line.restaurant,
       choices: line.choices,
+      picks: line.picks,
       for_name: line.for_name,
       unit_price_at_order: line.unit_price_at_order,
     })),

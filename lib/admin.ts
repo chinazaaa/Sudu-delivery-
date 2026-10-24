@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import type { Chosen } from "./picks";
 import { WINDOW_DAYS } from "./other-money";
 import { feeFor } from "./fees";
 import { activeBands } from "./settings";
@@ -40,6 +41,9 @@ export async function counterMarkups(): Promise<Record<string, number>> {
 export type CounterLine = {
   name: string;
   choices: string[];
+  /** The same choices with the question each one answers, so a free
+   *  "Regular" reads as the size at the counter. */
+  picks?: Chosen[];
   qty: number;
   unitPrice: number;
   /** Stable enough to hang a typed-in figure off: the same food ordered by
@@ -469,6 +473,12 @@ export function groupForCounter(
       items.set(key, {
         name: line.name,
         choices,
+        // Said in the order the choices are sorted in, so the label and
+        // the word it labels cannot drift apart.
+        picks: choices.map((name) => ({
+          group: (line.picks ?? []).find((pick) => pick.name === name)?.group ?? "",
+          name,
+        })),
         qty: line.qty,
         unitPrice: line.unit_price_at_order,
         key,

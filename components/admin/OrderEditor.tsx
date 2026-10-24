@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { saidPick } from "@/lib/picks";
 import ActionButton from "@/components/ActionButton";
 
 import { naira } from "@/lib/money";
@@ -168,9 +169,12 @@ export default function OrderEditor({
                     <Many qty={line.qty} small /> {line.name}
                   </p>
 
-                  {/* Every choice as its own chip. Run together in a
-                      sentence, "12 inches" and "vanilla" read as one thing
-                      nobody can pick apart at a counter. */}
+                  {/* Every choice as its own chip, with the question it
+                      answers. Run together in a sentence, "12 inches" and
+                      "vanilla" read as one thing nobody can pick apart at a
+                      counter, and a choice that costs nothing extra, like a
+                      regular size, read as a stray word rather than as the
+                      size somebody actually asked for. */}
                   {line.options.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1.5">
                       {line.options.map((one) => (
@@ -178,7 +182,7 @@ export default function OrderEditor({
                           key={one.id}
                           className="inline-flex items-center gap-1 rounded-full bg-shell px-2 py-0.5 text-xs font-semibold"
                         >
-                          {one.name}
+                          {saidPick(one)}
                           {one.delta !== 0 && (
                             <span className="text-muted">
                               {one.delta > 0 ? "+" : "−"}

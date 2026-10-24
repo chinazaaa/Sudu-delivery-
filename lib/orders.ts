@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import type { Chosen } from "./picks";
 import { carLabel } from "./view";
 import {
   claimLeader,
@@ -2430,6 +2431,10 @@ export type OrderLine = OrderItem & {
   source: string;
   /** "Large", "Pepperoni". What she reads out at the counter. */
   choices: string[];
+  /** The same choices with the question each one answers, so "Regular"
+   *  reads as the size rather than as one more word in a row. Empty on a
+   *  database that cannot join the menu's groups on. */
+  picks?: Chosen[];
 };
 export type GroupShare = {
   id: string;
@@ -2529,9 +2534,21 @@ export async function linesFor(orderIds: string[]): Promise<OrderLine[]> {
   // needs it is the moment they are looking at the order. Asked for
   // defensively: a database without that column yet refuses the whole
   // statement, and an order list is not a thing that may go blank.
+  // The group each choice came from travels with it, because a bare
+  // "Regular" on an order made somebody ring to ask which size that was.
+  // Asked for in the same defensive way as the source above: an older
+  // database refuses the whole statement rather than the one join, and an
+  // order list is not a thing that may go blank.
+  const withGroups =
+    "order_item_options(name_at_order, item_options(item_option_groups(name)))";
   let { data, error } = await ask(
-    "*, menu_items(name, source, restaurants(name)), order_item_options(name_at_order)"
+    `*, menu_items(name, source, restaurants(name)), ${withGroups}`
   );
+  if (error) {
+    ({ data, error } = await ask(
+      "*, menu_items(name, source, restaurants(name)), order_item_options(name_at_order)"
+    ));
+  }
   if (error) {
     ({ data, error } = await ask(
       "*, menu_items(name, restaurants(name)), order_item_options(name_at_order)"
@@ -2541,6 +2558,10 @@ export async function linesFor(orderIds: string[]): Promise<OrderLine[]> {
 
   return (data ?? []).map((row: any) => ({
     choices: (row.order_item_options ?? []).map((o: any) => o.name_at_order),
+    picks: (row.order_item_options ?? []).map((o: any) => ({
+      group: o.item_options?.item_option_groups?.name ?? "",
+      name: o.name_at_order ?? "",
+    })),
     id: row.id,
     order_id: row.order_id,
     menu_item_id: row.menu_item_id,

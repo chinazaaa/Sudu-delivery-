@@ -1,4 +1,5 @@
 import { naira, orderRef, refsIn } from "./money";
+import { saidPicksLine, type Chosen } from "./picks";
 import { formatPhone } from "./phone";
 import type { BatchSheet } from "./admin";
 
@@ -11,10 +12,14 @@ const lineText = (l: {
   qty: number;
   name: string;
   choices: string[];
+  picks?: Chosen[];
   restaurant?: string;
   for_name?: string | null;
 }) =>
-  `${l.qty} x ${l.name}${l.choices.length > 0 ? ` (${l.choices.join(", ")})` : ""}` +
+  `${l.qty} x ${l.name}` +
+  // "Size: Regular" rather than a bare "Regular", which in a message read
+  // as one more word in the name.
+  (l.choices.length > 0 ? ` (${saidPicksLine(l.picks, l.choices)})` : "") +
   (l.restaurant ? ` [${l.restaurant}]` : "") +
   (l.for_name ? ` for ${l.for_name}` : "");
 
@@ -29,7 +34,8 @@ export function sheetAsText(sheet: BatchSheet, batchLabel: string): string {
   for (const group of sheet.counter) {
     lines.push(`${group.restaurant}`);
     for (const item of group.lines) {
-      const choices = item.choices.length > 0 ? ` (${item.choices.join(", ")})` : "";
+      const choices =
+        item.choices.length > 0 ? ` (${saidPicksLine(item.picks, item.choices)})` : "";
       lines.push(`  ${item.qty} x ${item.name}${choices}`);
     }
     lines.push(`  pay about ${naira(group.expectedFoodTotal)}`);

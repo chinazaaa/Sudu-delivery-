@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { saidPicks, saidPicksLine } from "@/lib/picks";
 import { notFound } from "next/navigation";
 
 import CounterLines from "@/components/runner/CounterLines";
@@ -207,7 +208,9 @@ export default async function RunPage({
                     <span>
                       {line.name}
                       {line.choices.length > 0 && (
-                        <span className="text-muted"> ({line.choices.join(", ")})</span>
+                        <span className="text-muted">
+                          {" "}({saidPicksLine(line.picks, line.choices)})
+                        </span>
                       )}
                     </span>
                   </li>
@@ -383,7 +386,9 @@ function StopScreen({
         lines={stop.lines.map((line) => ({
           key: line.key,
           name: line.name,
-          choices: line.choices,
+          // Labelled here rather than in the list, so the counter reads
+          // "Size: Regular" and nobody has to guess what a free choice is.
+          choices: saidPicks(line.picks, line.choices),
           qty: line.qty,
           shouldCost: lineCost(line.unitPrice, line.qty, markup),
           paid: line.paid,

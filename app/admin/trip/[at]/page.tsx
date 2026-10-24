@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { saidPicksLine } from "@/lib/picks";
 import { notFound } from "next/navigation";
 import PageHeader from "@/components/admin/PageHeader";
 import Stat from "@/components/admin/Stat";
@@ -76,7 +77,7 @@ export default async function TripPage({
                     <span>
                       {line.name}
                       {line.choices.length > 0 && (
-                        <span className="text-muted"> · {line.choices.join(", ")}</span>
+                        <span className="text-muted"> · {saidPicksLine(line.picks, line.choices)}</span>
                       )}
                     </span>
                   </li>
@@ -111,7 +112,7 @@ export default async function TripPage({
                   <li key={line.id} className="flex items-baseline gap-1.5">
                     <Many qty={line.qty} small /> {line.name}
                     {line.choices.length > 0 && (
-                      <span className="text-muted"> · {line.choices.join(", ")}</span>
+                      <span className="text-muted"> · {saidPicksLine(line.picks, line.choices)}</span>
                     )}
                   </li>
                 ))}
