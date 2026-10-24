@@ -7,7 +7,7 @@ import Many from "@/components/Many";
 import ActionButton from "@/components/ActionButton";
 import { everythingAtTheCounter, setDayCosts } from "@/app/admin/actions";
 import { dayCostSoFar } from "@/lib/day-costs";
-import { drivingToday } from "@/lib/admin";
+import { dayToDrive, drivingToday } from "@/lib/admin";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { saidPicksLine } from "@/lib/picks";
@@ -32,7 +32,10 @@ export const dynamic = "force-dynamic";
  * about one promise rather than about one evening.
  */
 export default async function DrivingTodayPage() {
-  const day = lagosToday();
+  // Today while there is anything left to do with it, and then the next
+  // day with something going: this page sat on a finished Saturday all
+  // evening while tomorrow's run was the only thing anybody could act on.
+  const day = await dayToDrive();
   const sheet = await drivingToday(day);
 
   if (!sheet) {
@@ -40,7 +43,11 @@ export default async function DrivingTodayPage() {
       <div>
         <PageHeader
           title={`Driving ${runDateLabel(day).toLowerCase()}`}
-          detail="Everything going out today, as one shopping trip."
+          detail={
+          day === lagosToday()
+            ? "Everything going out today, as one shopping trip."
+            : "Everything going out that day, as one shopping trip."
+        }
           actions={
             <Link href="/admin/runs" className="btn-quiet px-4 py-2.5 text-sm">
               All runs
@@ -48,8 +55,8 @@ export default async function DrivingTodayPage() {
           }
         />
         <p className="card text-[15px] text-muted">
-          Nothing is going today. A run or a car of its own will show up here
-          the moment one is going.
+          Nothing is going. A run or a car of its own will show up here the
+          moment one is.
         </p>
       </div>
     );
@@ -88,7 +95,7 @@ export default async function DrivingTodayPage() {
         off a batch. See lib/day-costs.ts.
       */}
       <section className="card mb-4">
-        <h2 className="font-bold">What today cost</h2>
+        <h2 className="font-bold">What {day === lagosToday() ? "today" : "the day"} cost</h2>
         <p className="mb-3 text-sm text-muted">
           One drive, one set of costs. Typed here and shared across what is
           going, so nothing is counted twice.
@@ -132,7 +139,7 @@ export default async function DrivingTodayPage() {
             />
           </div>
           <ActionButton className="btn-admin" done="Saved ✓">
-            Save what today cost
+            Save what {day === lagosToday() ? "today" : "that day"} cost
           </ActionButton>
         </form>
       </section>

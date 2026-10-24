@@ -927,6 +927,44 @@ export async function tripSheet(at: string): Promise<TripSheet | null> {
   };
 }
 
+/**
+ * The day worth opening the driving sheet on.
+ *
+ * Today, while there is anything left to do with it. Once the last of
+ * today is settled or delivered, today is a record rather than a job,
+ * and the sheet should have moved on: it sat on a finished Saturday all
+ * evening while tomorrow's run was the only thing anybody could act on.
+ *
+ * Nothing ahead either and it stays on today, because a page that says
+ * "driving Saturday" over a day that is done is still better than one
+ * that says nothing at all.
+ */
+export async function dayToDrive(): Promise<string> {
+  const today = lagosToday();
+  try {
+    const { data, error } = await db()
+      .from("batches")
+      .select("run_date, kind, status, settled_at")
+      .gte("run_date", today)
+      .neq("status", "cancelled")
+      .order("run_date", { ascending: true })
+      .limit(60);
+    if (error) return today;
+
+    const going = ((data ?? []) as Batch[]).filter(
+      (one) => (one.kind ?? "run") === "run" || one.kind === "same_day"
+    );
+    const unfinished = going.filter(
+      (one) => one.settled_at === null && one.status !== "delivered"
+    );
+
+    if (unfinished.some((one) => one.run_date === today)) return today;
+    return unfinished[0]?.run_date ?? today;
+  } catch {
+    return today;
+  }
+}
+
 export type DrivingToday = TripSheet & {
   /** Every batch this sheet is made of, each keeping its own page: the
    *  costs, the profit and the stage all belong to one of them, and
@@ -1021,7 +1059,17 @@ export async function drivingToday(date?: string): Promise<DrivingToday | null> 
       .filter((line) => paidIds.has(line.order_id))
       .reduce((sum, line) => sum + line.qty, 0),
     gross: sum(paid, (o) => o.total),
-    parts: batches.map((one) => ({
+    /* A batch with nothing on it is not one of the day's parts: it has
+       no costs to hold, no stage worth watching and nobody on it. The
+       empty scheduled run kept turning up beside the car that carried
+       the evening. Where nothing is paid for yet they all stand, because
+       an empty list says less than a list of empties. */
+    parts: (batches.some((one) =>
+      paid.some((order) => order.batch_id === one.id)
+    )
+      ? batches.filter((one) => paid.some((order) => order.batch_id === one.id))
+      : batches
+    ).map((one) => ({
       id: one.id,
       label: carLabel(one),
       kind: one.kind ?? "run",
