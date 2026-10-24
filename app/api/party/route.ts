@@ -57,7 +57,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       // Today takes a car only when nothing else is going: she is not out
       // with the boot full, and no run is going anyway. Tomorrow is
       // untouched. See lib/one-driver.ts.
-      if (await nobodyToDrive(slot.date)) {
+      if (await nobodyToDrive(slot.date, slot.at)) {
         return NextResponse.json(
           { error: (await runGoingOn(slot.date)) ? RUN_INSTEAD_SAID : OUT_SAID },
           { status: 400 }

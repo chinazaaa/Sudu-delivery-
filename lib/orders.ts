@@ -34,9 +34,9 @@ import {
   createSameDayBatch,
   getBatch,
   isOrderable,
+  nobodyToDrive,
   orderCounts,
   runGoingOn,
-  someoneIsDriving,
 } from "./batches";
 import { OUT_SAID, RUN_INSTEAD_SAID } from "./one-driver";
 import { bandsFor, isSkincareBatch } from "./skincare";
@@ -231,9 +231,10 @@ async function checkSameDay(
   // sentences: a run is going that day anyway and this would be a dearer
   // version of the same drive, or she is out with the boot full right
   // now and cannot come back for one bag.
-  if (await runGoingOn(slot.date)) return { error: RUN_INSTEAD_SAID };
-  if (slot.date === lagosToday() && (await someoneIsDriving())) {
-    return { error: OUT_SAID };
+  if (await nobodyToDrive(slot.date, slot.at)) {
+    return {
+      error: (await runGoingOn(slot.date)) ? RUN_INSTEAD_SAID : OUT_SAID,
+    };
   }
 
   return { slot, pricing: await sameDayPricing() };

@@ -1482,10 +1482,11 @@ export default async function SettingsAdmin() {
                   to read a quiet evening is that something is broken. */}
               {settings.same_day_on === "on" && driving && (
                 <p className="soft px-3.5 py-2.5 text-sm">
-                  A day a run goes does not take a car of its own: one
-                  driver, one trip to the market, and the car would be a
-                  dearer version of the drive already being made. Days with
-                  no run take one as usual. Today also shuts while somebody
+                  On a day a run goes, only times before it are offered: a
+                  car at the run&apos;s own hour is a dearer way to get the
+                  same food at the same time, while a car hours earlier is a
+                  different trip she can make and be back from. Days with no
+                  run take any time as usual. Today also shuts while somebody
                   is out on the road with a full boot, and opens again by
                   itself once that run is marked handed out.
                 </p>

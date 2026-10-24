@@ -8,6 +8,7 @@ import { withIce, withoutIce } from "../lib/ice";
 import { runToWorkOn, type RunToPick } from "../lib/which-run";
 import { dayCostSoFar, shareOut, splitDayCosts } from "../lib/day-costs";
 import { windowGone } from "../lib/last-minute";
+import { carsBeforeTheRun } from "../lib/one-driver";
 import { carsStillDrivable, driverIsOut } from "../lib/one-driver";
 import { saidPick, saidPicks, saidPicksLine } from "../lib/picks";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
@@ -6501,4 +6502,31 @@ test("a settled run is finished, whatever its stage says", () => {
     takingLastMinute({ ...run, settled_at: "2026-10-24T16:00:00Z" }),
     false
   );
+});
+
+test("a car before the run is a different trip, a car at its hour is not", () => {
+  // The run lands between half past three and five.
+  const runs = { "2026-10-25": 15 };
+  const slots = [
+    { date: "2026-10-25", hour: 12 },
+    { date: "2026-10-25", hour: 13 },
+    { date: "2026-10-25", hour: 14 },
+    { date: "2026-10-25", hour: 15 },
+    { date: "2026-10-25", hour: 17 },
+  ];
+
+  // Lunch is a trip she can make and be back from. Three o'clock and
+  // after is the same drive, two and a half thousand naira dearer.
+  assert.deepEqual(
+    carsBeforeTheRun(slots, runs).map((one) => one.hour),
+    [12, 13, 14]
+  );
+
+  // A day with no run keeps every hour it had.
+  assert.equal(carsBeforeTheRun(slots, {}).length, slots.length);
+
+  // A run whose wording held no readable hour counts as all day, so
+  // nothing is offered beside it: one car fewer beats a trip nobody can
+  // drive.
+  assert.deepEqual(carsBeforeTheRun(slots, { "2026-10-25": 0 }), []);
 });

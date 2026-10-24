@@ -18,6 +18,8 @@ import {
 import { windowHours } from "./same-day";
 import { gotList } from "./runner";
 import {
+  BACK_IN_TIME_HOURS,
+  carsBeforeTheRun,
   carsStillDrivable,
   driverIsOut,
   OUT_STAGES,
@@ -572,31 +574,57 @@ export type OpenBatch = Batch & {
  * query that fails answers "nobody is out", which is how the shop worked
  * before this existed.
  */
-export async function carsOnOffer<T extends { date: string }>(
+export async function carsOnOffer<T extends { date: string; at: string }>(
   slots: T[]
 ): Promise<T[]> {
   if (slots.length === 0) return slots;
 
-  // A day a run goes is not a day a car of its own can go: it is one
-  // driver and one trip to the market, and the car would be a dearer
-  // version of the drive she is already making.
-  const runs = await daysWithARun([...new Set(slots.map((one) => one.date))]);
-  const left = slots.filter((one) => !runs.has(one.date));
+  // A car at the run's own hour is a dearer way to get the same food at
+  // the same time. A car hours before it is a different trip, and she
+  // can make it and be back in time to load the run.
+  const starts = await runStartsOn([...new Set(slots.map((one) => one.date))]);
+  const timed = slots.map((one) => ({ one, hour: hourOf(one.at) }));
+  const left = carsBeforeTheRun(
+    timed.map((row) => ({ date: row.one.date, hour: row.hour, row })),
+    starts
+  ).map((kept) => kept.row.one);
 
   // And today goes altogether while she is out with the boot full.
   return carsStillDrivable(left, await someoneIsDriving(), lagosToday());
 }
 
-/** Whether a time is one the shop will not sell a car for. */
-export async function nobodyToDrive(date: string): Promise<boolean> {
-  if ((await daysWithARun([date])).has(date)) return true;
+/**
+ * Whether a time is one the shop will not sell a car for.
+ *
+ * The hour matters, so a time is passed where there is one: a run going
+ * that day rules out its own hour and anything after it, not the whole
+ * day. Without one the old answer stands, which is that a day with a run
+ * is spoken for.
+ */
+export async function nobodyToDrive(date: string, at?: string): Promise<boolean> {
+  const starts = (await runStartsOn([date]))[date];
+  if (starts !== undefined) {
+    if (at === undefined) return true;
+    if (hourOf(at) > starts - BACK_IN_TIME_HOURS) return true;
+  }
   if (date !== lagosToday()) return false;
   return someoneIsDriving();
 }
 
 /** Whether a run is going on a day, for anything that asks about one. */
 export async function runGoingOn(date: string): Promise<boolean> {
-  return (await daysWithARun([date])).has(date);
+  return (await runStartsOn([date]))[date] !== undefined;
+}
+
+/** The hour of the day an instant falls on, where the shop is. */
+function hourOf(at: string): number {
+  return Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: TZ,
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date(at))
+  );
 }
 
 /** Today, for the pages that only ever ask about today. */
@@ -605,35 +633,45 @@ export async function runGoingToday(): Promise<boolean> {
 }
 
 /**
- * The days in this list that already have a run going.
+ * When the soonest run of each of these days begins its window.
  *
- * A run counts whatever state it is in, short of cancelled. Today's that
- * has closed is still going, because as far as somebody ordering is
- * concerned it takes the order and arrives this evening; and one that
- * has been and come back still used up the day's driving.
+ * The hour is read off the run's own wording, which is what the customer
+ * is told and so the only honest thing to measure a car against. A run
+ * whose wording holds no readable hour counts as all day: the safe way
+ * to be wrong is to sell one car fewer, not to promise a trip nobody can
+ * drive.
+ *
+ * A run counts whatever state it is in, short of cancelled. One that has
+ * been and come back still used up that day's driving.
  *
  * Asked for defensively, because every customer-facing page calls it: a
  * query that fails answers "no runs", which is how the shop worked
  * before this existed.
  */
-export async function daysWithARun(dates: string[]): Promise<Set<string>> {
+export async function runStartsOn(
+  dates: string[]
+): Promise<Record<string, number>> {
   const wanted = [...new Set(dates.filter((one) => one !== ""))];
-  if (wanted.length === 0) return new Set();
+  if (wanted.length === 0) return {};
   try {
     const { data, error } = await db()
       .from("batches")
-      .select("kind, run_date, status")
+      .select("kind, run_date, status, delivery_window_text")
       .in("run_date", wanted)
       .neq("status", "cancelled");
-    if (error) return new Set();
+    if (error) return {};
 
-    return new Set(
-      ((data ?? []) as Batch[])
-        .filter((one) => (one.kind ?? "run") === "run")
-        .map((one) => one.run_date)
-    );
+    const starts: Record<string, number> = {};
+    for (const one of (data ?? []) as Batch[]) {
+      if ((one.kind ?? "run") !== "run") continue;
+      const hours = windowHours(one.delivery_window_text ?? "");
+      const from = hours ? hours.from : 0;
+      const had = starts[one.run_date];
+      starts[one.run_date] = had === undefined ? from : Math.min(had, from);
+    }
+    return starts;
   } catch {
-    return new Set();
+    return {};
   }
 }
 
