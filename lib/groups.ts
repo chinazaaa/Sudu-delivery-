@@ -1,6 +1,7 @@
 import { db } from "./supabase";
+import type { CartLine } from "./types";
 import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
-import { evenShare, feeFor, isUrgent, perHead, sameDayFee, splitFee } from "./fees";
+import { feeFor, isUrgent, perHead, sameDayFee, splitFee } from "./fees";
 import { activeBands, groupFloor, sameDayPricing } from "./settings";
 import {
   canTravel,
@@ -10,6 +11,8 @@ import {
   placesInCarts,
 } from "./group-carts";
 import { activePromotion } from "./coupons";
+import { itemsNeedingIce } from "./areas-server";
+import { safeSettings } from "./settings";
 import { offerNote, offerShare } from "./offers";
 import { lookupColumn } from "./links";
 import { announceGroup } from "./announce-group";
@@ -45,7 +48,7 @@ async function settleGroup(group: OrderGroup, batch: Batch): Promise<void> {
 
   const { data: items } = await db()
     .from("order_items")
-    .select("order_id, qty")
+    .select("order_id, qty, menu_item_id")
     .in("order_id", travelling.map((o) => o.id));
 
   const countFor = (orderId: string) =>
@@ -62,11 +65,35 @@ async function settleGroup(group: OrderGroup, batch: Batch): Promise<void> {
   // would quietly turn the deal everybody agreed to into a different one,
   // after they had paid.
   const floor = await groupFloor();
+
+  /*
+   * Priced the way it was charged, or this only ever takes money off.
+   *
+   * It read the plain container ladder, and the car is not priced that
+   * way any more: distance, the market ladder and what rides along in
+   * the cool box are all in it. Left alone, a group that paid for a trip
+   * to Lekki would have had the distance quietly refunded the first time
+   * somebody dropped out, because this only ever moves a fee downward.
+   */
+  const whole = await carFee({
+    lines: (items ?? [])
+      .filter((row) => travelling.some((o) => o.id === row.order_id))
+      .map((row) => ({
+        menu_item_id: String(row.menu_item_id ?? ""),
+        qty: Number(row.qty ?? 0),
+      }))
+      .filter((line) => line.menu_item_id !== ""),
+    batchId: batch.id,
+    sameDay:
+      batch.kind === "same_day"
+        ? { urgent: batch.deliver_at ? isUrgent(new Date(batch.deliver_at)) : false }
+        : null,
+    fallback: feeFor(carried, batch.flash_fee, bands),
+  });
+
   const shares = group.closes_at
-    ? travelling.map(() =>
-        evenShare(carried, travelling.length, batch.flash_fee, bands, floor)
-      )
-    : splitFee(feeFor(carried, batch.flash_fee, bands), counts);
+    ? travelling.map(() => perHead(whole, travelling.length, floor))
+    : splitFee(whole, counts);
 
   for (const [index, order] of travelling.entries()) {
     const share = shares[index];
@@ -133,7 +160,7 @@ export async function groupShortfalls(batchId: string): Promise<GroupShortfall[]
 
     const { data: items } = await db()
       .from("order_items")
-      .select("order_id, qty")
+      .select("order_id, qty, menu_item_id")
       .in("order_id", orders.map((one) => one.id));
 
     const countFor = (id: string) =>
@@ -144,16 +171,37 @@ export async function groupShortfalls(batchId: string): Promise<GroupShortfall[]
     // What the trip costs for what is actually going, which is the only load
     // the shop is buying and driving.
     const travelling = paid.reduce((sum, one) => sum + countFor(one.id), 0);
-    const owed =
-      batch?.kind === "same_day"
-        ? await (async () => {
-            const { bands: ladder, urgentExtra } = await sameDayPricing();
-            const urgent = batch.deliver_at
-              ? isUrgent(new Date(batch.deliver_at as string))
-              : false;
-            return sameDayFee(travelling, urgent, ladder, urgentExtra);
-          })()
-        : feeFor(travelling, (batch?.flash_fee as number | null) ?? null, bands);
+    // Priced the way the car is actually priced, or the warning is short
+    // by exactly the distance and the cool boxes: the shop would be told
+    // it was owed less than it is.
+    const owed = await carFee({
+      lines: (items ?? [])
+        .filter((line) => paid.some((one) => one.id === line.order_id))
+        .map((line) => ({
+          menu_item_id: String(line.menu_item_id ?? ""),
+          qty: Number(line.qty ?? 0),
+        }))
+        .filter((line) => line.menu_item_id !== ""),
+      batchId,
+      sameDay:
+        batch?.kind === "same_day"
+          ? {
+              urgent: batch.deliver_at
+                ? isUrgent(new Date(batch.deliver_at as string))
+                : false,
+            }
+          : null,
+      fallback:
+        batch?.kind === "same_day"
+          ? await (async () => {
+              const { bands: ladder, urgentExtra } = await sameDayPricing();
+              const urgent = batch.deliver_at
+                ? isUrgent(new Date(batch.deliver_at as string))
+                : false;
+              return sameDayFee(travelling, urgent, ladder, urgentExtra);
+            })()
+          : feeFor(travelling, (batch?.flash_fee as number | null) ?? null, bands),
+    });
 
     const collected = paid.reduce((sum, one) => sum + one.fee, 0);
     const short = owed - collected;
@@ -260,23 +308,6 @@ export async function groupOrders(groupId: string): Promise<Order[]> {
   return (data ?? []) as Order[];
 }
 
-/**
- * One car at a time somebody chose, split between the people in it.
- *
- * Rounded up to the nearest hundred for the same reason the run split is: a
- * share of 2,166 is a number nobody wants to type into a banking app, and
- * rounding down would leave the shop short of what the trip costs.
- */
-async function evenSameDayShare(
-  items: number,
-  people: number,
-  deliverAt: string | null
-): Promise<number> {
-  const { bands, urgentExtra } = await sameDayPricing();
-  const urgent = deliverAt ? isUrgent(new Date(deliverAt)) : false;
-  const whole = sameDayFee(items, urgent, bands, urgentExtra);
-  return perHead(whole, people, await groupFloor());
-}
 
 /**
  * What delivery would cost each of them if the group closed right now.
@@ -289,6 +320,44 @@ async function evenSameDayShare(
  * Worked out the same way the close works it out, so the number people watch
  * is the number they end up paying.
  */
+/**
+ * What one shared car costs, priced exactly as a single order would be.
+ *
+ * A group's deal is that one car's fee is split evenly, not that the car
+ * is priced differently. This read the plain container ladder and nothing
+ * else, so a group ordering from Lekki paid no distance, a group buying
+ * market shopping paid by the container, and eleven Fantasy ice creams
+ * priced as eleven takeaway boxes: the same cart, ordered alone, cost
+ * something else entirely.
+ *
+ * So it is the checkout's own sum, over everybody's lines added together.
+ * Any new rule about what a trip costs lands here the day it lands there,
+ * which is the whole reason it is one sum rather than two.
+ *
+ * Falls back to the old ladder if the quote cannot be made, because a
+ * board that cannot show a running figure is worse than one showing the
+ * figure it has always shown.
+ */
+async function carFee(args: {
+  lines: CartLine[];
+  batchId: string;
+  sameDay: { urgent: boolean } | null;
+  fallback: number;
+}): Promise<number> {
+  if (args.lines.length === 0) return args.fallback;
+  try {
+    const { quote } = await import("./orders");
+    const priced = await quote({
+      lines: args.lines,
+      batchId: args.batchId,
+      sameDay: args.sameDay,
+    });
+    return "quote" in priced ? priced.quote.fee : args.fallback;
+  } catch {
+    return args.fallback;
+  }
+}
+
 export async function shareNow(
   groupId: string
 ): Promise<{ whole: number; each: number; people: number; offer?: string }> {
@@ -335,22 +404,25 @@ export async function shareNow(
     };
   }
 
-  if (batch?.kind === "same_day") {
-    const { bands, urgentExtra } = await sameDayPricing();
-    const urgent = batch.deliver_at
+  const urgent =
+    batch?.kind === "same_day" && batch.deliver_at
       ? isUrgent(new Date(batch.deliver_at as string))
       : false;
-    const whole = sameDayFee(carried, urgent, bands, urgentExtra);
-    return { whole, each: perHead(whole, people, await groupFloor()), people };
-  }
 
-  const bands = await activeBands();
-  const flash = (batch?.flash_fee as number | null) ?? null;
-  return {
-    whole: feeFor(carried, flash, bands),
-    each: evenShare(carried, people, flash, bands, await groupFloor()),
-    people,
-  };
+  const whole = await carFee({
+    lines: carts.flatMap((cart) => cart.lines),
+    batchId: group.batch_id,
+    sameDay: batch?.kind === "same_day" ? { urgent } : null,
+    fallback:
+      batch?.kind === "same_day"
+        ? await (async () => {
+            const { bands, urgentExtra } = await sameDayPricing();
+            return sameDayFee(carried, urgent, bands, urgentExtra);
+          })()
+        : feeFor(carried, (batch?.flash_fee as number | null) ?? null, await activeBands()),
+  });
+
+  return { whole, each: perHead(whole, people, await groupFloor()), people };
 }
 
 export type CloseResult =
@@ -479,21 +551,58 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
     returning: true,
   });
 
+  /*
+   * One car, priced as the checkout would price it, split evenly.
+   *
+   * The deal a group is offered is that one fee is shared, not that the
+   * car is cheaper to run: this used the plain container ladder and
+   * nothing else, so the same cart cost one thing ordered alone and
+   * another ordered together. See `carFee`.
+   */
+  const urgentNow =
+    sameDay && batch?.deliver_at
+      ? isUrgent(new Date(batch.deliver_at as string))
+      : false;
+
   const share = promotion
     ? offerShare(promotion.offer, carried, waiting.length)
-    : sameDay
-    ? await evenSameDayShare(
-        carried,
+    : perHead(
+        await carFee({
+          lines: waiting.flatMap((cart) => cart.lines),
+          batchId: group.batch_id,
+          sameDay: sameDay ? { urgent: urgentNow } : null,
+          fallback: sameDay
+            ? await (async () => {
+                const { bands, urgentExtra } = await sameDayPricing();
+                return sameDayFee(carried, urgentNow, bands, urgentExtra);
+              })()
+            : feeFor(
+                carried,
+                (batch?.flash_fee as number | null) ?? null,
+                await activeBands()
+              ),
+        }),
         waiting.length,
-        (batch?.deliver_at as string | null) ?? null
-      )
-    : evenShare(
-        carried,
-        waiting.length,
-        (batch?.flash_fee as number | null) ?? null,
-        await activeBands(),
         await groupFloor()
       );
+
+  /*
+   * One boot, one bag of ice.
+   *
+   * Every seat is placed as its own order, and an order puts a bag of ice
+   * on itself where anything in it has to travel on ice. Three friends
+   * ordering Cold Stone between them is still one car, so it was three
+   * bags for one boot and two of them money nobody owed. The bag goes on
+   * the first seat that needs one and the rest are told it is handled.
+   */
+  const needsIce = await itemsNeedingIce();
+  const iceItem = (await safeSettings()).ice_item_id ?? "";
+  const takesIce =
+    iceItem === ""
+      ? -1
+      : waiting.findIndex((cart) =>
+          cart.lines.some((line) => needsIce.has(line.menu_item_id) && line.qty > 0)
+        );
 
   // Claim the close first. Two callers arriving together, the leader and the
   // clock, must not both go on to make the orders: that would be everybody's
@@ -535,13 +644,18 @@ export async function closeGroup(groupId: string): Promise<CloseResult> {
   // can say so instead of shutting the group and leaving everybody to work
   // it out from an empty page.
   let refused = "";
-  for (const cart of waiting) {
+  for (const [seat, cart] of waiting.entries()) {
     const result = await placeOrder({
       batchId: group.batch_id,
       name: cart.name,
       phone: cart.phone,
       hostel: cart.hostel,
-      lines: cart.lines,
+      lines:
+        seat === takesIce
+          ? [...cart.lines, { menu_item_id: iceItem, qty: 1 }]
+          : cart.lines,
+      // The close has already decided which seat carries the bag.
+      iceDone: true,
       coupon: cart.coupon || undefined,
       paymentMethod: cart.payment_method === "card" ? "card" : "transfer",
       customerNote: cart.customer_note,

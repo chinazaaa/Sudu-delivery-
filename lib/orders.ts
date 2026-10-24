@@ -87,6 +87,11 @@ export type PlaceOrderInput = {
   payCurrency?: "GBP" | "USD";
   /** Present when one person is carting for several (addendum §2). */
   groupMode?: GroupMode | null;
+  /** The bag of ice block has already been dealt with by whoever is
+   *  placing this. A shared delivery is one boot, so it carries one bag
+   *  however many of the people in it ordered ice cream, and the close
+   *  puts that bag on one of the orders itself. */
+  iceDone?: boolean;
   /** Transfer, or a card link sent by hand over WhatsApp. */
   paymentMethod?: "transfer" | "card";
   /** Whether one person collects every bag, or everyone collects their own. */
@@ -335,13 +340,15 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
    * lib/ice.ts.
    */
   const iceItem = (await safeSettings()).ice_item_id ?? "";
-  input = {
-    ...input,
-    lines: withIce(input.lines, await itemsNeedingIce(), iceItem, (itemId) => ({
-      menu_item_id: itemId,
-      qty: 1,
-    })),
-  };
+  if (!input.iceDone) {
+    input = {
+      ...input,
+      lines: withIce(input.lines, await itemsNeedingIce(), iceItem, (itemId) => ({
+        menu_item_id: itemId,
+        qty: 1,
+      })),
+    };
+  }
 
   const priced = await priceLines(input.lines);
   if ("error" in priced) return { ok: false, error: priced.error };
