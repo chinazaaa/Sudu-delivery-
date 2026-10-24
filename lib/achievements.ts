@@ -107,7 +107,10 @@ async function history(): Promise<{
       ),
     db()
       .from("customers")
-      .select("first_order_at, created_at")
+      // is_parent is ticked by hand on the customer, so a shop that has
+      // not had that column yet asks the same question without it rather
+      // than losing every badge on the board.
+      .select("first_order_at, created_at, is_parent, phone")
       .limit(10_000)
       .then(
         (answer) => (answer.data ?? []) as Record<string, any>[],
@@ -411,6 +414,42 @@ async function history(): Promise<{
     // cart as a customer.
     people: firstPaid,
     again,
+    /*
+     * Parents, counted from the moment one of them first paid.
+     *
+     * A parent is ticked by hand on the customer, and the tick has no
+     * date of its own, so the honest moment is the first order that
+     * person actually paid for: that is the day the shop won them, and
+     * it is a day that cannot move afterwards.
+     *
+     * Worth its own family because it is a different shop. A student
+     * orders dinner; a parent is somebody abroad or across Lagos buying
+     * for a child they cannot feed themselves, and that is the half of
+     * the business the parents page exists for.
+     */
+    parents: (() => {
+      const isParent = new Set(
+        customerRows
+          .filter((row) => Boolean(row.is_parent))
+          .map((row) => String(row.phone ?? ""))
+          .filter((one) => one !== "")
+      );
+      if (isParent.size === 0) return [] as Happening[];
+
+      const met = new Set<string>();
+      const found: Happening[] = [];
+      for (const row of paid) {
+        const who = String(row.customer_phone);
+        if (!isParent.has(who) || met.has(who)) continue;
+        met.add(who);
+        found.push({
+          at: String(row.paid_at || row.created_at),
+          by: 1,
+          exact: Boolean(row.paid_at),
+        });
+      }
+      return found;
+    })(),
     stars: orderRows
       .filter(
         (row) =>
@@ -539,6 +578,12 @@ export async function board(): Promise<Board> {
       [25, "Twenty five people", "25 customers on the books"],
       [100, "A hundred people", "100 customers"],
       [500, "Five hundred people", "500 customers"],
+    ]),
+    tier("parents", "Parents", at("parents"), "count", [
+      [1, "First parent", "Somebody's mother or father ordered for them"],
+      [5, "Five parents", "5 parents have fed somebody here"],
+      [25, "Twenty five parents", "25 parents on the books"],
+      [100, "A hundred parents", "100 parents"],
     ]),
     tier("again", "Regulars", at("again"), "count", [
       [1, "They came back", "Somebody ordered a second time"],
