@@ -172,8 +172,11 @@ export default function Checkout() {
   const kitchenOf = (line: { itemId: string }) =>
     shop?.menu.find((one) => one.items.some((item) => item.id === line.itemId))
       ?.restaurant.id ?? "";
-  const marketHalf = lines.filter((line) => pricesByValue(shop, kitchenOf(line)));
-  const restHalf = lines.filter((line) => !pricesByValue(shop, kitchenOf(line)));
+  /* Priced by the cool box, and so not by what it came to as well: the
+     same tubs were being charged twice. Only Fantasy is priced this way. */
+  const notByBox = lines.filter((line) => !pricesByStep(shop, line.itemId));
+  const marketHalf = notByBox.filter((line) => pricesByValue(shop, kitchenOf(line)));
+  const restHalf = notByBox.filter((line) => !pricesByValue(shop, kitchenOf(line)));
   /*
    * What rides along on a trip the car was making anyway.
    *

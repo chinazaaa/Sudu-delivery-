@@ -5844,24 +5844,32 @@ test("ice cream rides along rather than making its own trip", () => {
 
   /*
    * The car is going for the pizzas. The ice cream is grabbed on the way
-   * past, so it is the dearer of the two rather than the sum: added would
-   * charge twice for one journey, and a cart with both in it would fall
-   * off a cliff.
+   * past, so the rest of the cart pays its own way and the ice cream
+   * adds one step on top: the five hundred that is the ladder's own word
+   * for "and these as well". Charging it a trip of its own on top of
+   * theirs charges twice for one journey, and a cart with both in it
+   * falls off a cliff.
    */
-  // Three Domino's pizzas and fifteen ice creams: pay for the pizzas.
+  // Three Domino's pizzas and fifteen ice creams: the pizzas, and five
+  // hundred for the tubs.
   assert.equal(
     feeRidingAlong({ stepCount: 15, steps, otherFee: 5500 }),
-    5500
+    6000
   );
-  // Fifteen ice creams and nothing else: the ice cream is the trip.
-  assert.equal(feeRidingAlong({ stepCount: 15, steps, otherFee: 0 }), 4000);
-  // Sixty ice creams and one pizza: four cool boxes is the trip now, and a
-  // shop that carried them for the price of one pizza is giving the boot
-  // away.
+  // Eleven ice creams and one cake at four thousand: four and a half.
+  assert.equal(
+    feeRidingAlong({ stepCount: 11, steps, otherFee: 4000 }),
+    4500
+  );
+  // However many there are. Eleven and sixty are the same answer, which
+  // is the shop saying the ice cream was never what the trip was for.
   assert.equal(
     feeRidingAlong({ stepCount: 60, steps, otherFee: 4000 }),
-    5500
+    4500
   );
+  // Alone in the cart it is the trip, so it pays the whole ladder.
+  assert.equal(feeRidingAlong({ stepCount: 15, steps, otherFee: 0 }), 4000);
+  assert.equal(feeRidingAlong({ stepCount: 30, steps, otherFee: 0 }), 4500);
   // Nothing priced this way leaves the ordinary fee exactly as it was.
   assert.equal(
     feeRidingAlong({ stepCount: 0, steps, otherFee: 7000 }),

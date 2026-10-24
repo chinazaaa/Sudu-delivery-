@@ -202,8 +202,17 @@ export default function Checkout({
   const byValue = ladderFor(kitchens, valueBandsOf);
   // Two errands, two fees: the market half by what the shopping comes to,
   // the restaurant half by how much of the car it fills.
-  const marketHalf = cart.filter((line) => pricesByValue(line.restaurantId, valueBandsOf));
-  const restHalf = cart.filter((line) => !pricesByValue(line.restaurantId, valueBandsOf));
+  /* What is priced by the cool box is priced by the cool box and by
+     nothing else. Counting it in the market half as well charged the same
+     tubs twice: once by what they came to, and again by the box they
+     travel in. Only Fantasy is priced this way. */
+  const notByBox = cart.filter((line) => !pricesByStep(line.itemId, stepFeeOf));
+  const marketHalf = notByBox.filter((line) =>
+    pricesByValue(line.restaurantId, valueBandsOf)
+  );
+  const restHalf = notByBox.filter(
+    (line) => !pricesByValue(line.restaurantId, valueBandsOf)
+  );
   /*
    * What rides along on a trip the car was making anyway.
    *

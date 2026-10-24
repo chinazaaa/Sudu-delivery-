@@ -96,21 +96,22 @@ export function stepsSaid(
  * What a cart costs where part of it is picked up on the way.
  *
  * Fantasy ice cream is not a stop the car makes for its own sake: it is
- * grabbed on the way past, and three Domino's pizzas are what the trip is
- * actually for. Adding its fee on top of theirs would charge twice for one
- * journey, which is how a cart with both in it falls off a cliff and the
- * customer places two orders instead. They would be right to.
+ * grabbed on the way past, and the three Domino's pizzas are what the
+ * trip is actually for. Charging it a trip of its own on top of theirs
+ * charges twice for one journey, which is how a cart with both in it
+ * falls off a cliff and the customer places two orders instead. They
+ * would be right to.
  *
- * So it is the dearer of the two, not the sum. The rest of the cart pays
- * the ordinary ladder with the ice cream left out of the count, and the ice
- * cream pays by the box; whichever is the bigger number is what the trip
- * costs. Three pizzas and an ice cream pays for the pizzas, which is what
- * the car went for. Sixty ice creams and one pizza pays for four cool
- * boxes, because by then the ice cream is the trip.
+ * So where there is anything else in the cart, the rest of it pays its
+ * own way and the ice cream adds one step on top: the five hundred naira
+ * that is the ladder's own word for "and these as well". Not the whole
+ * box, because the box is going anyway, and not nothing, because a boot
+ * full of tubs is not free to carry. However many there are: eleven and
+ * thirty are the same answer, which is the shop saying the ice cream is
+ * never what the trip was for.
  *
- * Added would be wrong and ignoring it would be worse: a shop that carries
- * four cool boxes for the price of one pizza is a shop giving the boot
- * away.
+ * Alone in the cart it is the trip, so it pays the whole ladder: fifteen
+ * is four thousand and thirty is four and a half.
  */
 export function feeRidingAlong(args: {
   /** How many of the by-the-box things are in the cart. */
@@ -119,9 +120,10 @@ export function feeRidingAlong(args: {
    *  then the ordinary fee stands untouched. */
   steps: StepFee | null;
   /** What the rest of the cart costs on the ordinary ladder, with these
-   *  left out of the count. */
+   *  left out of the count. Nought is a cart that is nothing else. */
   otherFee: number;
 }): number {
   if (args.steps === null || args.stepCount <= 0) return args.otherFee;
-  return Math.max(args.otherFee, feeByStep(args.stepCount, args.steps));
+  if (args.otherFee <= 0) return feeByStep(args.stepCount, args.steps);
+  return args.otherFee + args.steps.stepFee;
 }

@@ -704,11 +704,23 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
                   // the car it fills, and the bill is the two added. Neither
                   // half can underpay for the other.
                   feeAcross({
+                    // What is priced by the cool box is priced by the cool
+                    // box and by nothing else. Counting it here as well
+                    // charged the same tubs twice: once by what they came
+                    // to and again by the box they travel in.
                     marketFood: countFood(
-                      onlyFrom(priced.lines, where.byValueKitchens, true)
+                      onlyFrom(
+                        drivingLines(priced.lines, byBox),
+                        where.byValueKitchens,
+                        true
+                      )
                     ),
                     restaurantFee: feeOfHalf(
-                      onlyFrom(priced.lines, where.byValueKitchens, false),
+                      onlyFrom(
+                        drivingLines(priced.lines, byBox),
+                        where.byValueKitchens,
+                        false
+                      ),
                       batch.flash_fee,
                       // The plain ladder. The trip is added once below,
                       // for the whole order; taking the one with it
@@ -931,9 +943,12 @@ export async function quote(args: {
     // would call it eleven containers. Two errands, two fees, added.
     fee =
       feeAcross({
-        marketFood: countFood(onlyFrom(priced.lines, where.byValueKitchens, true)),
+        // Priced by the cool box, and so not by what it came to as well.
+        marketFood: countFood(
+          onlyFrom(drivingLines(priced.lines, byBox), where.byValueKitchens, true)
+        ),
         restaurantFee: feeOfHalf(
-          onlyFrom(priced.lines, where.byValueKitchens, false),
+          onlyFrom(drivingLines(priced.lines, byBox), where.byValueKitchens, false),
           batch?.flash_fee ?? null,
           // The plain ladder: the trip is added once, below.
           where.baseBands
