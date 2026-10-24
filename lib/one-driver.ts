@@ -70,3 +70,17 @@ export function carsStillDrivable<T extends { date: string }>(
  *  rather than as broken. */
 export const OUT_SAID =
   "Our driver is on the road with tonight's run, so a car of its own cannot go today. Pick a time tomorrow, or put it on the next run.";
+
+/**
+ * Why today's cars are not on offer, where they are not.
+ *
+ * Two reasons, and they are different sentences. One is that she is out
+ * with the boot full and cannot come back for one bag. The other is that
+ * a run is going today anyway: a car of its own exists for the evenings
+ * when nothing is, and selling one beside an open run sells somebody a
+ * six and a half thousand naira trip the shop was making at four, to
+ * arrive at the same hour. Offering it is not a choice, it is a worse
+ * deal with extra steps.
+ */
+export const RUN_INSTEAD_SAID =
+  "A run is going today, so this goes on that: it gets there the same evening and costs less than a car of its own.";

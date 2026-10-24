@@ -28,16 +28,17 @@ import { renderEmail, renderText, type Block } from "./email-html";
 import { siteUrl } from "./admin-templates";
 import { naira, orderRef } from "./money";
 import { SLOT_LABEL } from "./config";
-import { runDateLabel, weekdayLabel } from "./time";
+import { lagosToday, runDateLabel, weekdayLabel } from "./time";
 import {
   countersStillAhead,
   createSameDayBatch,
   getBatch,
   isOrderable,
-  nobodyToDrive,
   orderCounts,
+  runGoingToday,
+  someoneIsDriving,
 } from "./batches";
-import { OUT_SAID } from "./one-driver";
+import { OUT_SAID, RUN_INSTEAD_SAID } from "./one-driver";
 import { bandsFor, isSkincareBatch } from "./skincare";
 import { counterHolding } from "./counter";
 import { takingLastMinute } from "./last-minute";
@@ -226,7 +227,13 @@ async function checkSameDay(
   // stops one being bought by somebody who was already on the checkout.
   // Only today's: tomorrow was never the thing that clashed. See
   // lib/one-driver.ts.
-  if (await nobodyToDrive(slot.date)) return { error: OUT_SAID };
+  // Two reasons today might not take a car, and they are different
+  // sentences: she is out with the boot full, or a run is going anyway
+  // and this would be a dearer trip to the same hour.
+  if (slot.date === lagosToday()) {
+    if (await someoneIsDriving()) return { error: OUT_SAID };
+    if (await runGoingToday()) return { error: RUN_INSTEAD_SAID };
+  }
 
   return { slot, pricing: await sameDayPricing() };
 }

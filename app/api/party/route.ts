@@ -4,8 +4,14 @@ import { randomUUID } from "crypto";
 import { takeSeat } from "@/lib/group-carts";
 import { holdsOwnSeat, seatFrom } from "@/lib/seat";
 import { db } from "@/lib/supabase";
-import { createSameDayBatch, getBatch, isOrderable, nobodyToDrive } from "@/lib/batches";
-import { OUT_SAID } from "@/lib/one-driver";
+import {
+  createSameDayBatch,
+  getBatch,
+  isOrderable,
+  nobodyToDrive,
+  runGoingToday,
+} from "@/lib/batches";
+import { OUT_SAID, RUN_INSTEAD_SAID } from "@/lib/one-driver";
 import { hoursByDay, safeSettings } from "@/lib/settings";
 import { deliverySlots } from "@/lib/same-day";
 import { SHARE_MINUTES } from "@/lib/groups";
@@ -48,10 +54,14 @@ export async function POST(request: Request): Promise<NextResponse> {
       if (!slot) {
         return NextResponse.json({ error: "That time has gone." }, { status: 400 });
       }
-      // One driver: while she is out with tonight's run there is nobody to
-      // drive today's car. Tomorrow is untouched. See lib/one-driver.ts.
+      // Today takes a car only when nothing else is going: she is not out
+      // with the boot full, and no run is going anyway. Tomorrow is
+      // untouched. See lib/one-driver.ts.
       if (await nobodyToDrive(slot.date)) {
-        return NextResponse.json({ error: OUT_SAID }, { status: 400 });
+        return NextResponse.json(
+          { error: (await runGoingToday()) ? RUN_INSTEAD_SAID : OUT_SAID },
+          { status: 400 }
+        );
       }
       batch = await createSameDayBatch({
         deliverAt: slot.at,

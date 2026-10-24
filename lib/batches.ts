@@ -574,13 +574,55 @@ export async function carsOnOffer<T extends { date: string }>(
   slots: T[]
 ): Promise<T[]> {
   if (slots.length === 0) return slots;
-  return carsStillDrivable(slots, await someoneIsDriving(), lagosToday());
+  return carsStillDrivable(slots, await noCarToday(), lagosToday());
 }
 
-/** Whether a time is one nobody is left to drive. */
+/** Whether a time is one the shop will not sell a car for. */
 export async function nobodyToDrive(date: string): Promise<boolean> {
   if (date !== lagosToday()) return false;
-  return someoneIsDriving();
+  return noCarToday();
+}
+
+/**
+ * Whether today is off for cars of their own, for either reason.
+ *
+ * She is out with the boot full, or a run is going today anyway. See
+ * lib/one-driver.ts: the second is the ordinary case, and it is not a
+ * restriction so much as arithmetic. A car of its own is for the
+ * evenings when nothing is going.
+ */
+export async function noCarToday(): Promise<boolean> {
+  if (await someoneIsDriving()) return true;
+  return runGoingToday();
+}
+
+/**
+ * A scheduled run going today that somebody can still order onto.
+ *
+ * Open, or closed and not shopped yet, which is the same thing as far as
+ * a customer is concerned: both of them take the order and both of them
+ * arrive this evening.
+ */
+export async function runGoingToday(): Promise<boolean> {
+  try {
+    const { data, error } = await db()
+      .from("batches")
+      .select("kind, stage, status, cut_off_at")
+      .eq("run_date", lagosToday())
+      .neq("status", "cancelled")
+      .limit(10);
+    if (error) return false;
+
+    return ((data ?? []) as Batch[]).some((one) => {
+      if ((one.kind ?? "run") !== "run") return false;
+      if (one.status === "open" && new Date(one.cut_off_at).getTime() > Date.now()) {
+        return true;
+      }
+      return takingLastMinute(one);
+    });
+  } catch {
+    return false;
+  }
 }
 
 /** The run being driven right now, if there is one. */
