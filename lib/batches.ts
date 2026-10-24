@@ -13,7 +13,9 @@ import {
   PAY_WITHIN_MINUTES,
   stillToGo,
   takingLastMinute,
+  windowGone,
 } from "./last-minute";
+import { windowHours } from "./same-day";
 import { gotList } from "./runner";
 import {
   carsStillDrivable,
@@ -574,54 +576,64 @@ export async function carsOnOffer<T extends { date: string }>(
   slots: T[]
 ): Promise<T[]> {
   if (slots.length === 0) return slots;
-  return carsStillDrivable(slots, await noCarToday(), lagosToday());
+
+  // A day a run goes is not a day a car of its own can go: it is one
+  // driver and one trip to the market, and the car would be a dearer
+  // version of the drive she is already making.
+  const runs = await daysWithARun([...new Set(slots.map((one) => one.date))]);
+  const left = slots.filter((one) => !runs.has(one.date));
+
+  // And today goes altogether while she is out with the boot full.
+  return carsStillDrivable(left, await someoneIsDriving(), lagosToday());
 }
 
 /** Whether a time is one the shop will not sell a car for. */
 export async function nobodyToDrive(date: string): Promise<boolean> {
+  if ((await daysWithARun([date])).has(date)) return true;
   if (date !== lagosToday()) return false;
-  return noCarToday();
+  return someoneIsDriving();
 }
 
-/**
- * Whether today is off for cars of their own, for either reason.
- *
- * She is out with the boot full, or a run is going today anyway. See
- * lib/one-driver.ts: the second is the ordinary case, and it is not a
- * restriction so much as arithmetic. A car of its own is for the
- * evenings when nothing is going.
- */
-export async function noCarToday(): Promise<boolean> {
-  if (await someoneIsDriving()) return true;
-  return runGoingToday();
+/** Whether a run is going on a day, for anything that asks about one. */
+export async function runGoingOn(date: string): Promise<boolean> {
+  return (await daysWithARun([date])).has(date);
 }
 
-/**
- * A scheduled run going today that somebody can still order onto.
- *
- * Open, or closed and not shopped yet, which is the same thing as far as
- * a customer is concerned: both of them take the order and both of them
- * arrive this evening.
- */
+/** Today, for the pages that only ever ask about today. */
 export async function runGoingToday(): Promise<boolean> {
+  return runGoingOn(lagosToday());
+}
+
+/**
+ * The days in this list that already have a run going.
+ *
+ * A run counts whatever state it is in, short of cancelled. Today's that
+ * has closed is still going, because as far as somebody ordering is
+ * concerned it takes the order and arrives this evening; and one that
+ * has been and come back still used up the day's driving.
+ *
+ * Asked for defensively, because every customer-facing page calls it: a
+ * query that fails answers "no runs", which is how the shop worked
+ * before this existed.
+ */
+export async function daysWithARun(dates: string[]): Promise<Set<string>> {
+  const wanted = [...new Set(dates.filter((one) => one !== ""))];
+  if (wanted.length === 0) return new Set();
   try {
     const { data, error } = await db()
       .from("batches")
-      .select("kind, stage, status, cut_off_at")
-      .eq("run_date", lagosToday())
-      .neq("status", "cancelled")
-      .limit(10);
-    if (error) return false;
+      .select("kind, run_date, status")
+      .in("run_date", wanted)
+      .neq("status", "cancelled");
+    if (error) return new Set();
 
-    return ((data ?? []) as Batch[]).some((one) => {
-      if ((one.kind ?? "run") !== "run") return false;
-      if (one.status === "open" && new Date(one.cut_off_at).getTime() > Date.now()) {
-        return true;
-      }
-      return takingLastMinute(one);
-    });
+    return new Set(
+      ((data ?? []) as Batch[])
+        .filter((one) => (one.kind ?? "run") === "run")
+        .map((one) => one.run_date)
+    );
   } catch {
-    return false;
+    return new Set();
   }
 }
 
@@ -694,7 +706,22 @@ export async function lastMinuteRun(): Promise<OpenBatch | null> {
       .limit(4);
     if (error) return null;
 
-    const run = ((data ?? []) as Batch[]).find((one) => takingLastMinute(one));
+    // The stage says where the car is, and the stage is a tap somebody
+    // has to remember. The clock is not: past the end of its window the
+    // run is home, whatever anybody pressed. See lib/last-minute.ts.
+    const hourNow = hourInLagos();
+    const today = lagosToday();
+
+    const run = ((data ?? []) as Batch[]).find(
+      (one) =>
+        takingLastMinute(one) &&
+        !windowGone({
+          hours: windowHours(one.delivery_window_text ?? ""),
+          hourNow,
+          runDate: one.run_date,
+          today,
+        })
+    );
     if (!run) return null;
 
     const left = await countersStillAhead(run);
@@ -862,8 +889,27 @@ export function isOrderable(batch: Batch): boolean {
   }
   // Closed is not the same as gone. Until the food is bought there is a
   // car going, and a counter it has not reached is one it can still buy
-  // at. See lib/last-minute.ts.
-  return takingLastMinute(batch);
+  // at. Past the hour it was going to arrive it is gone whatever the
+  // stage says, because the stage is a tap somebody has to remember and
+  // the clock is not. See lib/last-minute.ts.
+  if (!takingLastMinute(batch)) return false;
+  return !windowGone({
+    hours: windowHours(batch.delivery_window_text ?? ""),
+    hourNow: hourInLagos(),
+    runDate: batch.run_date,
+    today: lagosToday(),
+  });
+}
+
+/** The hour of the day where the shop is. */
+function hourInLagos(): number {
+  return Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: TZ,
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date())
+  );
 }
 
 /**

@@ -7,6 +7,7 @@ import { runCarries } from "../lib/run-places";
 import { withIce, withoutIce } from "../lib/ice";
 import { runToWorkOn, type RunToPick } from "../lib/which-run";
 import { dayCostSoFar, shareOut, splitDayCosts } from "../lib/day-costs";
+import { windowGone } from "../lib/last-minute";
 import { carsStillDrivable, driverIsOut } from "../lib/one-driver";
 import { saidPick, saidPicks, saidPicksLine } from "../lib/picks";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
@@ -6448,5 +6449,42 @@ test("a day's costs are typed once and shared, never doubled", () => {
       { fuel: 200, transport: 3000, driver: 0, other: 0 },
     ]),
     { fuel: 300, transport: 9000, driver: 0, other: 50 }
+  );
+});
+
+test("a run stops taking last minute orders once its hour has gone", () => {
+  const today = "2026-10-24";
+  const window = { from: 15, to: 15 };
+
+  // Quarter past four, for a run that was landing by half past three.
+  // The stage is a tap somebody has to remember; the clock is not.
+  assert.equal(
+    windowGone({ hours: window, hourNow: 16, runDate: today, today }),
+    true
+  );
+
+  // Two o'clock, still to come.
+  assert.equal(
+    windowGone({ hours: window, hourNow: 14, runDate: today, today }),
+    false
+  );
+
+  // Tomorrow's run has not had its window whatever the hour is.
+  assert.equal(
+    windowGone({ hours: window, hourNow: 23, runDate: "2026-10-25", today }),
+    false
+  );
+
+  // Yesterday's is gone whatever it says.
+  assert.equal(
+    windowGone({ hours: null, hourNow: 1, runDate: "2026-10-23", today }),
+    true
+  );
+
+  // Nothing readable in the wording leaves the stage as the only answer:
+  // a run nobody can time is better offered than wrongly shut.
+  assert.equal(
+    windowGone({ hours: null, hourNow: 23, runDate: today, today }),
+    false
   );
 });

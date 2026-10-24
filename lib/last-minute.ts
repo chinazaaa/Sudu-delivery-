@@ -44,6 +44,39 @@ export function takingLastMinute(batch: MaybeLastMinute): boolean {
 }
 
 /**
+ * Whether the hour it was going to arrive has gone.
+ *
+ * The stage is the shop's word for where the car is, and the shop is a
+ * person with a phone in a car park: she hands the bags over and marks
+ * the orders delivered, and the run can sit at "at the counter" all
+ * evening because moving it on is a different tap. Meanwhile the site
+ * went on offering last minute orders on a run that was already home,
+ * for a window that ended three quarters of an hour ago.
+ *
+ * So the clock has a say as well. Past the end of its window the run is
+ * not taking anything, whatever the stage says, because there is no
+ * version of the evening where that food still arrives when it said.
+ *
+ * `hours` is the window read off the run's own wording, and null where
+ * nothing could be read, which leaves the stage as the only answer: a
+ * run nobody can time is better offered than wrongly shut.
+ */
+export function windowGone(args: {
+  hours: { from: number; to: number } | null;
+  /** The hour of the day where the shop is, now. */
+  hourNow: number;
+  /** The run's day against today, as dates: a run tomorrow has not had
+   *  its window yet whatever the hour is. */
+  runDate: string;
+  today: string;
+}): boolean {
+  if (args.runDate > args.today) return false;
+  if (args.runDate < args.today) return true;
+  if (args.hours === null) return false;
+  return args.hourNow >= args.hours.to;
+}
+
+/**
  * The counters a late order may still draw on.
  *
  * Everything the run was already willing to stop at, less everything it

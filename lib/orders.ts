@@ -35,7 +35,7 @@ import {
   getBatch,
   isOrderable,
   orderCounts,
-  runGoingToday,
+  runGoingOn,
   someoneIsDriving,
 } from "./batches";
 import { OUT_SAID, RUN_INSTEAD_SAID } from "./one-driver";
@@ -227,12 +227,13 @@ async function checkSameDay(
   // stops one being bought by somebody who was already on the checkout.
   // Only today's: tomorrow was never the thing that clashed. See
   // lib/one-driver.ts.
-  // Two reasons today might not take a car, and they are different
-  // sentences: she is out with the boot full, or a run is going anyway
-  // and this would be a dearer trip to the same hour.
-  if (slot.date === lagosToday()) {
-    if (await someoneIsDriving()) return { error: OUT_SAID };
-    if (await runGoingToday()) return { error: RUN_INSTEAD_SAID };
+  // Two reasons a day might not take a car, and they are different
+  // sentences: a run is going that day anyway and this would be a dearer
+  // version of the same drive, or she is out with the boot full right
+  // now and cannot come back for one bag.
+  if (await runGoingOn(slot.date)) return { error: RUN_INSTEAD_SAID };
+  if (slot.date === lagosToday() && (await someoneIsDriving())) {
+    return { error: OUT_SAID };
   }
 
   return { slot, pricing: await sameDayPricing() };

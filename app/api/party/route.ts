@@ -9,7 +9,7 @@ import {
   getBatch,
   isOrderable,
   nobodyToDrive,
-  runGoingToday,
+  runGoingOn,
 } from "@/lib/batches";
 import { OUT_SAID, RUN_INSTEAD_SAID } from "@/lib/one-driver";
 import { hoursByDay, safeSettings } from "@/lib/settings";
@@ -59,7 +59,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       // untouched. See lib/one-driver.ts.
       if (await nobodyToDrive(slot.date)) {
         return NextResponse.json(
-          { error: (await runGoingToday()) ? RUN_INSTEAD_SAID : OUT_SAID },
+          { error: (await runGoingOn(slot.date)) ? RUN_INSTEAD_SAID : OUT_SAID },
           { status: 400 }
         );
       }
