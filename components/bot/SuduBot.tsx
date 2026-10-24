@@ -4998,6 +4998,36 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     begin();
   }, [begin, open]);
 
+  /*
+   * Stay above whatever bar the page has, however tall it is.
+   *
+   * The launcher cleared a fixed hundred and fifty pixels, which is the
+   * checkout's bar on a good day. Add the line that says the food is not
+   * coming today and the bar grows, and the disc sat on top of the one
+   * sentence somebody has to read before they pay. A number in a
+   * stylesheet cannot know how tall a sentence is, so it is measured.
+   */
+  useEffect(() => {
+    const root = document.documentElement;
+    const read = () => {
+      const bar = document.querySelector("[data-actionbar]");
+      const tall = bar ? Math.round(bar.getBoundingClientRect().height) : 0;
+      root.style.setProperty("--actionbar-h", `${tall}px`);
+    };
+
+    read();
+    const watching = new ResizeObserver(read);
+    const bar = document.querySelector("[data-actionbar]");
+    if (bar) watching.observe(bar);
+    window.addEventListener("resize", read);
+
+    return () => {
+      watching.disconnect();
+      window.removeEventListener("resize", read);
+      root.style.removeProperty("--actionbar-h");
+    };
+  });
+
   function close() {
     greeted.current = false;
     clear();

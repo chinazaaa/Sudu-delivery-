@@ -298,7 +298,11 @@ export default function Checkout() {
     byValue.length > 0
       ? // Nothing but market shopping is charged by what the shopping comes
         // to. Mix a restaurant in and both are charged, their own way, and
-        // the bill is the two added.
+        // the bill is the two added. What rides along in the cool box goes
+        // on top of that, exactly as it does on the ordinary ladder below:
+        // the server adds it once at the end for every cart, and this
+        // branch was the one place the phone did not.
+        ridesAlong(
         feeAcross({
           marketFood: cartTotal(marketHalf),
           // The container count floors at one, which is right for a cart and
@@ -315,6 +319,7 @@ export default function Checkout() {
           })(),
           bands: byValue,
         }) + farExtra
+        )
       : ridesAlong(
           feeFrom(
             // What rides along is out of the container count: the car is

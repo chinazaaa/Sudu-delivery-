@@ -84,6 +84,7 @@ export default async function CartPage({
           figure. See components/IceInCart.tsx. */}
       <IceInCart ice={ice} needsIce={needsIce} />
       <CartView
+      iceItemId={ice?.itemId ?? ""}
       restaurants={restaurants}
       runs={batches
         .slice(0, 4)

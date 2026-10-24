@@ -774,9 +774,12 @@ export default function Checkout({
     ? 0
     : byValue.length > 0
       ? // Nothing but market shopping is charged by what the shopping comes
-        // to. Mix a restaurant in and the dearer of the two measures comes
-        // back, so a pepper added to twelve pizzas cannot drop the whole
-        // order onto the market's ladder.
+        // to. Mix a restaurant in and both halves pay, because they are two
+        // errands. What rides along in the cool box is added on top of
+        // whichever of those applies, exactly as it is on the ordinary
+        // ladder below: the server does it once at the end for every cart,
+        // and this branch was the one place the phone did not.
+        ridesAlong(
         feeAcross({
           marketFood: cartSubtotal(marketHalf),
           // The container count floors at one, which is right for a cart and
@@ -792,8 +795,8 @@ export default function Checkout({
               : feeFor(containers, selected?.flashFee ?? null, ladderBase);
           })(),
           bands: byValue,
-        }) +
-        farExtra
+        }) + farExtra
+        )
       : ridesAlong(
           feeFor(
             // What rides along is out of the container count: the car is

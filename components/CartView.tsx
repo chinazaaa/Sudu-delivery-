@@ -52,8 +52,12 @@ export default function CartView({
   offers = [],
   nextRunId = "",
   startGroup = false,
+  iceItemId = "",
 }: {
   restaurants?: { id: string; name: string; href: string }[];
+  /** The bag of ice block, which the shop puts in and takes out itself.
+   *  Empty where the shop has not said which item it is. */
+  iceItemId?: string;
   /** What a group could be put on, worked out on the server so the clock and
    *  the prices are the shop's. */
   runs?: ArrivalRun[];
@@ -853,6 +857,16 @@ export default function CartView({
                   <span className="font-display text-[26px] font-extrabold leading-none">
                     {naira(line.unitPrice * line.qty)}
                   </span>
+                  {/* The bag of ice block is not somebody's to change. It
+                      arrived because the cart has ice cream in it and it
+                      leaves when the ice cream does, so a stepper and a
+                      Remove on it are two controls that undo themselves
+                      the moment they are pressed. */}
+                  {line.itemId === iceItemId ? (
+                    <span className="shrink-0 text-xs font-semibold text-muted">
+                      Goes with the ice cream
+                    </span>
+                  ) : (
                   <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-ink p-0.5 text-white">
                     <button
                       type="button"
@@ -874,20 +888,23 @@ export default function CartView({
                       +
                     </button>
                   </span>
+                  )}
                 </div>
 
                 {/* Taking something out had no button of its own: the only way
                     was to press minus until the row went, and somebody who
                     did not already know that reported that the cart would not
                     let her delete anything. A word that says what it does. */}
-                <button
-                  type="button"
-                  onClick={() => setQty(line.key, 0)}
-                  className="mt-2 text-xs font-semibold text-muted underline hover:text-ink"
-                  aria-label={`Remove ${line.name} from the cart`}
-                >
-                  Remove
-                </button>
+                {line.itemId !== iceItemId && (
+                  <button
+                    type="button"
+                    onClick={() => setQty(line.key, 0)}
+                    className="mt-2 text-xs font-semibold text-muted underline hover:text-ink"
+                    aria-label={`Remove ${line.name} from the cart`}
+                  >
+                    Remove
+                  </button>
+                )}
 
                 {people.length > 0 && !inParty && (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">

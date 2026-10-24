@@ -499,12 +499,35 @@ body {
  * the floor and the tab bar does not exist.
  */
 body:has([data-actionbar]) .sudubot-launcher {
-  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  /* Measured rather than guessed. A bar carrying "this is not coming
+     today, between half three and half five tomorrow" is two lines
+     taller than one carrying a button, and a number written here cannot
+     know that: the disc sat on top of the one sentence somebody has to
+     read before they pay. SuduBot measures the bar and sets the
+     variable; the fallback is the old guess, for the moment before it
+     has. */
+  bottom: calc(var(--actionbar-h, 76px) + 20px + env(safe-area-inset-bottom, 0px));
 }
 @media (max-width: 639.98px) {
   body:has([data-actionbar]) .sudubot-launcher {
-    bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+    /* The tab bar sits under the action bar on a phone, and the bar is
+       positioned above it, so both are cleared. */
+    bottom: calc(
+      var(--actionbar-h, 82px) + 68px + 12px + env(safe-area-inset-bottom, 0px)
+    );
   }
+}
+
+/*
+ * No teaser where there is a bar.
+ *
+ * "Hungry? Order in about a minute" is a nudge to start ordering, and a
+ * page with a Place order button on it is a page where they have. It is
+ * also the widest part of the launcher, so it is the part that covers
+ * the sentence beside it.
+ */
+body:has([data-actionbar]) .sudubot .teaser {
+  display: none;
 }
 
 .sudubot .teaser {
