@@ -7,7 +7,7 @@ import Many from "@/components/Many";
 import ActionButton from "@/components/ActionButton";
 import { everythingAtTheCounter, setDayCosts } from "@/app/admin/actions";
 import { dayCostSoFar } from "@/lib/day-costs";
-import { dayToDrive, drivingToday } from "@/lib/admin";
+import { dayToDrive, daysGoing, drivingToday } from "@/lib/admin";
 import { naira } from "@/lib/money";
 import { formatPhone } from "@/lib/phone";
 import { saidPicksLine } from "@/lib/picks";
@@ -31,11 +31,18 @@ export const dynamic = "force-dynamic";
  * its Settle button live, because those are the parts that are genuinely
  * about one promise rather than about one evening.
  */
-export default async function DrivingTodayPage() {
+export default async function DrivingTodayPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ day?: string }>;
+}) {
   // Today while there is anything left to do with it, and then the next
   // day with something going: this page sat on a finished Saturday all
   // evening while tomorrow's run was the only thing anybody could act on.
-  const day = await dayToDrive();
+  // Asked for by name where somebody wants the evening they just drove.
+  const asked = (await searchParams).day ?? "";
+  const [days, moved] = await Promise.all([daysGoing(), dayToDrive()]);
+  const day = days.some((one) => one.day === asked) ? asked : moved;
   const sheet = await drivingToday(day);
 
   if (!sheet) {
@@ -77,6 +84,26 @@ export default async function DrivingTodayPage() {
           </Link>
         }
       />
+
+      {/* The days with something on them, because this page follows the
+          work and the work moves on: the evening you have just driven was
+          nowhere you could click back to. */}
+      {days.length > 1 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {days.map((one) => (
+            <Link
+              key={one.day}
+              href={`/admin/today?day=${one.day}`}
+              className={`btn-admin btn-admin-sm ${
+                one.day === day ? "btn-admin-go" : ""
+              }`}
+            >
+              {one.day === lagosToday() ? "Today" : runDateLabel(one.day)}
+              {one.bags > 0 && ` · ${one.bags}`}
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Bags" value={sheet.handout.length} />

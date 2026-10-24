@@ -965,6 +965,66 @@ export async function dayToDrive(): Promise<string> {
   }
 }
 
+/**
+ * The days with something going, for moving between them.
+ *
+ * The driving sheet follows the work, which means it moves on the moment
+ * a day is finished, and then the day you have just driven is nowhere
+ * you can click to. A few days either side is the whole of what anybody
+ * wants from it: what went out this evening, and what goes out next.
+ */
+export async function daysGoing(): Promise<
+  { day: string; bags: number }[]
+> {
+  const today = lagosToday();
+  const shift = (days: number) => {
+    const at = new Date(`${today}T12:00:00Z`);
+    at.setUTCDate(at.getUTCDate() + days);
+    return at.toISOString().slice(0, 10);
+  };
+  const from = shift(-3);
+  const to = shift(7);
+  try {
+    const { data } = await db()
+      .from("batches")
+      .select("id, run_date, kind, status")
+      .gte("run_date", from)
+      .lte("run_date", to)
+      .neq("status", "cancelled");
+
+    const going = ((data ?? []) as Batch[]).filter(
+      (one) => (one.kind ?? "run") === "run" || one.kind === "same_day"
+    );
+    if (going.length === 0) return [];
+
+    const { data: orders } = await db()
+      .from("orders")
+      .select("batch_id, status")
+      .in("batch_id", going.map((one) => one.id))
+      .not("status", "in", NOT_ORDERS_SQL);
+
+    const bags = new Map<string, number>();
+    for (const order of (orders ?? []) as { batch_id: string; status: string }[]) {
+      if (!isPaid(order.status)) continue;
+      bags.set(order.batch_id, (bags.get(order.batch_id) ?? 0) + 1);
+    }
+
+    const byDay = new Map<string, number>();
+    for (const one of going) {
+      byDay.set(one.run_date, (byDay.get(one.run_date) ?? 0) + (bags.get(one.id) ?? 0));
+    }
+
+    // Days with nothing on them, in the past, are days that never
+    // happened: the same rule the runs page keeps.
+    return [...byDay.entries()]
+      .filter(([day, count]) => count > 0 || day >= today)
+      .map(([day, count]) => ({ day, bags: count }))
+      .sort((a, b) => a.day.localeCompare(b.day));
+  } catch {
+    return [];
+  }
+}
+
 export type DrivingToday = TripSheet & {
   /** Every batch this sheet is made of, each keeping its own page: the
    *  costs, the profit and the stage all belong to one of them, and
