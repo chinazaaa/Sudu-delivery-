@@ -41,6 +41,14 @@ export type Slot = {
  */
 const WINDOW_HOURS = 3;
 
+/** How long a window is for a given day's hours. The shop's figure where it
+ *  has one, and the old fixed three where it has not: a day of hours that
+ *  predates the setting still has to make windows. */
+function windowOf(open: { windowHours?: number }): number {
+  const said = Number(open.windowHours);
+  return Number.isFinite(said) && said > 0 ? said : WINDOW_HOURS;
+}
+
 /**
  * Every window somebody can ask for, soonest first.
  *
@@ -56,8 +64,13 @@ const WINDOW_HOURS = 3;
 export function deliverySlots(
   now: Date = new Date(),
   hours:
-    | { first: number; last: number }
-    | ((weekday: number) => { first: number; last: number; off?: boolean }) = {
+    | { first: number; last: number; windowHours?: number }
+    | ((weekday: number) => {
+        first: number;
+        last: number;
+        off?: boolean;
+        windowHours?: number;
+      }) = {
     first: FIRST_DELIVERY_HOUR,
     last: LAST_DELIVERY_HOUR,
   },
@@ -69,7 +82,9 @@ export function deliverySlots(
   // Either one pair for the whole week, or a pair per day. Saturday can open
   // at noon while a Wednesday starts at three, and tomorrow is a different
   // day from today, so this is asked per date rather than once.
-  const hoursOn = (date: string): { first: number; last: number; off?: boolean } =>
+  const hoursOn = (
+    date: string
+  ): { first: number; last: number; off?: boolean; windowHours?: number } =>
     typeof hours === "function"
       ? hours(new Date(`${date}T12:00:00Z`).getUTCDay())
       : hours;
@@ -109,10 +124,11 @@ export function deliverySlots(
       return Math.max(minutes, open.first * 60);
     })();
 
-    for (let block = open.first; block < open.last; block += WINDOW_HOURS) {
+    const long = windowOf(open);
+    for (let block = open.first; block < open.last; block += long) {
       // The last block is whatever is left rather than running past closing:
       // a day ending at two is noon to two, not noon to three.
-      const to = Math.min(block + WINDOW_HOURS, open.last);
+      const to = Math.min(block + long, open.last);
 
       // What is left of this block, rather than the block itself. A window
       // whose start has passed is still worth offering while there is time

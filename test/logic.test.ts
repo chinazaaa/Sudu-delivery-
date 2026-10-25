@@ -1607,9 +1607,9 @@ test("the soonest way to eat is picked, not asked for", () => {
   // No run today, but the day is not over: a car of its own, today.
   const car = nextArrival([runTomorrow], slots, today);
   assert.equal(car?.onARun, false);
-  // The time it lands, rounded up to the next half hour, rather than the
-  // block the shop happens to divide the day into.
-  assert.equal(car?.when, "Around 4:30pm today");
+  // The window it lands in, which is what the shop can stand behind: a
+  // time to the minute is a promise Lagos traffic does not keep.
+  assert.equal(car?.when, "Between 4:15pm and 5pm today");
 
   // Nothing left today. A run tomorrow beats a car tomorrow, because it is
   // the same hours for less money.
@@ -1620,11 +1620,20 @@ test("the soonest way to eat is picked, not asked for", () => {
   // is whenever the shop opens. Never nothing.
   const none = nextArrival([], tomorrowOnly, today);
   assert.equal(none?.onARun, false);
-  assert.equal(none?.when, "Around 12pm tomorrow");
+  assert.equal(none?.when, "Between 12pm and 3pm tomorrow");
 
   // The day is always said, so a window never reads as today by default.
-  assert.equal(car?.said, "around 4:30pm today");
-  assert.equal(none?.said, "around 12pm tomorrow");
+  assert.equal(car?.said, "between 4:15pm and 5pm today");
+  assert.equal(none?.said, "between 12pm and 3pm tomorrow");
+
+  // A car tomorrow beats a run on Friday. Cheaper is not the same question
+  // as sooner, and the front page led with Wednesday while a car could have
+  // been there on Monday.
+  const runFriday = { ...runTomorrow, id: "c", runDate: "2026-09-25" };
+  assert.equal(nextArrival([runFriday], tomorrowOnly, today)?.onARun, false);
+  // But a run on the day the car would go still wins it: same evening,
+  // less money.
+  assert.equal(nextArrival([runTomorrow], tomorrowOnly, today)?.runId, "b");
 
   // Nothing anywhere is the only case with no answer.
   assert.equal(nextArrival([], [], today), null);

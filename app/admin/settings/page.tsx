@@ -881,6 +881,22 @@ export default async function SettingsAdmin() {
                 />
                 <p className="hint mt-1">Days ahead.</p>
               </div>
+              <div className="w-44">
+                <label className="label" htmlFor="car_window_hours">
+                  A car&rsquo;s window
+                </label>
+                <input
+                  id="car_window_hours"
+                  name="car_window_hours"
+                  inputMode="numeric"
+                  defaultValue={settings.car_window_hours}
+                  className="field"
+                />
+                <p className="hint mt-1">
+                  Hours. How wide a window a car of its own promises: three
+                  makes &ldquo;between 4pm and 7pm&rdquo;.
+                </p>
+              </div>
               <SaveButton look="btn-admin-go">Save</SaveButton>
               <p className="hint">
                 A run already created keeps the wording it was created with; change

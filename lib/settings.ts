@@ -104,6 +104,10 @@ export type Settings = {
   window_night_to: string;
   /** How many days ahead a customer may order into. */
   order_horizon_days: number;
+  /** How long a car of its own's delivery window is, in hours. Three was
+   *  written into the code; a keke across Sangotedo is not the same promise
+   *  as a car to Ikoyi, so it is the shop's to set. */
+  car_window_hours: number;
   /** The line under the name in the header. */
   tagline: string;
   /** Whether the footer offers the promoter sign in. Blank means it does. */
@@ -312,6 +316,7 @@ export const EMPTY: Settings = {
   window_night_from: "",
   window_night_to: "",
   order_horizon_days: 7,
+  car_window_hours: 3,
   tagline: "",
   hide_promoter_link: "",
   hide_footer: "",
@@ -660,7 +665,16 @@ export async function deliveryHours(): Promise<{ first: number; last: number }> 
   return first < last ? { first, last } : { first: FIRST_DELIVERY_HOUR, last: LAST_DELIVERY_HOUR };
 }
 
-export type DayHours = { first: number; last: number; off?: boolean };
+export type DayHours = {
+  first: number;
+  last: number;
+  off?: boolean;
+  /** How long a delivery window is, in hours. Carried with the hours rather
+   *  than passed separately because every caller of `hoursByDay` is already
+   *  asking the same question, and threading it through seventeen call
+   *  sites is seventeen chances to forget one. */
+  windowHours?: number;
+};
 
 /**
  * The hours for each weekday, where a day is not like the rest of the week.
@@ -682,16 +696,22 @@ export async function hoursByDay(): Promise<(weekday: number) => DayHours> {
     // shop.
   }
 
+  // Nought or nonsense in the box means the old fixed three, rather than a
+  // shop whose every window is zero hours long.
+  const windowHours = Number(settings.car_window_hours) > 0
+    ? Number(settings.car_window_hours)
+    : 3;
+
   return (weekday: number) => {
     const day = byDay[String(weekday)];
-    if (!day) return base;
-    if (day.off) return { first: 0, last: 0, off: true };
+    if (!day) return { ...base, windowHours };
+    if (day.off) return { first: 0, last: 0, off: true, windowHours };
 
     const first = Number(day.first);
     const last = Number(day.last);
     return Number.isFinite(first) && Number.isFinite(last) && first < last
-      ? { first, last }
-      : base;
+      ? { first, last, windowHours }
+      : { ...base, windowHours };
   };
 }
 

@@ -3325,6 +3325,7 @@ const SETTING_FIELDS = [
   "window_night_from",
   "window_night_to",
   "order_horizon_days",
+  "car_window_hours",
   "tagline",
   "hide_promoter_link",
   "hide_footer",

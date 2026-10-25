@@ -1,4 +1,5 @@
-import { aroundPhrase, type Slot } from "./same-day";
+import { type Slot } from "./same-day";
+import { runDateLabel } from "./time";
 
 /**
  * When an order lands, worked out rather than asked for.
@@ -69,11 +70,22 @@ export function nextArrival(
     onARun: true,
   });
   const onItsOwn = (slot: Slot): Arrival => {
-    // A car of its own is three hours out, so what is promised is that time:
-    // "around 4:30pm", not the whole block the shop divides the day into,
-    // which reads as a three hour wait. The day is always said, because a
-    // time on its own reads as today whatever day it is on.
-    const said = `${aroundPhrase(slot.at)} ${slot.day}`;
+    /*
+     * The window, the same as a run.
+     *
+     * This used to promise the hour it was aimed at, "around 4:30pm",
+     * on the reasoning that the three hour block reads as a three hour
+     * wait. In practice it reads as a promise to the minute, and Lagos
+     * traffic does not keep one: a window is what the shop can actually
+     * stand behind, and it is what every run on the site already says.
+     *
+     * The day is always said, because a time on its own reads as today
+     * whatever day it is on, and named rather than called "later", which
+     * is not a day anybody can plan around.
+     */
+    const when =
+      slot.day === "later" ? `on ${runDateLabel(slot.date)}` : slot.day;
+    const said = `${slot.window} ${when}`;
     return {
       runId: "",
       at: slot.at,
@@ -89,12 +101,25 @@ export function nextArrival(
   const slotToday = slots.find((one) => one.day === "today");
   if (slotToday) return onItsOwn(slotToday);
 
-  // Anything after today, soonest first. The lists arrive in order, so the
-  // first one past today is the next one there is.
+  /*
+   * Anything after today, soonest first, whichever kind it is.
+   *
+   * Every run was looked at before any car, so a run five days out beat a
+   * car tomorrow and the front page led with Wednesday while a car could
+   * have been there on Monday. That is the shop's order of preference,
+   * because a run is cheaper; it is not the answer to "when can I eat".
+   * The cheaper way is still offered, underneath, where somebody who
+   * would rather wait can take it.
+   *
+   * A run wins a day it shares with a car: same food, same evening, less
+   * money.
+   */
   const runLater = runs.find((one) => one.runDate > today);
-  if (runLater) return onRun(runLater);
-
   const slotLater = slots.find((one) => one.day !== "today");
+  if (runLater && slotLater) {
+    return runLater.runDate <= slotLater.date ? onRun(runLater) : onItsOwn(slotLater);
+  }
+  if (runLater) return onRun(runLater);
   if (slotLater) return onItsOwn(slotLater);
 
   // A run whose date cannot be read against today is still a run going

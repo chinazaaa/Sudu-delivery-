@@ -46,7 +46,7 @@ import GroupLink, {
   PARTY_CHANGED,
   readGroup,
 } from "@/components/GroupLink";
-import { aroundPhrase, type Slot } from "@/lib/same-day";
+import { type Slot } from "@/lib/same-day";
 import { ESTIMATE_NOTE, nextArrival, runArrival } from "@/lib/arrival";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
@@ -913,7 +913,7 @@ export default function Checkout({
       ? runArrival(runNow).said
       : "on the next run"
     : sameDay
-      ? `${aroundPhrase(sameDay.at)} ${sameDayWord(sameDay)}`
+      ? `${sameDay.window} ${sameDayWord(sameDay)}`
       : "on the next run";
 
   /*
@@ -940,7 +940,7 @@ export default function Checkout({
       ? runArrival(runNow).when
       : ""
     : sameDay
-      ? `${aroundPhrase(sameDay.at).charAt(0).toUpperCase()}${aroundPhrase(sameDay.at).slice(1)} ${sameDayWord(sameDay)}`
+      ? `${sameDay.window.charAt(0).toUpperCase()}${sameDay.window.slice(1)} ${sameDayWord(sameDay)}`
       : "";
 
   // Nothing to agree to where there is no arrival to name, and nothing to
@@ -1237,6 +1237,11 @@ export default function Checkout({
           onChange={(e) => {
             if (e.target.value === "pick") {
               setPickingDate(true);
+              // Opened on the next day after tomorrow, because that is what
+              // "pick a date" is for: today and tomorrow are a tap above it.
+              // An empty box asks somebody to find a day on a calendar when
+              // the obvious one could already be in it.
+              if (farDay === "" && further[0]) goTo(further[0].date);
               return;
             }
             setPickingDate(false);
