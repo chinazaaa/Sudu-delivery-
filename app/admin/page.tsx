@@ -333,11 +333,33 @@ export default async function AdminHome() {
 
   // The last few runs that actually went, for the bars. Newest on the right,
   // the way a week reads.
-  const ran = batches
-    .filter((batch) => batch.kind !== "same_day" && batch.kind !== "parcel" && batch.paidCount > 0)
+  /*
+   * One bar for one evening, cars of their own counted.
+   *
+   * A car of its own used to be filtered out of this, on the reasoning that
+   * the chart is about runs. It is about driving, and the biggest Saturday
+   * the shop has had was a car: three orders and 52,809 kept. The chart
+   * drew a quiet Saturday from the week before instead and said nothing
+   * about the good one, which is the opposite of what a chart for deciding
+   * which days are worth driving is for.
+   *
+   * Grouped by the date as well, because two batches on one night are one
+   * drive. Otherwise a night with a run and a car on it is two bars both
+   * labelled Sat, each showing half of what the evening made.
+   *
+   * Parcels stay out. A parcel is a courier job to one door, not a trip
+   * round the counters, and averaging one in answers a different question.
+   */
+  const byNight = new Map<string, number>();
+  for (const batch of batches) {
+    if (batch.kind === "parcel" || batch.paidCount === 0) continue;
+    byNight.set(batch.run_date, (byNight.get(batch.run_date) ?? 0) + batch.profit);
+  }
+  const ran = [...byNight.entries()]
+    .map(([runDate, profit]) => ({ id: runDate, run_date: runDate, profit }))
     .sort((a, b) => a.run_date.localeCompare(b.run_date))
     .slice(-5);
-  const best = Math.max(1, ...ran.map((batch) => batch.profit));
+  const best = Math.max(1, ...ran.map((one) => one.profit));
   const topped = Math.max(1, ...(stats?.topItems ?? []).map((one) => one.qty));
   /*
    * The last run that actually went, which the board draws under today's and
