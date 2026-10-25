@@ -1,6 +1,7 @@
 import PageHeader from "@/components/admin/PageHeader";
 import { runToWorkOn } from "@/lib/which-run";
 import Link from "next/link";
+import Pill from "@/components/admin/Pill";
 import Diagnostic from "@/components/Diagnostic";
 import Figure from "@/components/admin/Figure";
 import Panel from "@/components/admin/Panel";
@@ -419,18 +420,12 @@ export default async function RunsPage({
           spent stopping the fling, so a row somebody has to scroll is a
           row whose buttons sometimes do nothing. */}
       <div className="mb-3 flex flex-wrap gap-2">
-        <Link
-          href="/admin/runs"
-          className={`pill-admin ${window === "recent" ? "pill-admin-on" : ""}`}
-        >
+        <Pill href="/admin/runs" on={window === "recent"}>
           This week
-        </Link>
-        <Link
-          href="/admin/runs?show=all"
-          className={`pill-admin ${window === "all" ? "pill-admin-on" : ""}`}
-        >
+        </Pill>
+        <Pill href="/admin/runs?show=all" on={window === "all"}>
           Every run so far
-        </Link>
+        </Pill>
       </div>
 
       {/* The thing that quietly kills a shop: ordering open, but nothing left
