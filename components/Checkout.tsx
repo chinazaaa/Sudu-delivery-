@@ -896,13 +896,24 @@ export default function Checkout({
    * plainly that a time is an estimate.
    */
   const onARun = deliverAt === "";
+  /*
+   * Which day a car of its own lands on, in words.
+   *
+   * The windows come back labelled today, tomorrow or "later", which was
+   * fine while only today and tomorrow were ever offered. A day can be
+   * picked out of the calendar now, so the page was saying "get it around
+   * 4pm later" and, in the box asking somebody to agree to the date,
+   * "Around 4pm later. Tick to say that works for you."
+   */
+  const sameDayWord = (one: { day: string; date: string }) =>
+    one.day === "later" ? `on ${runDateLabel(one.date)}` : one.day;
   const runNow = batches.find((one) => one.id === batchId) ?? null;
   const arriving = onARun
     ? runNow
       ? runArrival(runNow).said
       : "on the next run"
     : sameDay
-      ? `${aroundPhrase(sameDay.at)} ${sameDay.day}`
+      ? `${aroundPhrase(sameDay.at)} ${sameDayWord(sameDay)}`
       : "on the next run";
 
   /*
@@ -929,7 +940,7 @@ export default function Checkout({
       ? runArrival(runNow).when
       : ""
     : sameDay
-      ? `${aroundPhrase(sameDay.at).charAt(0).toUpperCase()}${aroundPhrase(sameDay.at).slice(1)} ${sameDay.day}`
+      ? `${aroundPhrase(sameDay.at).charAt(0).toUpperCase()}${aroundPhrase(sameDay.at).slice(1)} ${sameDayWord(sameDay)}`
       : "";
 
   // Nothing to agree to where there is no arrival to name, and nothing to
@@ -1183,7 +1194,7 @@ export default function Checkout({
      * it and in the box agreeing to it. A day has to be on the list
      * before the list can say it is the one.
      */
-    const far =
+    const farDay =
       chosen !== null && !named.includes(chosen.date) ? chosen.date : "";
 
     const goTo = (date: string) => {
@@ -1198,6 +1209,12 @@ export default function Checkout({
         return;
       }
       setDayProblem("");
+      // Picked today or tomorrow out of the calendar: those have their own
+      // place on the list above, so the dropdown goes back to naming the
+      // day and the calendar closes behind it. Left open, the box sat
+      // blank underneath a dropdown reading "Pick a date", with the day
+      // itself said nowhere.
+      if (named.includes(date)) setPickingDate(false);
       if (day.runId !== null) {
         setBatchId(day.runId);
         setDeliverAt("");
@@ -1232,15 +1249,11 @@ export default function Checkout({
               {one.choice === null ? " · closed" : ""}
             </option>
           ))}
-          {far !== "" && <option value={far}>{runDateLabel(far)}</option>}
+          {farDay !== "" && (
+            <option value={farDay}>{runDateLabel(farDay)}</option>
+          )}
           {further.length > 0 && <option value="pick">Pick a date</option>}
         </select>
-
-        {arriving !== "" && (
-          <p className="text-sm text-muted">
-            Get it {arriving}.
-          </p>
-        )}
 
         {/*
             Any day, because a car of its own can go on any of them.
@@ -1262,7 +1275,10 @@ export default function Checkout({
               className="field"
               min={today}
               max={furthest}
-              value={far}
+              // Whatever day is chosen, not only the far ones. `far` is
+              // empty for today and tomorrow, which left the box blank
+              // the moment somebody picked one of them in it.
+              value={chosen?.date ?? ""}
               onChange={(e) => goTo(e.target.value)}
               aria-label="The day you want it"
             />
@@ -1270,6 +1286,13 @@ export default function Checkout({
               <p className="text-sm text-brand-dark">{dayProblem}</p>
             )}
           </div>
+        )}
+
+        {/* Under the whole control, calendar and all. Between the dropdown
+            and the date box it was describing the day above it while the
+            box below it was the thing being changed. */}
+        {arriving !== "" && (
+          <p className="text-sm text-muted">Get it {arriving}.</p>
         )}
       </div>
     );
