@@ -805,6 +805,10 @@ export default function Checkout({
   const sameDay = allSlots.find((one) => one.at === deliverAt) ?? null;
   /** The dropdown is on Today, Tomorrow, or a date somebody typed. */
   const [pickingDate, setPickingDate] = useState(false);
+  /** Why the day somebody typed cannot be done, where it cannot. Said out
+   *  loud, because a date box that takes a tap and changes nothing reads as
+   *  a broken page rather than as an answer. */
+  const [dayProblem, setDayProblem] = useState("");
   const shared = joining !== null || party !== "";
 
   // A promotion is the price rather than money off it, so it is settled
@@ -1167,6 +1171,8 @@ export default function Checkout({
       choice: dayChoices.find((one) => one.date === date) ?? null,
     }));
     const further = dayChoices.filter((one) => !named.includes(one.date));
+    // As far out as anything is going, which is the order horizon.
+    const furthest = dayChoices.at(-1)?.date ?? today;
     /*
      * The day that is picked, when it is further out than tomorrow.
      *
@@ -1181,8 +1187,17 @@ export default function Checkout({
       chosen !== null && !named.includes(chosen.date) ? chosen.date : "";
 
     const goTo = (date: string) => {
+      if (date === "") return;
       const day = dayChoices.find((one) => one.date === date);
-      if (!day) return;
+      if (!day) {
+        setDayProblem(
+          date < today
+            ? "That day has gone. Pick today or later."
+            : "Nothing is going that day. Try another."
+        );
+        return;
+      }
+      setDayProblem("");
       if (day.runId !== null) {
         setBatchId(day.runId);
         setDeliverAt("");
@@ -1228,31 +1243,33 @@ export default function Checkout({
         )}
 
         {/*
-            The days themselves, not a calendar.
+            Any day, because a car of its own can go on any of them.
 
-            This was a date box, and a date box on a phone opens the whole
-            month: every day of October was there to be tapped, including
-            the ones already gone. `min` and `max` are a suggestion that
-            iOS does not take, and the days that did nothing when tapped
-            outnumbered the ones that worked about five to one.
+            This was briefly a list of the days with something already
+            going, which is the shop's diary rather than the customer's
+            question: there is a car for a Monday as much as for a
+            Wednesday, and the only difference is the fee. So it is a date
+            again.
 
-            A list cannot offer a day the shop is not going out on, so
-            there is nothing to validate and nothing that ignores a tap.
+            `min` and `max` are a suggestion iOS does not take, so a day
+            we cannot do says why rather than taking the tap and changing
+            nothing, which reads as a broken page.
          */}
         {pickingDate && (
-          <select
-            className="field"
-            aria-label="The day you want it"
-            value={far}
-            onChange={(e) => goTo(e.target.value)}
-          >
-            <option value="">Which day?</option>
-            {further.map((one) => (
-              <option key={one.date} value={one.date}>
-                {runDateLabel(one.date)}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-2">
+            <input
+              type="date"
+              className="field"
+              min={today}
+              max={furthest}
+              value={far}
+              onChange={(e) => goTo(e.target.value)}
+              aria-label="The day you want it"
+            />
+            {dayProblem !== "" && (
+              <p className="text-sm text-brand-dark">{dayProblem}</p>
+            )}
+          </div>
         )}
       </div>
     );
