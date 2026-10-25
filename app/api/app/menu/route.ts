@@ -154,7 +154,15 @@ export async function GET(): Promise<NextResponse> {
       settings.same_day_on === "on"
         ? await carsOnOffer(
             slotsWorthOffering(
-              deliverySlots(new Date(), dayHours),
+              // As far ahead as the shop is open, the same as the website.
+              // The app lets somebody pick a day now, and a day with no run
+              // on it is a car of its own: two days of windows meant that
+              // past tomorrow there was nothing to offer at all.
+              deliverySlots(
+                new Date(),
+                dayHours,
+                settings.order_horizon_days || 7
+              ),
               batches.map((one) => ({
                 run_date: one.run_date,
                 window: one.delivery_window_text,

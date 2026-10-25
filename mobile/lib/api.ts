@@ -335,7 +335,16 @@ export type Slot = {
   /** The same thing inside a sentence: "get it between 12pm and 3pm". Older
    *  servers do not send it, so anything reading it falls back to the label. */
   phrase?: string;
-  day: "today" | "tomorrow";
+  /** Just the hours, no day on the end: "between 4pm and 7pm". What a car
+   *  of its own promises, the same as a run. Older servers do not send it,
+   *  so anything reading it falls back to the label. */
+  window?: string;
+  /** Past tomorrow a day is named by its date rather than counted, because
+   *  "in six days" is not how anybody says Saturday. */
+  day: "today" | "tomorrow" | "later";
+  /** The day it lands on, so one further out than tomorrow can be named.
+   *  Older servers do not send it. */
+  date?: string;
   /** Under five hours away, which costs more because the car cannot wait. */
   urgent: boolean;
 };
@@ -1145,6 +1154,10 @@ export type Area = {
   /** Whether a car of its own can go there. Three hours is its whole
    *  promise, and an hour each way eats that before the kitchen starts. */
   sameDay: boolean;
+  /** The weekdays a car can reach it, "0,6" for Sunday and Saturday. Empty
+   *  is every day. Ajah takes a car only on the day the shop is already
+   *  going that way, and without this the switch was all or nothing. */
+  sameDayDays?: string;
 };
 
 export const HOME: Area = {
@@ -1305,9 +1318,19 @@ export function nextArrival(
   const onItsOwn = (slot: Slot) => ({
     runId: "",
     at: slot.at,
-    // A time, not the block the shop divides the day into: "around 4:30pm"
-    // is something somebody can plan an afternoon around.
-    said: `${aroundPhrase(slot.at)} ${slot.day}`,
+    /*
+     * The window, the same as a run.
+     *
+     * This used to promise the hour it was aimed at, "around 4:30pm", on
+     * the reasoning that a three hour block reads as a three hour wait. In
+     * practice it reads as a promise to the minute, and Lagos traffic does
+     * not keep one.
+     *
+     * The day is named rather than called "later", which is not a day
+     * anybody can plan around. An older server sends neither the window nor
+     * the date, so both fall back to what it does send.
+     */
+    said: `${slotWindow(slot)} ${slotDayWord(slot)}`,
     onARun: false,
   });
 
@@ -1317,13 +1340,135 @@ export function nextArrival(
   const slotToday = slots.find((one) => one.day === "today");
   if (slotToday) return onItsOwn(slotToday);
 
+  /*
+   * Anything after today, soonest first, whichever kind it is.
+   *
+   * Every run was looked at before any car, so a run five days out beat a
+   * car tomorrow and the app led with Wednesday while a car could have
+   * been there on Monday. That is the shop's order of preference, because
+   * a run is cheaper; it is not the answer to "when can I eat". A run
+   * still wins a day it shares with a car: same evening, less money.
+   */
   const runLater = runs.find((one) => (one.runDate ?? "") > today);
-  if (runLater) return onRun(runLater);
-
   const slotLater = slots.find((one) => one.day !== "today");
+  if (runLater && slotLater) {
+    const carDay = slotLater.date ?? "";
+    return carDay === "" || (runLater.runDate ?? "") <= carDay
+      ? onRun(runLater)
+      : onItsOwn(slotLater);
+  }
+  if (runLater) return onRun(runLater);
   if (slotLater) return onItsOwn(slotLater);
 
   return runs[0] ? onRun(runs[0]) : slots[0] ? onItsOwn(slots[0]) : null;
+}
+
+export type DayOnOffer = {
+  date: string;
+  /** The run carrying it, or empty where a car of its own is the only way. */
+  runId: string;
+  /** The car window, where there is no run. Empty when a run carries it. */
+  at: string;
+};
+
+/**
+ * Every day this cart could arrive on, soonest first.
+ *
+ * A run wins its day outright: where one is going there is no reason to
+ * offer a car beside it, since it arrives the same evening and costs
+ * thousands less. The same rule the website uses; see lib/pick-a-day.ts.
+ */
+export function daysOnOffer(args: {
+  runs: { id: string; runDate?: string }[];
+  slots: Slot[];
+}): DayOnOffer[] {
+  const byDate = new Map<string, DayOnOffer>();
+
+  for (const run of args.runs) {
+    const date = (run.runDate ?? "").trim();
+    if (date === "" || byDate.has(date)) continue;
+    byDate.set(date, { date, runId: run.id, at: "" });
+  }
+
+  for (const slot of args.slots) {
+    const date = (slot.date ?? "").trim();
+    // A run already has this day. The car would be dearer and no sooner.
+    if (date === "" || byDate.has(date)) continue;
+    byDate.set(date, { date, runId: "", at: slot.at });
+  }
+
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** "Today", "Tomorrow", or "Tue 27": short, because these sit side by side
+ *  in a row somebody reads across rather than down. */
+export function dayShort(date: string, today: string): string {
+  if (date === today) return "Today";
+  const at = new Date(`${today}T12:00:00Z`);
+  const next = new Date(at.getTime() + 86_400_000).toISOString().slice(0, 10);
+  if (date === next) return "Tomorrow";
+
+  const on = new Date(`${date}T12:00:00Z`);
+  if (Number.isNaN(on.getTime())) return date;
+  return new Intl.DateTimeFormat("en-NG", {
+    timeZone: "Africa/Lagos",
+    weekday: "short",
+    day: "numeric",
+  }).format(on);
+}
+
+/** What a car of its own promises, in hours. Falls back to the label an
+ *  older server sends, lower cased so it reads inside a sentence. */
+export function slotWindow(slot: Slot): string {
+  const said = (slot.window ?? "").trim();
+  return said !== "" ? said : lower(slot.label);
+}
+
+/** "today", "tomorrow", or the day itself where it is further out. */
+export function slotDayWord(slot: Slot): string {
+  if (slot.day !== "later") return slot.day;
+  const date = (slot.date ?? "").trim();
+  return date === "" ? "later" : `on ${daySaid(date)}`;
+}
+
+/** "Tuesday, 27 Oct", in Lagos, the way the shop writes a date. */
+export function daySaid(date: string): string {
+  const at = new Date(`${date}T12:00:00Z`);
+  if (Number.isNaN(at.getTime())) return "";
+  return new Intl.DateTimeFormat("en-NG", {
+    timeZone: "Africa/Lagos",
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+  }).format(at);
+}
+
+/**
+ * Whether a car of its own can reach everywhere this cart touches, on a
+ * given day.
+ *
+ * One car fetches all of it, so a cart is only drivable on a day every one
+ * of its areas allows. Home is always allowed: the shop is in it. The same
+ * rule the website and the server both use; see lib/areas.ts.
+ */
+export function carGoesOn(areas: Area[], date: string): boolean {
+  const away = areas.filter((one) => one.id !== "");
+  if (away.length === 0) return true;
+  return away.every((one) => one.sameDay && carDayAllowed(one.sameDayDays, date));
+}
+
+function carDayAllowed(text: string | null | undefined, date: string): boolean {
+  if (!date) return true;
+  const said = String(text ?? "")
+    .split(",")
+    .map((one) => one.trim())
+    .filter((one) => one !== "")
+    .map(Number)
+    .filter((one) => Number.isInteger(one) && one >= 0 && one <= 6);
+  // Empty is every day, so an area nobody has touched is unchanged.
+  if (said.length === 0) return true;
+  const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
+  return said.includes(weekday);
 }
 
 /** Said the same way on every screen, because it is the same promise. */

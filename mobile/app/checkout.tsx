@@ -20,8 +20,13 @@ import {
   pricesByValue,
   stepsFor,
   valueLadderFor,
-  aroundPhrase,
   canGoSameDay,
+  carGoesOn,
+  dayShort,
+  daysOnOffer,
+  slotDayWord,
+  slotWindow,
+  type DayOnOffer,
   dearestArea,
   mixedExtra,
   ESTIMATE_NOTE,
@@ -209,7 +214,14 @@ export default function Checkout() {
   );
   // One thing from a far area makes the whole order a run: a car cannot be
   // in two places in three hours.
-  const slots = canGoSameDay(cartAreas) ? (shop?.sameDay?.slots ?? []) : [];
+  const slots = canGoSameDay(cartAreas)
+    ? (shop?.sameDay?.slots ?? []).filter((one) =>
+        // Ajah takes a car on the day the shop is already going that way and
+        // on no other. The day picker offers a fortnight, so without this
+        // somebody could buy a Monday car to Ajah nobody was going to drive.
+        carGoesOn(cartAreas, one.date ?? "")
+      )
+    : [];
 
   const far = cartAreas.filter((one) => one.id !== "");
   const farNames = far.map((one) => one.name).join(" and ");
@@ -274,8 +286,26 @@ export default function Checkout() {
     setDeliverAt(going.at);
   }, [going?.runId, going?.at]);
 
+  /*
+   * The days this cart could come on, and the one it is on.
+   *
+   * The app decided the day and said so, which is the right answer to
+   * "when is the next run" and the wrong one to "I want it today". A run
+   * where one is going, a car of its own where none is, and the price
+   * follows from which: nobody has to know what a run is to buy lunch.
+   */
+  const dayChoices = daysOnOffer({
+    runs: runsHere.map((one) => ({ id: one.id, runDate: one.runDate })),
+    slots,
+  });
+  const chosenDate = picked?.date ?? run?.runDate ?? "";
+  const goToDay = (day: DayOnOffer) => {
+    setRunId(day.runId);
+    setDeliverAt(day.at);
+  };
+
   const arriving = picked
-    ? `${aroundPhrase(picked.at)} ${picked.day}`
+    ? `${slotWindow(picked)} ${slotDayWord(picked)}`
     : run
       ? `${run.deliveryWindow.charAt(0).toLowerCase()}${run.deliveryWindow.slice(1)} ${run.label.split(" · ")[0]}`
       : (going?.said ?? "on the next run");
@@ -379,14 +409,20 @@ export default function Checkout() {
       };
     }
 
-    // On a run. Only worth saying a car exists at all, and only when it
-    // costs more, because a cheaper one would already have been chosen.
-    const soon = slots[0];
-    if (!soon) return null;
-    const fee = feeOnCar(soon);
-    return fee > feeOnRun(run?.flashFee ?? null)
-      ? { runId: "", at: soon.at, said: `${aroundPhrase(soon.at)} ${soon.day}`, fee, saving: 0 }
-      : null;
+    /*
+     * On a run, and nothing to offer.
+     *
+     * This used to say "need it sooner, a car can be there at four for
+     * 6,500". It was the one way of asking for a different arrival back
+     * when the day was decided for you. The row of days above is that
+     * question asked properly, so the offer was being made twice, the
+     * second time in the shop's words rather than the customer's.
+     *
+     * The other direction stays: somebody who picked a car has not
+     * necessarily seen that a run is thousands cheaper, and that one is an
+     * argument about money, which sits beside the money further down.
+     */
+    return null;
   })();
 
   // What a promotion does to this cart, worked out by the shop because that
@@ -576,11 +612,48 @@ export default function Checkout() {
           {arriving}
         </Display>
 
-        <Text style={{ color: T.onInkMuted, fontFamily: F.body, fontSize: 14, lineHeight: 20 }}>
-          {picked
-            ? "A car of its own, because no run is going in time for this."
-            : "Everybody's food in one car, which is why it costs less."}
-        </Text>
+        {/* Which day, when there is more than one to pick from.
+
+            A row rather than a calendar: today and tomorrow are the two
+            anybody says in words, and past that a date is clearer than
+            counting days. Scrolls sideways because a fortnight of them
+            does not fit across a phone. */}
+        {dayChoices.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+          >
+            {dayChoices.map((day) => {
+              const on = day.date === chosenDate;
+              return (
+                <Pressable
+                  key={day.date}
+                  onPress={() => goToDay(day)}
+                  style={{
+                    minHeight: 44,
+                    justifyContent: "center",
+                    paddingHorizontal: 14,
+                    borderRadius: 999,
+                    borderWidth: 2,
+                    borderColor: on ? T.volt : T.onInkMuted,
+                    backgroundColor: on ? T.volt : "transparent",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: on ? F.bodyBold : F.body,
+                      fontSize: 14,
+                      color: on ? T.ink : T.onInk,
+                    }}
+                  >
+                    {dayShort(day.date, lagosToday())}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
 
         {/* One line, because three paragraphs about Lekki is three
             paragraphs nobody reads. Why it waits for a run, and the way out
@@ -617,11 +690,6 @@ export default function Checkout() {
         <Text style={{ color: T.onInkMuted, fontFamily: F.body, fontSize: 13, lineHeight: 19 }}>
           {ESTIMATE_NOTE}
         </Text>
-
-        {/* Somebody on a run being told a car could be quicker. The argument
-            here is time, so it belongs beside the time. The other direction
-            is an argument about money and sits by the money, further down. */}
-        {otherWay && !picked && theOtherWay()}
 
         {noRunThere && (
           <Text style={{ color: T.volt, fontFamily: F.bodySemi, fontSize: 14, lineHeight: 20 }}>
