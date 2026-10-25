@@ -153,7 +153,21 @@ export default async function CheckoutPage({
         (await safeSettings()).same_day_on === "on"
           ? await carsOnOffer(
               slotsWorthOffering(
-                deliverySlots(new Date(), await hoursByDay()),
+                /*
+                 * As far ahead as the shop is open, not just today and
+                 * tomorrow.
+                 *
+                 * The checkout asks which day somebody wants their food, and
+                 * a day with no run on it is a car of its own. Two days of
+                 * windows meant that past tomorrow the dropdown had runs and
+                 * nothing else, so a week with no Monday run had no way to
+                 * offer Monday at all.
+                 */
+                deliverySlots(
+                  new Date(),
+                  await hoursByDay(),
+                  (await safeSettings()).order_horizon_days || 7
+                ),
                 // A window a run already covers is not offered: the run gets
                 // there at the same hour for two and a half thousand less.
                 batches.map((one) => ({

@@ -9,6 +9,7 @@ import { runToWorkOn, type RunToPick } from "../lib/which-run";
 import { dayCostSoFar, shareOut, splitDayCosts } from "../lib/day-costs";
 import { windowGone } from "../lib/last-minute";
 import { carsBeforeTheRun } from "../lib/one-driver";
+import { dayAfter, daySaid, daysOnOffer, dayOfChoice, soonestDay } from "../lib/pick-a-day";
 import { carsStillDrivable, driverIsOut } from "../lib/one-driver";
 import { saidPick, saidPicks, saidPicksLine } from "../lib/picks";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
@@ -6537,4 +6538,86 @@ test("a car before the run is a different trip, a car at its hour is not", () =>
   // nothing is offered beside it: one car fewer beats a trip nobody can
   // drive.
   assert.deepEqual(carsBeforeTheRun(slots, { "2026-10-25": 0 }), []);
+});
+
+test("picking a day: a run wins its day, a car fills the gaps", () => {
+  // Sunday's run has closed, there is no Monday or Tuesday run, and the
+  // next one is Wednesday. This is the evening that started all of it: a
+  // lady wanted her food that night and was quietly given Wednesday.
+  const runs = [
+    { id: "wed", runDate: "2026-10-28" },
+    { id: "thu", runDate: "2026-10-29" },
+  ];
+  const slots = [
+    { at: "2026-10-25T18:00:00.000Z", date: "2026-10-25" },
+    { at: "2026-10-25T19:00:00.000Z", date: "2026-10-25" },
+    { at: "2026-10-26T12:00:00.000Z", date: "2026-10-26" },
+    // The same night a run is going. The run gets there just as soon and
+    // costs thousands less, so there is nothing to choose between them.
+    { at: "2026-10-28T18:00:00.000Z", date: "2026-10-28" },
+  ];
+
+  const days = daysOnOffer({ runs, slots });
+
+  assert.deepEqual(
+    days.map((one) => [one.date, one.runId, one.at !== null]),
+    [
+      // Today, by car, because no run is left.
+      ["2026-10-25", null, true],
+      // Tomorrow, by car, because the week has no Monday run.
+      ["2026-10-26", null, true],
+      // Wednesday, on the run. The car window that night is not offered.
+      ["2026-10-28", "wed", false],
+      ["2026-10-29", "thu", false],
+    ]
+  );
+
+  // The first window of a day is the one kept, not the last.
+  assert.equal(days[0].at, "2026-10-25T18:00:00.000Z");
+});
+
+test("picking a day: the first run of a day wins it", () => {
+  // An afternoon run and a night run on one Saturday. Runs arrive in
+  // cut-off order, so the afternoon one comes first and is the earlier food.
+  const days = daysOnOffer({
+    runs: [
+      { id: "afternoon", runDate: "2026-10-31" },
+      { id: "night", runDate: "2026-10-31" },
+    ],
+    slots: [],
+  });
+  assert.deepEqual(days.map((one) => one.runId), ["afternoon"]);
+});
+
+test("picking a day: what a day is called", () => {
+  const spell = (date: string) => `spelled ${date}`;
+  assert.equal(daySaid("2026-10-25", "2026-10-25", spell), "Today");
+  assert.equal(daySaid("2026-10-26", "2026-10-25", spell), "Tomorrow");
+  assert.equal(daySaid("2026-10-28", "2026-10-25", spell), "spelled 2026-10-28");
+  // Across a month end, where adding a day is the easiest thing to get wrong.
+  assert.equal(daySaid("2026-11-01", "2026-10-31", spell), "Tomorrow");
+  assert.equal(dayAfter("2026-12-31"), "2027-01-01");
+  assert.equal(dayAfter("not a date"), "");
+});
+
+test("picking a day: putting the dropdown back where the page moved it", () => {
+  const days = daysOnOffer({
+    runs: [{ id: "wed", runDate: "2026-10-28" }],
+    slots: [{ at: "2026-10-25T18:00:00.000Z", date: "2026-10-25" }],
+  });
+
+  // Soonest is what the page opens on, which here is today by car.
+  assert.equal(soonestDay(days)?.date, "2026-10-25");
+
+  // A car time selected elsewhere on the page finds its day.
+  assert.equal(
+    dayOfChoice(days, { runId: "wed", at: "2026-10-25T18:00:00.000Z" })?.date,
+    "2026-10-25"
+  );
+  // And with no time set, the run does.
+  assert.equal(dayOfChoice(days, { runId: "wed", at: "" })?.date, "2026-10-28");
+  // A run that has closed under somebody matches nothing, rather than
+  // leaving the dropdown pointing at a day that is no longer on offer.
+  assert.equal(dayOfChoice(days, { runId: "gone", at: "" }), null);
+  assert.equal(soonestDay([]), null);
 });

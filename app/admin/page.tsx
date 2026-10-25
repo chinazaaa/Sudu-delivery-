@@ -148,6 +148,19 @@ export default async function AdminHome() {
   const after = open
     .filter((batch) => batch.run_date > tomorrow)
     .sort((a, b) => a.run_date.localeCompare(b.run_date))[0];
+  /*
+   * Whether there is anything still to come in the next two days.
+   *
+   * Not the same as having nothing on the card. A Sunday whose only run
+   * has been driven and settled has a row on it and nothing ahead of it,
+   * and the week has no Monday run, so the card sat there showing one
+   * finished Sunday and no sign of the Wednesday everybody is waiting
+   * for. A card called Runs that answers only what already happened is
+   * the diary, not the board.
+   */
+  const stillToCome = soon.some(
+    (batch) => !(batch.status === "delivered" || done(batch))
+  );
 
   // The run somebody is actually working today, for the button at the top.
   //
@@ -680,7 +693,7 @@ export default async function AdminHome() {
               could not have been drawn here even if one had been passed. */}
           {[
             ...soon,
-            ...(after && soon.length === 0 ? [after] : []),
+            ...(after && !stillToCome ? [after] : []),
             ...(went ? [went] : []),
           ]
             /*

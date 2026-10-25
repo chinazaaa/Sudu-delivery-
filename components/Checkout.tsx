@@ -50,7 +50,13 @@ import { aroundPhrase, type Slot } from "@/lib/same-day";
 import { ESTIMATE_NOTE, nextArrival, runArrival } from "@/lib/arrival";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
-import { countdown } from "@/lib/time";
+import { countdown, runDateLabel } from "@/lib/time";
+import {
+  dayAfter,
+  dayOfChoice,
+  daySaid,
+  daysOnOffer,
+} from "@/lib/pick-a-day";
 import type { GroupMode } from "@/lib/types";
 import type { BatchView } from "@/lib/view";
 
@@ -244,8 +250,19 @@ export default function Checkout({
       .filter((line) => !opensOn(openDaysOf[line.restaurantId], today))
       .map((line) => line.restaurantName)
   )];
+  /*
+   * Today and tomorrow, as this has always meant.
+   *
+   * The server now sends windows for every day the shop is open, because
+   * the day dropdown needs them. Everything else on this page that reads
+   * `sameDaySlots` is answering "how soon can this get here", and handing
+   * it next Friday would change what it says. So the long list is cut back
+   * to what it used to be, and the dropdown reads the long one below.
+   */
   const sameDaySlots =
-    canGoSameDay(cartAreas) && shutToday.length === 0 ? allSlots : [];
+    canGoSameDay(cartAreas) && shutToday.length === 0
+      ? allSlots.filter((one) => one.date <= dayAfter(today))
+      : [];
 
   /*
    * A counter that will be shut when that car goes.
@@ -273,6 +290,22 @@ export default function Checkout({
       runCarries(b.onlyPlaces, kitchens) &&
       runOpen(b)
   );
+
+  /*
+   * Every day this cart could arrive on, and what would carry it.
+   *
+   * A run where one is going, a car of its own where none is. Checked per
+   * date rather than against today, because a counter shut on Sunday is
+   * open on Monday and the car that fetches it goes on the day chosen,
+   * not on this one.
+   */
+  const carWindows = canGoSameDay(cartAreas)
+    ? allSlots.filter((one) => shutNames(one.date).length === 0)
+    : [];
+  const dayChoices = daysOnOffer({
+    runs: openable.map((one) => ({ id: one.id, runDate: one.runDate })),
+    slots: carWindows,
+  });
 
   // The runs that only fail because somebody is closed that day, and what
   // is closed on the soonest of them. Said in their words: "DO Bowls is
@@ -739,7 +772,18 @@ export default function Checkout({
   const [deliverAt, setDeliverAt] = useState(decided?.at ?? "");
   // Ticked by hand when the food is not coming today. See comesToday below.
   const [agreedWhen, setAgreedWhen] = useState(false);
-  const sameDay = sameDaySlots.find((one) => one.at === deliverAt) ?? null;
+  /*
+   * Looked for in every window the shop sent, not only today's and
+   * tomorrow's.
+   *
+   * A day chosen from the dropdown can be next Thursday, and the whole
+   * page reads the arrival off this: found in the short list only, a car
+   * picked for later came back as nothing and the headline fell through to
+   * "on the next run" while the fee was charging for a car.
+   */
+  const sameDay = allSlots.find((one) => one.at === deliverAt) ?? null;
+  /** The dropdown is on Today, Tomorrow, or a date somebody typed. */
+  const [pickingDate, setPickingDate] = useState(false);
   const shared = joining !== null || party !== "";
 
   // A promotion is the price rather than money off it, so it is settled
@@ -1085,6 +1129,109 @@ export default function Checkout({
     );
   }
 
+  /**
+   * Which day the food comes.
+   *
+   * The only question worth asking, and the one the page stopped asking.
+   * A run or a car of its own is the shop's business: the customer picks a
+   * day and pays what that day costs, the same way they would anywhere
+   * else. Today and tomorrow are named, everything past that is a date,
+   * because "in six days" is not how anybody says Saturday.
+   *
+   * Choosing a day sets a run or a time, and every price on this page is
+   * already worked out from those two, so nothing here knows what anything
+   * costs.
+   *
+   * Called as a function rather than drawn as <DayPicker />. Declared in
+   * here, it is a new component type on every render, and React throws away
+   * the old one and builds a fresh one each time: the date box would lose
+   * the caret halfway through somebody typing a date into it. Called, its
+   * elements are this component's own and the box is left alone.
+   */
+  function dayPicker() {
+    const chosen = dayOfChoice(dayChoices, { runId: batchId, at: deliverAt });
+    const named = [today, dayAfter(today)];
+    // Today and tomorrow are always on the list, on offer or not: a
+    // dropdown that silently has no "Today" on it is a dropdown somebody
+    // reads twice looking for it. One that says nothing goes today has
+    // answered the question.
+    const near = named.map((date) => ({
+      date,
+      choice: dayChoices.find((one) => one.date === date) ?? null,
+    }));
+    const further = dayChoices.filter((one) => !named.includes(one.date));
+    const furthest = further.at(-1)?.date ?? "";
+
+    const goTo = (date: string) => {
+      const day = dayChoices.find((one) => one.date === date);
+      if (!day) return;
+      if (day.runId !== null) {
+        setBatchId(day.runId);
+        setDeliverAt("");
+      } else if (day.at !== null) {
+        setDeliverAt(day.at);
+      }
+      // A day agreed to is a day agreed to for that day, not for the one
+      // chosen before it.
+      setAgreedWhen(false);
+    };
+
+    return (
+      <div className="space-y-2">
+        <label className="label" htmlFor="when-day">
+          When do you want it?
+        </label>
+        <select
+          id="when-day"
+          className="field"
+          value={pickingDate ? "pick" : (chosen?.date ?? "")}
+          disabled={adding !== null || joining !== null || party !== ""}
+          onChange={(e) => {
+            if (e.target.value === "pick") {
+              setPickingDate(true);
+              return;
+            }
+            setPickingDate(false);
+            goTo(e.target.value);
+          }}
+        >
+          {near.map((one) => (
+            <option key={one.date} value={one.date} disabled={one.choice === null}>
+              {daySaid(one.date, today, runDateLabel)}
+              {one.choice === null ? " · nothing goes this day" : ""}
+            </option>
+          ))}
+          {further.length > 0 && <option value="pick">Pick a date</option>}
+        </select>
+
+        {pickingDate && (
+          <div className="space-y-2">
+            <input
+              type="date"
+              className="field"
+              min={further[0]?.date ?? today}
+              max={furthest}
+              value={chosen && !near.some((one) => one.date === chosen.date) ? chosen.date : ""}
+              onChange={(e) => goTo(e.target.value)}
+              aria-label="The day you want it"
+            />
+            {/* Only the days something actually goes on. A calendar will
+                happily offer a Monday the shop cannot reach, and finding
+                that out by tapping it is worse than being told. */}
+            <p className="text-sm text-muted">
+              {further.length === 0
+                ? "Nothing further out is open yet."
+                : `We can do ${further
+                    .slice(0, 6)
+                    .map((one) => runDateLabel(one.date))
+                    .join(", ")}${further.length > 6 ? " and more" : ""}.`}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   /** Which run, and what it says underneath. The same control wherever it is
    *  shown, so the two ways of ordering read as one decision. */
   function RunPicker() {
@@ -1266,6 +1413,24 @@ export default function Checkout({
         {!noRunThere && (
           <Step at="01">Order now, get it {arriving}</Step>
         )}
+
+        {/* And the day is a choice again.
+
+            It was decided and said, on the reasoning that a dropdown asked
+            somebody to know the fee ladder and the cut-off before they
+            could buy lunch. That is true of a dropdown of runs, which is
+            what it was. A dropdown of days is not: everybody knows which
+            day they want their food.
+
+            Only where there is more than one day to pick from, and never
+            for somebody adding to an order, joining a friend or in a
+            group, whose day was settled when they were invited. */}
+        {!noRunThere &&
+          dayChoices.length > 1 &&
+          adding === null &&
+          joining === null &&
+          party === "" &&
+          dayPicker()}
 
         {/* Before the explaining rather than under it, and named.
             The date above is the surprising part of this page whenever a
