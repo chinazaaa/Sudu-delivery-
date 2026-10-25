@@ -2413,8 +2413,15 @@ export default async function BatchPage({
                       className="soft flex flex-wrap items-center justify-between gap-2 bg-shell px-3 py-2"
                     >
                       <input type="hidden" name="batch_id" value={batch.id} />
-                      <input type="hidden" name="fuel_cost" value={batch.fuel_cost || ""} />
-                      <input type="hidden" name="driver_cost" value={batch.driver_cost || ""} />
+                      {/* Carried through as they are. This form only clears
+                          the food figure, and a run that does have fuel on
+                          it should come out of it with the same fuel. */}
+                      {batch.fuel_cost > 0 && (
+                        <input type="hidden" name="fuel_cost" value={batch.fuel_cost} />
+                      )}
+                      {batch.driver_cost > 0 && (
+                        <input type="hidden" name="driver_cost" value={batch.driver_cost} />
+                      )}
                       <input
                         type="hidden"
                         name="transport_cost"
@@ -2457,8 +2464,14 @@ export default async function BatchPage({
                       skipped, and a run with no cost in it reports a profit
                       that is too high.
 
-                      The other three are still here, still counted, and
-                      still saved. They are folded away, which is the
+                      Fuel and the driver are gone from the form now, asked
+                      for and never once filled in. The columns are still
+                      there and still come off the profit, so the handful of
+                      old runs carrying a figure keep it and keep counting;
+                      the form simply does not send those two, and the
+                      action leaves a column it is not sent alone.
+
+                      Anything else stays, folded away, which is the
                       difference between a field that is available and a
                       field that is demanded.
                     */}
@@ -2501,43 +2514,19 @@ export default async function BatchPage({
 
                     <details className="border-t-[1.5px] border-rule pt-2.5">
                       <summary className="cursor-pointer text-[13px] font-semibold text-brand">
-                        Fuel, a driver, or something else on this run
+                        Something else on this run
                       </summary>
                       <div className="mt-2.5 space-y-3">
-                        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                          <div>
-                            <label className="label" htmlFor="fuel_cost">Fuel</label>
-                            <input
-                              id="fuel_cost"
-                              name="fuel_cost"
-                              inputMode="numeric"
-                              defaultValue={batch.fuel_cost || ""}
-                              placeholder="0"
-                              className="field field-admin min-h-[44px] sm:min-h-[42px]"
-                            />
-                          </div>
-                          <div>
-                            <label className="label" htmlFor="driver_cost">Driver</label>
-                            <input
-                              id="driver_cost"
-                              name="driver_cost"
-                              inputMode="numeric"
-                              defaultValue={batch.driver_cost || ""}
-                              placeholder="0"
-                              className="field field-admin min-h-[44px] sm:min-h-[42px]"
-                            />
-                          </div>
-                          <div>
-                            <label className="label" htmlFor="other_cost">Anything else</label>
-                            <input
-                              id="other_cost"
-                              name="other_cost"
-                              inputMode="numeric"
-                              defaultValue={batch.other_cost || ""}
-                              placeholder="0"
-                              className="field field-admin min-h-[44px] sm:min-h-[42px]"
-                            />
-                          </div>
+                        <div>
+                          <label className="label" htmlFor="other_cost">Anything else</label>
+                          <input
+                            id="other_cost"
+                            name="other_cost"
+                            inputMode="numeric"
+                            defaultValue={batch.other_cost || ""}
+                            placeholder="0"
+                            className="field field-admin min-h-[44px] sm:min-h-[42px]"
+                          />
                         </div>
                         <div>
                           <label className="label" htmlFor="cost_note">

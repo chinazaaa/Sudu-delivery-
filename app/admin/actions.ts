@@ -1082,8 +1082,12 @@ export async function setDayCosts(form: FormData): Promise<void> {
 
   for (const share of shares) {
     const costs = {
-      fuel_cost: share.fuel,
-      driver_cost: share.driver,
+      // Absent means leave it alone, not set it to nothing. The form stopped
+      // asking for fuel and a driver, because the fare is the only one ever
+      // answered, and writing a nought for a field nobody was shown would
+      // quietly erase the runs that do carry one.
+      ...(form.has("fuel_cost") ? { fuel_cost: share.fuel } : {}),
+      ...(form.has("driver_cost") ? { driver_cost: share.driver } : {}),
       other_cost: share.other,
       cost_note: note,
     };
@@ -1189,8 +1193,12 @@ export async function setRunCosts(form: FormData): Promise<void> {
 
   for (const share of shares) {
     const costs = {
-      fuel_cost: share.fuel,
-      driver_cost: share.driver,
+      // Absent means leave it alone, the same way the food figure above
+      // works. The form no longer asks for fuel or a driver: the fare is
+      // the only one ever answered, and a nought written for a box nobody
+      // saw would wipe the old runs that have one.
+      ...(form.has("fuel_cost") ? { fuel_cost: share.fuel } : {}),
+      ...(form.has("driver_cost") ? { driver_cost: share.driver } : {}),
       other_cost: share.other,
       // What was spent on the food is this batch's own, so it is written
       // only where it was typed.
