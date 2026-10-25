@@ -483,9 +483,7 @@ export default function Checkout({
   // The soonest way to eat, the same rule as everywhere else: a run today, a
   // car of its own today, a run tomorrow, tomorrow's first window.
   const todayRun = openable.find((one) => one.runDate === today) ?? null;
-  const todaySlot = sameDaySlots.find((one) => one.day === "today") ?? null;
   const laterRun = openable.find((one) => one.runDate > today) ?? null;
-  const laterSlot = sameDaySlots.find((one) => one.day !== "today") ?? null;
   const decided = nextArrival(openable.map(runArrival), sameDaySlots, today);
   // A car of its own still carries a run id, because that is what the
   // coupon and the offer rules are asked about. The time is what decides
@@ -964,20 +962,6 @@ export default function Checkout({
     return { id: run.id, label: run.label, fee, saving: Math.max(0, now - fee) };
   })();
 
-  /**
-   * The other direction: somebody on a run may not know a car today is even
-   * possible. Only worth a sentence when it costs more, because a car that
-   * were somehow cheaper would already have been chosen for them.
-   */
-  const carSooner = (() => {
-    const soon = todaySlot ?? laterSlot;
-    if (!comparable || !onARun || !soon) return null;
-
-    const runFee = feeOnRun(selected?.flashFee ?? null);
-    const fee = sameDayFee(itemCount, soon.urgent, sameDayBands, urgentExtra);
-    return fee > runFee ? { fee, phrase: soon.phrase, at: soon.at } : null;
-  })();
-
   // Naming friends to carry food for is a different thing from being in a
   // shared delivery, and doing both at once is two answers to one question.
   // The shared delivery wins: it is the one with a link out in a chat.
@@ -1161,6 +1145,18 @@ export default function Checkout({
     }));
     const further = dayChoices.filter((one) => !named.includes(one.date));
     const furthest = further.at(-1)?.date ?? "";
+    /*
+     * The day that is picked, when it is further out than tomorrow.
+     *
+     * A select whose value matches none of its options does not sit
+     * empty: the browser shows the first one it can pick and presents it
+     * as the choice. So an order going out on Wednesday sat under a
+     * dropdown reading "Tomorrow", with the real date in the line above
+     * it and in the box agreeing to it. A day has to be on the list
+     * before the list can say it is the one.
+     */
+    const far =
+      chosen !== null && !named.includes(chosen.date) ? chosen.date : "";
 
     const goTo = (date: string) => {
       const day = dayChoices.find((one) => one.date === date);
@@ -1178,11 +1174,9 @@ export default function Checkout({
 
     return (
       <div className="space-y-2">
-        <label className="label" htmlFor="when-day">
-          When do you want it?
-        </label>
         <select
           id="when-day"
+          aria-label="When do you want it"
           className="field"
           value={pickingDate ? "pick" : (chosen?.date ?? "")}
           disabled={adding !== null || joining !== null || party !== ""}
@@ -1198,11 +1192,18 @@ export default function Checkout({
           {near.map((one) => (
             <option key={one.date} value={one.date} disabled={one.choice === null}>
               {daySaid(one.date, today, runDateLabel)}
-              {one.choice === null ? " · nothing goes this day" : ""}
+              {one.choice === null ? " · closed" : ""}
             </option>
           ))}
+          {far !== "" && <option value={far}>{runDateLabel(far)}</option>}
           {further.length > 0 && <option value="pick">Pick a date</option>}
         </select>
+
+        {arriving !== "" && (
+          <p className="text-sm text-muted">
+            Get it {arriving}.
+          </p>
+        )}
 
         {pickingDate && (
           <div className="space-y-2">
@@ -1411,7 +1412,7 @@ export default function Checkout({
             promise, and the line under the basket already says what is
             wrong and what to do about it. */}
         {!noRunThere && (
-          <Step at="01">Order now, get it {arriving}</Step>
+          <Step at="01">Choose when you want it</Step>
         )}
 
         {/* And the day is a choice again.
@@ -1457,13 +1458,6 @@ export default function Checkout({
           </p>
         )}
 
-        {!noRunThere && (
-          <p className="text-sm text-muted">
-            {onARun
-              ? "Everybody's food in one car, which is why it costs less."
-              : "A car of its own, because no run is going in time for this."}
-          </p>
-        )}
 
         {/* Half this cart can go out tonight and half of it cannot, and
             which half is a fact about where the car has got to rather than
@@ -1521,23 +1515,13 @@ export default function Checkout({
             o'clock is fine unless somebody was told four o'clock exactly. */}
         <p className="text-sm text-muted">{ESTIMATE_NOTE}</p>
 
-        {/* The one choice worth keeping. Where waiting for a run would save
-            real money, it is offered as a sentence rather than as a menu: a
-            car of its own can be two and a half thousand dearer, and nobody
-            should pay that without being told there was another way. */}
-        {carSooner !== null && (
-          <button
-            type="button"
-            onClick={() => setDeliverAt(carSooner.at)}
-            className="block w-full rounded-xl bg-brand-tint px-3 py-2 text-left text-sm font-semibold text-brand-dark"
-          >
-            Need it sooner? A car of its own can be there {carSooner.phrase},
-            for {naira(carSooner.fee)}.{" "}
-            <span className="underline decoration-dotted underline-offset-4">
-              Tap for that instead.
-            </span>
-          </button>
-        )}
+        {/* The offer of a car of its own used to live here, as a sentence:
+            "need it sooner, a car can be there at four for 6,500". It was
+            the one way of asking for a different arrival when the day was
+            decided for you. The dropdown above is that question asked
+            properly, so this is the same offer made twice, in the shop's
+            words rather than the customer's. Pick the day; the price
+            follows. */}
       </section>
       )}
 
