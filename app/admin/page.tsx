@@ -334,15 +334,27 @@ export default async function AdminHome() {
    * that have not left yet, so a morning after a good Friday said nothing
    * about Friday.
    */
+  /*
+   * The last thing that actually went out.
+   *
+   * Cars of their own were left out of this, on the reasoning that the
+   * row is about runs. It is about the evening: a Saturday whose only
+   * driving was a car disappeared off this card the moment the date
+   * rolled over, and the car had earned the day. A parcel is still its
+   * own trip on its own agreed day and is not what "last night" means.
+   *
+   * Latest day first, and within a day whichever carried most, so an
+   * empty run settled beside a full car does not stand in for it.
+   */
   const went =
     batches
       .filter(
-        (batch) =>
-          batch.status === "delivered" &&
-          batch.kind !== "same_day" &&
-          batch.kind !== "parcel"
+        (batch) => batch.status === "delivered" && batch.kind !== "parcel"
       )
-      .sort((a, b) => a.run_date.localeCompare(b.run_date))
+      .sort(
+        (a, b) =>
+          a.run_date.localeCompare(b.run_date) || a.orderCount - b.orderCount
+      )
       .at(-1) ?? null;
   const dot = {
     red: "bg-brand-dark",
