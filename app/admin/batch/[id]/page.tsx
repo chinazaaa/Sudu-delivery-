@@ -191,20 +191,39 @@ export default async function BatchPage({
    *  to somebody and so the back button walks the stops. */
   searchParams: Promise<{ stop?: string; moved?: string }>;
 }) {
-  const sheet = await batchSheet((await params).id);
-  if (!sheet) notFound();
+  const { id } = await params;
   const query = await searchParams;
+
+  /*
+   * The sheet and the five lists beside it, asked together.
+   *
+   * Only the sheet depends on anything here, and nothing here depends on
+   * the sheet: they were seven awaits in a row at the top of the page
+   * somebody opens and presses more than any other, so the whole lot of
+   * them had to come back from Lagos one at a time before a single stop
+   * could be drawn.
+   */
+  const [sheet, areas, counters, reach, allNotes, schedule, settings] =
+    await Promise.all([
+      batchSheet(id),
+      allAreas(),
+      // For the run that is one counter's run. Read here rather than typed, so
+      // a restaurant added this morning is tickable this afternoon.
+      openRestaurants(),
+      // How each counter takes an order ahead, by name, because a counter
+      // group is grouped by the name on the order line. Not every kitchen is
+      // on WhatsApp and some take one only in person.
+      counterContacts(),
+      // What a counter said that still needs doing. Everything else on this
+      // page is the run; this is the work the run left behind.
+      notesOn(id),
+      runSchedule(true),
+      getSettings(),
+    ]);
+  if (!sheet) notFound();
 
   const { batch, counter, handout, unpaid, summary, refunds, groupsShort, pins, callsThem } =
     sheet;
-  const areas = await allAreas();
-  // For the run that is one counter's run. Read here rather than typed, so
-  // a restaurant added this morning is tickable this afternoon.
-  const counters = await openRestaurants();
-  // How each counter takes an order ahead, by name, because a counter
-  // group is grouped by the name on the order line. Not every kitchen is
-  // on WhatsApp and some take one only in person.
-  const reach = await counterContacts();
 
   /*
    * What a counter will actually charge, which is its prices without the
@@ -259,9 +278,6 @@ export default async function BatchPage({
           : costFor(group, line.unitPrice, line.qty, line.costPrice)),
       0
     );
-  // What a counter said that still needs doing. Everything else on this
-  // page is the run; this is the work the run left behind.
-  const allNotes = await notesOn(batch.id);
   /*
    * Which lines somebody at a counter said could not be had.
    *
@@ -315,7 +331,7 @@ export default async function BatchPage({
   const scheduleWeekday = new Date(`${batch.run_date}T12:00:00Z`).getUTCDay();
   const onSchedule =
     batch.kind !== "same_day" &&
-    (await runSchedule(true)).some(
+    schedule.some(
       (entry) =>
         entry.active &&
         entry.slot === batch.slot &&
@@ -343,18 +359,22 @@ export default async function BatchPage({
   // Before a run is driven nobody has entered its fuel or driver, so profit
   // reads high at exactly the moment the decision to drive is made. What past
   // runs actually cost is a far better guess than nothing.
-  const guessed = summary.costs === 0 ? await typicalCosts() : null;
-  // The part of that average that a real fare replaces.
-  const guessedTransport = guessed === null ? 0 : await typicalTransport();
-  // Windows a car could be moved into, when it is a car and nothing has been
-  // bought for it yet.
-  const windows =
+  // Four more that do not need each other: the averages a run is guessed
+  // at before it is driven, the windows a car could move into, and what a
+  // shared delivery is short by.
+  const [guessed, guessedTransport, windows, short] = await Promise.all([
+    summary.costs === 0 ? typicalCosts() : null,
+    // The part of that average that a real fare replaces.
+    summary.costs === 0 ? typicalTransport() : 0,
+    // Windows a car could be moved into, when it is a car and nothing has been
+    // bought for it yet.
     batch.kind === "same_day" && batch.stage === "ordering"
-      ? await deliverySlots(new Date(), await hoursByDay())
-      : [];
-  // Shared deliveries where somebody has not paid, and what that leaves the
-  // car short by.
-  const short = await shortfalls(batch.id);
+      ? hoursByDay().then((hours) => deliverySlots(new Date(), hours))
+      : [],
+    // Shared deliveries where somebody has not paid, and what that leaves the
+    // car short by.
+    shortfalls(batch.id),
+  ]);
   // What is still to be handed over at the counters, at menu prices: every
   // line nobody has typed a real figure against yet. The private ticks beside
   // a stop are in one browser's storage, so they cannot be counted here, and
@@ -412,7 +432,7 @@ export default async function BatchPage({
   const stopAreas = [
     ...new Set(counter.map((group) => reach[group.restaurant]?.area ?? "")),
   ];
-  const fares = parseFares((await getSettings()).transport_fares);
+  const fares = parseFares(settings.transport_fares);
   const fare = fareFor(stopAreas, fares);
   // Worked out here, where the fare is known, and not above it.
   const { usual, likely } = likelyFrom(fare.exact ? fare.amount : null);
@@ -522,14 +542,16 @@ export default async function BatchPage({
 
   // Whether this run is thin for the day of the week it is on, and only
   // while there is still time to do something about it.
-  const thin =
+  // The last two, together: how thin the run is for its weekday, and the
+  // account the payment message quotes.
+  const [thin, accounts] = await Promise.all([
     batch.kind === "run" && batch.stage === "ordering"
-      ? await thinForItsDay(batch, summary.paidCount).catch(() => null)
-      : null;
-
-  const settings = await getSettings();
+      ? thinForItsDay(batch, summary.paidCount).catch(() => null)
+      : null,
+    payableAccounts(settings),
+  ]);
   // The account the payment message quotes: the first on the list.
-  const bank = (await payableAccounts(settings))[0] ?? null;
+  const bank = accounts[0] ?? null;
   const bands = parseBands(settings.fee_bands);
   // Links inside the messages have to be absolute, so they are built from the
   // request rather than from another environment variable to keep in sync.

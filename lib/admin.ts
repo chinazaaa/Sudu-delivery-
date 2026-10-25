@@ -214,14 +214,61 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
    */
   const mineOnly = paid.filter((o) => o.batch_id === batchId);
 
-  // What each thing really cost, where somebody has said.
-  // Read across the evening, written against the batch whose page it was
-  // typed on: one shopping trip, one set of receipts.
-  const { data: spendRows } = await db()
-    .from("counter_spend")
-    .select("line_key, paid, recovered")
-    .in("batch_id", driving);
-  const rows = (spendRows ?? []) as {
+  /*
+   * Nine questions asked at once.
+   *
+   * None of them needs an answer from any of the others: they are the
+   * receipts, the commission, which counters melt, who collects their own
+   * bag, the refunds, the short groups, the PINs and who to call. They were
+   * nine awaits one after another, five of them hidden inside the object
+   * this function returns, where properties are worked out in the order
+   * they are written. That is nine round trips to Lagos in series every
+   * time anybody ticks a box on a run sheet, which is the page somebody
+   * presses most, and it is why the board felt like treacle.
+   */
+  const [
+    spendRows,
+    { total: commission, by: commissionBy },
+    goLast,
+    ownBags,
+    refunds,
+    groupsShort,
+    pins,
+    callsThem,
+    markups,
+  ] = await Promise.all([
+    // What each thing really cost, where somebody has said.
+    // Read across the evening, written against the batch whose page it was
+    // typed on: one shopping trip, one set of receipts.
+    db()
+      .from("counter_spend")
+      .select("line_key, paid, recovered")
+      .in("batch_id", driving),
+    commissionFor(mineOnly),
+    meltingStops(),
+    collectingSeparately(batchId),
+    refundsOwed(batchId),
+    groupShortfalls(batchId),
+    pinsFor(orders.map((o) => o.customer_phone)),
+    callsThemFor(orders.map((o) => o.customer_phone)),
+    /*
+     * What a line is reckoned to cost where nobody has typed a receipt.
+     *
+     * It used to be the menu price, which was never a guess at the cost at
+     * all: the menu price IS the cost with the shop's markup already on it,
+     * so using it claimed the shop paid exactly what it charged and earned
+     * nothing whatever on food. That is where the markup went. It was right
+     * when the shop had no idea what a counter asks for, and every item now
+     * carries a cost, hundreds of them checked against a board.
+     *
+     * The same arithmetic the run sheet and the counter sheet already use,
+     * so the three cannot disagree. They did: the counter sheet read 7,304
+     * and the tile above it read 8,400, on one screen.
+     */
+    counterMarkups(),
+  ]);
+
+  const rows = (spendRows.data ?? []) as {
     line_key: string;
     paid: number;
     recovered?: number;
@@ -230,7 +277,6 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   // Money the customer handed back, which the shop is therefore not out.
   const gotBack = new Map(rows.map((row) => [row.line_key, row.recovered ?? 0]));
 
-  const { total: commission, by: commissionBy } = await commissionFor(mineOnly);
   const costs =
     batch.fuel_cost + batch.driver_cost + (batch.transport_cost ?? 0) + batch.other_cost;
 
@@ -242,7 +288,6 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   // Typed-in figures first, and only for the lines somebody has actually
   // typed: the rest stay at the menu price, so a half-finished reconcile
   // still leaves an honest number rather than a wrong one.
-  const goLast = await meltingStops();
   const counterLines = groupForCounter(
     lines.filter((l) => paidIds.has(l.order_id)),
     batch.stop_order ?? null,
@@ -252,25 +297,19 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   const reconciled = everyLine.filter((line) => spentOn.has(line.key));
 
   /*
-   * What a line is reckoned to cost where nobody has typed a receipt.
+   * Both of these are the same list of item ids asked two ways, so they go
+   * together: what the till charges and what the menu says.
    *
-   * It used to be the menu price, which was never a guess at the cost at
-   * all: the menu price IS the cost with the shop's markup already on it,
-   * so using it claimed the shop paid exactly what it charged and earned
-   * nothing whatever on food. That is where the markup went. It was right
-   * when the shop had no idea what a counter asks for, and every item now
-   * carries a cost, hundreds of them checked against a board.
-   *
-   * The same arithmetic the run sheet and the counter sheet already use,
-   * so the three cannot disagree. They did: the counter sheet read 7,304
-   * and the tile above it read 8,400, on one screen.
+   * And a cost somebody actually wrote down beats the sum, here as on the
+   * sheet: the sum is the guess that stands in until there is one, and the
+   * two must agree or the tile and the stop under it print different money
+   * for the same food.
    */
-  const markups = await counterMarkups();
-  // And a cost somebody actually wrote down beats the sum, here as on the
-  // sheet: the sum is the guess that stands in until there is one, and
-  // the two must agree or the tile and the stop under it print different
-  // money for the same food.
-  const atCounter = await counterCosts(everyLine.map((line) => line.itemId));
+  const itemIds = everyLine.map((line) => line.itemId);
+  const [atCounter, onMenu] = await Promise.all([
+    counterCosts(itemIds),
+    menuPrices(itemIds),
+  ]);
   const shouldCost = (
     restaurant: string,
     line: { qty: number; unitPrice: number; itemId: string }
@@ -303,8 +342,6 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
         : reckoned;
   const margin = sum(mineOnly, (o) => o.total) - foodCost;
 
-  const onMenu = await menuPrices(everyLine.map((line) => line.itemId));
-
   return {
     batch,
     counter: groupForCounter(
@@ -326,12 +363,12 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
         })),
       })
     ),
-    handout: bagsFor(paid.map(withLines), await collectingSeparately(batchId)),
+    handout: bagsFor(paid.map(withLines), ownBags),
     unpaid: unpaid.map(withLines),
-    refunds: await refundsOwed(batchId),
-    groupsShort: await groupShortfalls(batchId),
-    pins: await pinsFor(orders.map((o) => o.customer_phone)),
-    callsThem: await callsThemFor(orders.map((o) => o.customer_phone)),
+    refunds,
+    groupsShort,
+    pins,
+    callsThem,
     summary: {
       paidCount: mineOnly.length,
       unpaidCount: unpaid.length,
@@ -1251,11 +1288,16 @@ export async function batchOverview(
   // only ever right when every order earned the same for the same person;
   // with four promoters on different rates, and orders that earn nobody
   // anything, a run's share had little to do with what it actually owed.
-  const owed = new Map<string, number>();
-  for (const b of rows) {
-    const mine = all.filter((o) => o.batch_id === b.id && isPaid(o.status)) as Order[];
-    owed.set(b.id, (await commissionFor(mine)).total);
-  }
+  //
+  // Asked once for the lot rather than once per run. This was a loop with
+  // an await in it and `commissionFor` is two queries, so thirty runs in
+  // the window meant sixty round trips to London in series before the
+  // dashboard could draw anything. `commissionByRun` reads the rule once
+  // and tallies in memory, which is what the profit page has always done
+  // with the same question.
+  const owed = await commissionByRun(
+    all.filter((o) => isPaid(o.status)) as Order[]
+  );
 
   return rows.map((b) => {
     const mine = all.filter((o) => o.batch_id === b.id && !isGone(o.status));
@@ -1313,7 +1355,14 @@ export async function overMenu(
     if (batch.food_spend > 0 && menu > 0) out.set(batch.id, batch.food_spend - menu);
   }
 
+  /*
+   * The receipts and the markup list together.
+   *
+   * Neither needs the other, and they were asked one after the next on the
+   * path the dashboard and the runs page both take.
+   */
   let spend: { batch_id: string; line_key: string; paid: number; recovered?: number }[] = [];
+  const markupsComing = counterMarkups();
   try {
     const { data } = await db()
       .from("counter_spend")
@@ -1321,6 +1370,9 @@ export async function overMenu(
       .in("batch_id", batches.map((b) => b.id));
     spend = (data ?? []) as typeof spend;
   } catch {
+    // Still waited on, or the rejection it cannot have lands with nobody
+    // holding it and takes the process down.
+    await markupsComing.catch(() => ({}));
     return out;
   }
 
@@ -1334,7 +1386,7 @@ export async function overMenu(
    * markup was therefore absent from its own profit, which is where tens
    * of thousands of naira of it went.
    */
-  const markups = await counterMarkups();
+  const markups = await markupsComing;
   /*
    * A run where somebody typed one figure for the whole shop keeps it.
    *

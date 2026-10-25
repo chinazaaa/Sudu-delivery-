@@ -52,21 +52,28 @@ const HOURS = Array.from({ length: 16 }, (_, index) => {
 export const dynamic = "force-dynamic";
 
 export default async function SettingsAdmin() {
-  const settings = await getSettings();
-  // Whether anybody is out driving a run right now, which shuts cars of
-  // their own by itself. See lib/one-driver.ts.
-  const driving = await someoneIsDriving();
-  const hostels = await listHostels(true);
-  // Asked up front, so a box whose column is not there says why rather than
-  // taking a line and throwing on save.
-  const missing = await missingSettings(["ribbon_text", "offer_code"]);
-  // Null means the table is not there yet, which reads differently from an
-  // empty list and is worth saying out loud.
-  const accounts = await allAccounts();
-  // The phones that buzz. Read here rather than in the control, because the
-  // control is a client component and the list is the shop's, not the
-  // browser's: a phone subscribed at the counter shows on the laptop too.
-  const phones = await adminPhones();
+  // Six questions in a row, and not one of them wants an answer from any
+  // other. The longest page in admin also kept people waiting the longest
+  // to see it, for no reason but the order the lines were written in.
+  const [settings, driving, hostels, missing, accounts, phones] =
+    await Promise.all([
+      getSettings(),
+      // Whether anybody is out driving a run right now, which shuts cars of
+      // their own by itself. See lib/one-driver.ts.
+      someoneIsDriving(),
+      listHostels(true),
+      // Asked up front, so a box whose column is not there says why rather
+      // than taking a line and throwing on save.
+      missingSettings(["ribbon_text", "offer_code"]),
+      // Null means the table is not there yet, which reads differently from
+      // an empty list and is worth saying out loud.
+      allAccounts(),
+      // The phones that buzz. Read here rather than in the control, because
+      // the control is a client component and the list is the shop's, not
+      // the browser's: a phone subscribed at the counter shows on the laptop
+      // too.
+      adminPhones(),
+    ]);
 
   return (
     <div>

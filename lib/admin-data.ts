@@ -87,8 +87,20 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
   // how "1042b" written in a transfer narration finds its order. Declared
   // after it, the search threw before it could run, and every admin page that
   // searches went down with it.
-  const groups = await groupMap(orders.map((o) => o.group_id));
-  const stillOpen = await openGroups(orders.map((o) => o.group_id));
+  /*
+   * Three questions about the same orders, asked at once.
+   *
+   * The promoters are wanted a little further down, after the search has
+   * narrowed the list, but the answer is a map keyed by phone: asking about
+   * a few more numbers than are kept costs nothing, and asking about them
+   * here saves a whole wait. This function is read twice on the dashboard
+   * alone and on every list in admin.
+   */
+  const [groups, stillOpen, promoters] = await Promise.all([
+    groupMap(orders.map((o) => o.group_id)),
+    openGroups(orders.map((o) => o.group_id)),
+    promoterMap(orders.map((o) => o.customer_phone)),
+  ]);
 
   const term = filter.search?.trim().toLowerCase();
   if (term) {
@@ -104,8 +116,6 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
     );
   }
 
-  const promoters = await promoterMap(orders.map((o) => o.customer_phone));
-
   // Narrowed here rather than in the query: whose promoter a customer is
   // lives on the customer, not the order, so there is nothing to filter on
   // in the orders table itself.
@@ -114,10 +124,6 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
     orders = orders.filter((order) => promoters.get(order.customer_phone)?.code === wanted);
   }
 
-  const lines = await linesFor(orders.map((o) => o.id));
-  const batches = await batchMap(orders.map((o) => o.batch_id));
-  const pins = await pinMap(orders.map((o) => o.customer_phone));
-  const called = await callsThemMap(orders.map((o) => o.customer_phone));
   /*
    * Asked of each of them, not of the household.
    *
@@ -129,12 +135,20 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
    */
   // Both halves, because each of them is asked once and the tick belongs
   // to whichever of them actually left one.
-  const reviewed = await reviewedMap(
-    orders.flatMap((o) => [
-      o.customer_phone,
-      String((o as { deliver_to_phone?: string | null }).deliver_to_phone ?? ""),
-    ])
-  );
+  // And the last five together, now the list is final: its lines, its runs,
+  // the PINs, who to call and who has already been asked for a word.
+  const [lines, batches, pins, called, reviewed] = await Promise.all([
+    linesFor(orders.map((o) => o.id)),
+    batchMap(orders.map((o) => o.batch_id)),
+    pinMap(orders.map((o) => o.customer_phone)),
+    callsThemMap(orders.map((o) => o.customer_phone)),
+    reviewedMap(
+      orders.flatMap((o) => [
+        o.customer_phone,
+        String((o as { deliver_to_phone?: string | null }).deliver_to_phone ?? ""),
+      ])
+    ),
+  ]);
 
  return orders.map((order) => {
     const batch = batches.get(order.batch_id);
@@ -570,7 +584,24 @@ export async function dashboard(days = WINDOW_DAYS): Promise<Dashboard> {
   const orders = (data ?? []).filter((order) => !isGone(order.status));
   const paid = orders.filter((order) => isPaid(order.status));
 
-  const lines = await linesFor(paid.map((order) => order.id as string));
+  /*
+   * Everything about the window at once.
+   *
+   * The lines, the runs they belong to and the two customer counts were
+   * four waits one after the other, and the dashboard cannot draw a tile
+   * until all four are in. They have nothing to say to each other.
+   */
+  const [lines, batches, { count: customers }, { count: newCustomers }] =
+    await Promise.all([
+      linesFor(paid.map((order) => order.id as string)),
+      batchMap(paid.map((order) => order.batch_id as string)),
+      db().from("customers").select("phone", { count: "exact", head: true }),
+      db()
+        .from("customers")
+        .select("phone", { count: "exact", head: true })
+        .gte("created_at", since),
+    ]);
+
   const counts = new Map<string, { name: string; restaurant: string; qty: number }>();
   for (const line of lines) {
     const key = `${line.name}|${line.restaurant}`;
@@ -579,7 +610,6 @@ export async function dashboard(days = WINDOW_DAYS): Promise<Dashboard> {
     else counts.set(key, { name: line.name, restaurant: line.restaurant, qty: line.qty });
   }
 
-  const batches = await batchMap(paid.map((order) => order.batch_id as string));
   const weekdays = new Map<string, { label: string; orders: number; gross: number }>();
   for (const order of paid) {
     const batch = batches.get(order.batch_id as string);
@@ -590,14 +620,6 @@ export async function dashboard(days = WINDOW_DAYS): Promise<Dashboard> {
     seen.gross += order.total as number;
     weekdays.set(label, seen);
   }
-
-  const { count: customers } = await db()
-    .from("customers")
-    .select("phone", { count: "exact", head: true });
-  const { count: newCustomers } = await db()
-    .from("customers")
-    .select("phone", { count: "exact", head: true })
-    .gte("created_at", since);
 
   const gross = paid.reduce((total, order) => total + (order.total as number), 0);
   const discounts = paid.reduce(

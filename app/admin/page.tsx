@@ -43,21 +43,32 @@ export default async function AdminHome() {
   let parcelsToday: Awaited<ReturnType<typeof parcelJobs>> = [];
 
   try {
-    // Forced: whoever is on this page has just changed something and
-    // is looking to see it.
-    await tendBatches(true);
-    const settings = await safeSettings();
-    [batches, stats, unpaid, today, left] = await Promise.all([
+    /*
+     * Three jobs in a row that open next week's runs, close the ones whose
+     * cut-off has passed and settle the empty ones. It used to be forced,
+     * which skipped the once-a-minute throttle, so every press of every
+     * button in admin waited for the whole lot before a thing appeared on
+     * screen. Nothing in it reflects what the person just did: it goes by
+     * the clock, and a minute old is as good as a second old for "has the
+     * cut-off passed".
+     */
+    await tendBatches();
+    let promised: Awaited<ReturnType<typeof parcelJobs>> = [];
+    [batches, stats, unpaid, today, left, promised] = await Promise.all([
       // Four weeks, the same stretch the money figures beside it cover.
       batchOverview("month"),
       dashboard(),
       orderFeed({ status: "pending", limit: 6 }),
       orderFeed({ status: "all", limit: 8 }),
-      abandonedCarts(settings.abandon_minutes || 45).catch(() => []),
+      // Needs the settings row first, so it is chained rather than listed,
+      // and the chain still runs alongside everything else here.
+      safeSettings()
+        .then((settings) => abandonedCarts(settings.abandon_minutes || 45))
+        .catch(() => []),
+      parcelJobs().catch(() => []),
     ]);
     // Only the ones promised for today, which is the whole reason this is on
     // the front page rather than on the parcels page alone.
-    const promised = await parcelJobs().catch(() => []);
     parcelsToday = promised.filter((one) => one.goesOn === lagosToday());
 
     if (batches.length === 0) problem = await diagnoseEmpty();

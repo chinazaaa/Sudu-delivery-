@@ -30,36 +30,39 @@ const DAYS = [
  * sane way to put a catalogue that size in.
  */
 export default async function AdminSkincarePage() {
-  const settings = await safeSettings();
-  const shop = await skincareShop();
+  // The shop and the settings together, then the three counts and the
+  // shelves together. These were six round trips in a row for one page of
+  // numbers, each one waiting on the last for no reason at all.
+  const [settings, shop] = await Promise.all([safeSettings(), skincareShop()]);
 
-  const counted = shop
-    ? await db()
-        .from("menu_items")
-        .select("id", { count: "exact", head: true })
-        .eq("restaurant_id", shop.id)
-    : null;
+  const [counted, missing, borrowed, shelves] = await Promise.all([
+    shop
+      ? db()
+          .from("menu_items")
+          .select("id", { count: "exact", head: true })
+          .eq("restaurant_id", shop.id)
+      : null,
+    shop
+      ? db()
+          .from("menu_items")
+          .select("id", { count: "exact", head: true })
+          .eq("restaurant_id", shop.id)
+          .eq("image_url", "")
+      : null,
+    // Pictures that came in with the catalogue and are still being served
+    // from the shop it was exported from. They work, which is why the shelf
+    // looked finished on day one, and they are somebody else's to take down.
+    shop
+      ? db()
+          .from("menu_items")
+          .select("id", { count: "exact", head: true })
+          .eq("restaurant_id", shop.id)
+          .neq("image_url", "")
+          .not("image_url", "ilike", "%/storage/v1/object/public/%")
+      : null,
+    skincareShelves(),
+  ]);
   const products = counted?.count ?? 0;
-
-  const missing = shop
-    ? await db()
-        .from("menu_items")
-        .select("id", { count: "exact", head: true })
-        .eq("restaurant_id", shop.id)
-        .eq("image_url", "")
-    : null;
-
-  // Pictures that came in with the catalogue and are still being served from
-  // the shop it was exported from. They work, which is why the shelf looked
-  // finished on day one, and they are somebody else's to take down.
-  const borrowed = shop
-    ? await db()
-        .from("menu_items")
-        .select("id", { count: "exact", head: true })
-        .eq("restaurant_id", shop.id)
-        .neq("image_url", "")
-        .not("image_url", "ilike", "%/storage/v1/object/public/%")
-    : null;
 
   const drop = nextDrop(settings);
   const [hour, minute] = cutOffTime(settings.skincare_cut_off);
@@ -191,7 +194,7 @@ export default async function AdminSkincarePage() {
         </p>
       </SkincareForm>
 
-      <Shelves shelves={await skincareShelves()} />
+      <Shelves shelves={shelves} />
 
       <ImportProducts
         shopName={shop?.name ?? "Skincare"}

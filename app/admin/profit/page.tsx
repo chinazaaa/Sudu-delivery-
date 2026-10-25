@@ -100,13 +100,17 @@ export default async function ProfitPage({
   // standing cost is owed. Written before the sums rather than after.
   await catchUpStanding();
 
-  const sums = await profitBetween(from, to);
-  // Food only, and only the runs that have been reconciled, which is why it
-  // is its own question rather than a column on the table above.
-  const byKitchen = await profitByKitchen(from, to);
-  // What a run usually costs to drive, which is the figure a run with nothing
-  // typed into it is standing in for.
-  const typical = await typicalCosts();
+  // Three sums over the same stretch of days, asked together: they read the
+  // same rows and none of them needs another's answer.
+  const [sums, byKitchen, typical] = await Promise.all([
+    profitBetween(from, to),
+    // Food only, and only the runs that have been reconciled, which is why it
+    // is its own question rather than a column on the table above.
+    profitByKitchen(from, to),
+    // What a run usually costs to drive, which is the figure a run with
+    // nothing typed into it is standing in for.
+    typicalCosts(),
+  ]);
   // Hosting, bank charges, data: what is actually eating the money, which a
   // single "paid out" figure cannot answer.
   const costs = costsByKind(sums.aside);

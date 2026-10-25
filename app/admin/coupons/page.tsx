@@ -67,15 +67,19 @@ export default async function CouponsAdmin({
   const making = asked.new === "1";
   const changing = (asked.edit ?? "").trim().toUpperCase();
   const view = VIEWS.some((one) => one.value === asked.view) ? (asked.view as string) : "";
-  const coupons = await listCoupons();
+  // The offers, the runs still ahead and the whole menu, asked at once.
+  const [coupons, allRuns, menu] = await Promise.all([
+    listCoupons(),
+    batchOverview(),
+    // Every dish, flat, for the picker: free delivery is usually one or two
+    // things and finding them is a search, not a scroll.
+    menuView(),
+  ]);
   const editing = changing === "" ? null : (coupons.find((one) => one.code === changing) ?? null);
   // Only runs still ahead are worth attaching a code to.
-  const runs = (await batchOverview()).filter(
+  const runs = allRuns.filter(
     (run) => new Date(run.cut_off_at).getTime() > Date.now()
   );
-  // Every dish, flat, for the picker: free delivery is usually one or two
-  // things and finding them is a search, not a scroll.
-  const menu = await menuView();
   const dishes = menu.flatMap((place) =>
     place.items.map((item) => ({
       id: item.id,
@@ -137,25 +141,33 @@ export default async function CouponsAdmin({
 
   // Whether a size actually catches every dish it is meant to, said before a
   // Friday rather than after one.
-  const reach = new Map<string, Awaited<ReturnType<typeof choiceReach>>>();
-  for (const coupon of coupons) {
-    // Only where a choice has actually been ticked. Saying every dish offers
-    // it when none was asked for is an answer to a question nobody put.
-    if (choiceSets(coupon.required_choice ?? "").length > 0) {
-      // The same rule the pricing uses: named dishes win over a section.
-      const covered =
-        coupon.dishes.length > 0
-          ? coupon.dishes.map((dish) => dish.id)
-          : menu.flatMap((place) =>
-              place.items
-                .filter((item) =>
-                  coupon.sections.some((section) => section.id === item.categoryId)
-                )
-                .map((item) => item.id)
-            );
-      reach.set(coupon.code, await choiceReach([...new Set(covered)], coupon.required_choice));
-    }
-  }
+  // Every offer at once rather than one after the next. A shop with a dozen
+  // offers on was a dozen waits in a row for a line of small print.
+  const asked$ = await Promise.all(
+    coupons
+      // Only where a choice has actually been ticked. Saying every dish
+      // offers it when none was asked for is an answer to a question nobody
+      // put.
+      .filter((coupon) => choiceSets(coupon.required_choice ?? "").length > 0)
+      .map(async (coupon) => {
+        // The same rule the pricing uses: named dishes win over a section.
+        const covered =
+          coupon.dishes.length > 0
+            ? coupon.dishes.map((dish) => dish.id)
+            : menu.flatMap((place) =>
+                place.items
+                  .filter((item) =>
+                    coupon.sections.some((section) => section.id === item.categoryId)
+                  )
+                  .map((item) => item.id)
+              );
+        return [
+          coupon.code,
+          await choiceReach([...new Set(covered)], coupon.required_choice),
+        ] as const;
+      })
+  );
+  const reach = new Map<string, Awaited<ReturnType<typeof choiceReach>>>(asked$);
 
   // Which is which. An automatic offer applies itself and is never typed,
   // which is the only real division in this list: everything else is a

@@ -199,17 +199,35 @@ function ClosureFields({ closure }: { closure: Shut | null }) {
  * and changing a cut-off is the rare one.
  */
 export default async function SchedulePage() {
-  const schedule = await runSchedule(true);
-  const until = await openUntil();
   const months = nextMonths(4);
-  const horizon = (await safeSettings()).order_horizon_days || 7;
-  const areas = await allAreas();
+  const today = lagosToday();
+
+  /*
+   * Six questions in one go.
+   *
+   * The week, how far ahead the shop is open, the settings, the areas, the
+   * days off and four weeks of money. They were asked one at a time, and
+   * the page could not draw its first card until the last of them landed.
+   *
+   * The money is caught rather than left to throw: the week is what this
+   * page is for, and a card about one day of it is not worth taking the
+   * schedule down over.
+   */
+  const [schedule, until, settings, areas, closed, money] = await Promise.all([
+    runSchedule(true),
+    openUntil(),
+    safeSettings(),
+    allAreas(),
+    closures(),
+    profitBetween(addDays(today, -(WEEKS_BACK * 7 - 1)), today).catch(() => null),
+  ]);
+  const horizon = settings.order_horizon_days || 7;
 
   // Days off, with what is already booked inside each of them: saving a
   // closure deletes the empty runs in its range and leaves the rest, so the
   // row has to be able to say that rather than implying the days are clear.
   const shut: Shut[] = await Promise.all(
-    (await closures()).map(async (off) => ({
+    closed.map(async (off) => ({
       ...off,
       booked: await bookedInside(off.starts_on, off.ends_on),
     }))
@@ -242,13 +260,6 @@ export default async function SchedulePage() {
    * pure profit, and averaging those in would hide exactly the day this is
    * looking for.
    */
-  const today = lagosToday();
-  // Caught rather than left to throw: the week is what this page is for, and
-  // a card about one day of it is not worth taking the schedule down over.
-  const money = await profitBetween(
-    addDays(today, -(WEEKS_BACK * 7 - 1)),
-    today
-  ).catch(() => null);
   const settled = (money?.byRun ?? []).filter((run) => !run.estimated);
 
   // Only a day the week actually runs, only one that still has a run on it

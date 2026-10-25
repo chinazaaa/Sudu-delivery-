@@ -143,20 +143,29 @@ export async function groupShortfalls(batchId: string): Promise<GroupShortfall[]
     .eq("batch_id", batchId)
     .not("closes_at", "is", null);
 
-  const out: GroupShortfall[] = [];
-  const bands = await activeBands();
+  const [bands, { data: batch }] = await Promise.all([
+    activeBands(),
+    db()
+      .from("batches")
+      .select("flash_fee, kind, deliver_at")
+      .eq("id", batchId)
+      .maybeSingle(),
+  ]);
 
-  const { data: batch } = await db()
-    .from("batches")
-    .select("flash_fee, kind, deliver_at")
-    .eq("id", batchId)
-    .maybeSingle();
-
-  for (const row of groups ?? []) {
+  /*
+   * A group at a time, all at once.
+   *
+   * Each group here is three or four questions to Lagos, and this used to
+   * wait for one group's lot before asking about the next. On a run with
+   * half a dozen groups that was twenty waits in a row for a report that
+   * changes nothing, and the page sat on it.
+   */
+  const perGroup = await Promise.all(
+    (groups ?? []).map(async (row): Promise<GroupShortfall | null> => {
     const orders = await groupOrders(row.id as string);
     const paid = orders.filter((one) => isPaid(one.status));
     const missing = orders.filter((one) => one.status === "pending");
-    if (paid.length === 0 || missing.length === 0) continue;
+    if (paid.length === 0 || missing.length === 0) return null;
 
     const { data: items } = await db()
       .from("order_items")
@@ -205,9 +214,9 @@ export async function groupShortfalls(batchId: string): Promise<GroupShortfall[]
 
     const collected = paid.reduce((sum, one) => sum + one.fee, 0);
     const short = owed - collected;
-    if (short <= 0) continue;
+    if (short <= 0) return null;
 
-    out.push({
+    return {
       groupId: row.id as string,
       leaderName: String(row.leader_name ?? ""),
       owed,
@@ -224,10 +233,11 @@ export async function groupShortfalls(batchId: string): Promise<GroupShortfall[]
         phone: one.customer_phone,
         items: countFor(one.id),
       })),
-    });
-  }
+    };
+    })
+  );
 
-  return out;
+  return perGroup.filter((one): one is GroupShortfall => one !== null);
 }
 
 /**
@@ -245,11 +255,13 @@ export async function shortGroupsNow(): Promise<GroupShortfall[]> {
     .order("run_date", { ascending: false })
     .limit(20);
 
-  const out: GroupShortfall[] = [];
-  for (const batch of batches ?? []) {
-    out.push(...(await groupShortfalls(batch.id as string)));
-  }
-  return out;
+  // Twenty runs asked at once rather than one after another. Each run is
+  // several questions deep, so in a row this was the slowest page on the
+  // board by a distance.
+  const perRun = await Promise.all(
+    (batches ?? []).map((batch) => groupShortfalls(batch.id as string))
+  );
+  return perRun.flat();
 }
 
 /**

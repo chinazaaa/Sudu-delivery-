@@ -39,33 +39,36 @@ const DAYS = [
  * where the line is and why the words on the shelf are not editable away.
  */
 export default async function AdminPharmacyPage() {
-  const settings = await safeSettings();
-  const shop = await pharmacyShop();
+  // The shop and the settings together, then the three counts and the
+  // shelves together. These were six round trips in a row for one page of
+  // numbers, each one waiting on the last for no reason at all.
+  const [settings, shop] = await Promise.all([safeSettings(), pharmacyShop()]);
 
-  const counted = shop
-    ? await db()
-        .from("menu_items")
-        .select("id", { count: "exact", head: true })
-        .eq("restaurant_id", shop.id)
-    : null;
+  const [counted, missing, borrowed, shelves] = await Promise.all([
+    shop
+      ? db()
+          .from("menu_items")
+          .select("id", { count: "exact", head: true })
+          .eq("restaurant_id", shop.id)
+      : null,
+    shop
+      ? db()
+          .from("menu_items")
+          .select("id", { count: "exact", head: true })
+          .eq("restaurant_id", shop.id)
+          .eq("image_url", "")
+      : null,
+    shop
+      ? db()
+          .from("menu_items")
+          .select("id", { count: "exact", head: true })
+          .eq("restaurant_id", shop.id)
+          .neq("image_url", "")
+          .not("image_url", "ilike", "%/storage/v1/object/public/%")
+      : null,
+    pharmacyShelves(),
+  ]);
   const products = counted?.count ?? 0;
-
-  const missing = shop
-    ? await db()
-        .from("menu_items")
-        .select("id", { count: "exact", head: true })
-        .eq("restaurant_id", shop.id)
-        .eq("image_url", "")
-    : null;
-
-  const borrowed = shop
-    ? await db()
-        .from("menu_items")
-        .select("id", { count: "exact", head: true })
-        .eq("restaurant_id", shop.id)
-        .neq("image_url", "")
-        .not("image_url", "ilike", "%/storage/v1/object/public/%")
-    : null;
 
   const drop = nextDrop(settings);
   const [hour, minute] = cutOffTime(pharmacyCutOff(settings));
@@ -216,7 +219,7 @@ export default async function AdminPharmacyPage() {
         </p>
       </SkincareForm>
 
-      <Shelves shelves={await pharmacyShelves()} kind="pharmacy" />
+      <Shelves shelves={shelves} kind="pharmacy" />
 
       <ImportProducts
         shopName={shop?.name ?? "Pharmacy"}

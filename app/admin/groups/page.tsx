@@ -30,15 +30,20 @@ export default async function GroupsPage() {
     .order("created_at", { ascending: false })
     .limit(30);
 
-  const groups = await Promise.all(
+  // The groups and the shortfalls at the same time, rather than the whole
+  // list of groups first and then the money.
+  const [groups, short] = await Promise.all([
+    Promise.all(
     (rows ?? []).map(async (row) => {
-      const carts = await groupCarts(row.id as string);
+      const [carts, { data: batch }] = await Promise.all([
+        groupCarts(row.id as string),
+        db()
+          .from("batches")
+          .select("delivery_window_text")
+          .eq("id", row.batch_id as string)
+          .maybeSingle(),
+      ]);
       const worth = await cartValues(carts);
-      const { data: batch } = await db()
-        .from("batches")
-        .select("delivery_window_text")
-        .eq("id", row.batch_id as string)
-        .maybeSingle();
 
       return {
         id: row.id as string,
@@ -54,15 +59,16 @@ export default async function GroupsPage() {
         worth,
       };
     })
-  );
+    ),
+    // Read here while a run is still filling, which is early enough to ask
+    // somebody for the difference rather than absorb it on the way out.
+    shortGroupsNow(),
+  ]);
 
   const filling = groups.filter((one) => one.carts.length > 0);
   // Links somebody made and nobody used. Worth seeing only so they can be
   // shut, because an open one keeps the clock coming back to it.
   const empty = groups.filter((one) => one.carts.length === 0);
-  // Read here while a run is still filling, which is early enough to ask
-  // somebody for the difference rather than absorb it on the way out.
-  const short = await shortGroupsNow();
 
   return (
     <div>

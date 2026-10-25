@@ -71,16 +71,26 @@ export default async function RunsPage({
 }) {
   const query = await searchParams;
   const showForm = query.new === "1";
-  const schedule = await runSchedule(true);
-  // How far ahead the shop can actually take orders, and the months worth
-  // offering to open next.
-  const until = await openUntil();
   const window = query.show === "all" ? "all" : "recent";
-  const horizon = (await safeSettings()).order_horizon_days || 7;
+
+  /*
+   * Four questions that have nothing to do with each other, asked together.
+   *
+   * These were four awaits in a row at the top of the page, and this page is
+   * the one somebody opens twenty times in an afternoon: nothing could be
+   * drawn until the last of them came back from Lagos.
+   */
+  const [schedule, until, settings, counters] = await Promise.all([
+    runSchedule(true),
+    // How far ahead the shop can actually take orders, and the months worth
+    // offering to open next.
+    openUntil(),
+    safeSettings(),
+    openRestaurants(),
+  ]);
+  const horizon = settings.order_horizon_days || 7;
   // Ids are what a run stores. Names are what the list has to say.
-  const counterNames = new Map(
-    (await openRestaurants()).map((one) => [one.id, one.name] as const)
-  );
+  const counterNames = new Map(counters.map((one) => [one.id, one.name] as const));
 
   let problem: Awaited<ReturnType<typeof diagnoseEmpty>> | null = null;
   let batches: Awaited<ReturnType<typeof batchOverview>> = [];
@@ -91,9 +101,16 @@ export default async function RunsPage({
   let everything: Awaited<ReturnType<typeof batchOverview>> = [];
 
   try {
-    // Forced: whoever is on this page has just changed something and
-    // is looking to see it.
-    await tendBatches(true);
+    /*
+     * Not forced any more.
+     *
+     * Forcing it skipped the once-a-minute throttle, so every single visit
+     * to this page waited for the week to be opened, the expired runs to be
+     * closed and the empty ones settled before a row appeared. None of that
+     * answers to what the person just pressed: it goes by the clock, and a
+     * minute old is as good as new for "has the cut-off passed".
+     */
+    await tendBatches();
     // Starting a group makes its car immediately, so every abandoned group
     // left one behind, closed and empty and impossible to delete. They go
     // here, the moment nobody is in them.

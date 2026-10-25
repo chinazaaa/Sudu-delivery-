@@ -104,12 +104,44 @@ export default async function CartsPage({
   const settings = await getSettings();
   const minutes = settings.abandon_minutes || 45;
 
-  const [unhandled, done, bought, hushed] = await Promise.all([
-    abandonedCarts(minutes),
-    closedCarts(),
-    boughtCarts(),
-    hushedCarts(),
-  ]);
+  /*
+   * The four lists of carts, the two pickers, the areas and four weeks of
+   * reasons, all in one go.
+   *
+   * These were four separate waves down the page, each waiting on the one
+   * before it although none of them wants the other's answer. The pickers
+   * and the tally were being asked halfway down and at the bottom, which is
+   * exactly as slow as asking them at the top and no clearer to read.
+   */
+  const since = new Date(Date.now() - CHART_DAYS * 86400000).toISOString();
+  const [unhandled, done, bought, hushed, openRuns, carSlots, cars, areas, reasons] =
+    await Promise.all([
+      abandonedCarts(minutes),
+      closedCarts(),
+      boughtCarts(),
+      hushedCarts(),
+      /*
+       * The same two choices the order page offers when moving an order: a
+       * run still taking orders, or a window of its own, which makes its car
+       * when it is picked. Read once for the page rather than per card,
+       * because every card offers the same list.
+       */
+      openBatches().catch(() => []),
+      settings.same_day_on === "on"
+        ? hoursByDay()
+            .then((hours) => deliverySlots(new Date(), hours))
+            .catch(() => [])
+        : Promise.resolve([]),
+      carsStillGoing().catch(() => []),
+      // Which areas a car of its own cannot reach, so a line from one can
+      // say so before somebody picks a car it rules out.
+      allAreas().catch(() => []),
+      db()
+        .from("carts")
+        .select("handled_reason")
+        .not("handled_at", "is", null)
+        .gte("handled_at", since),
+    ]);
 
   /*
    * Whether the run a cart was filled on is still taking orders.
@@ -144,23 +176,8 @@ export default async function CartsPage({
 
   const open = unhandled.filter(stillGoing);
   const shut = unhandled.filter((cart) => !stillGoing(cart));
-  /*
-   * Where a cart could go, if it became an order now.
-   *
-   * The same two choices the order page offers when moving an order: a run
-   * still taking orders, or a window of its own, which makes its car when
-   * it is picked. Read once for the page rather than per card, because
-   * every card offers the same list.
-   */
-  const [openRuns, carSlots, cars] = await Promise.all([
-    openBatches().catch(() => []),
-    settings.same_day_on === "on"
-      ? hoursByDay()
-          .then((hours) => deliverySlots(new Date(), hours))
-          .catch(() => [])
-      : Promise.resolve([]),
-    carsStillGoing().catch(() => []),
-  ]);
+  // Where a cart could go, if it became an order now. Asked at the top of
+  // the page with everything else.
   const goingTo = [
     ...openRuns
       .map(toBatchView)
@@ -213,9 +230,6 @@ export default async function CartsPage({
         .select("id, name, restaurants(name, area)")
         .in("id", wantedIds)
     : { data: [] };
-  // Which areas a car of its own cannot reach, so a line from one can say
-  // so before somebody picks a car it rules out.
-  const areas = await allAreas().catch(() => []);
   const noCarTo = new Set(
     areas.filter((one) => !one.sameDay).map((one) => one.id)
   );
@@ -295,12 +309,7 @@ export default async function CartsPage({
    * the card above writes. Nothing is drawn until there is something to
    * read: four weeks of one reason is not a chart, it is a sentence.
    */
-  const since = new Date(Date.now() - CHART_DAYS * 86400000).toISOString();
-  const { data: reasonRows } = await db()
-    .from("carts")
-    .select("handled_reason")
-    .not("handled_at", "is", null)
-    .gte("handled_at", since);
+  const reasonRows = reasons.data;
   const tally = new Map<string, number>();
   for (const row of (reasonRows ?? []) as { handled_reason: string }[]) {
     const reason = (row.handled_reason || "").trim();

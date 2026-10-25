@@ -88,12 +88,16 @@ export default async function PromotersAdmin({
       : "";
 
   const schema = await promoterSchema();
-  const everybody = schema.ok ? await promoterRows() : [];
-
-  // Who brought whom, which is what the list is ranked on. A customer
-  // belongs to whoever brought them for life, so their whole lifetime spend
-  // is what that promoter is worth to the shop.
-  const customers = schema.ok ? await customerRows().catch(() => []) : [];
+  // The two lists together once the columns are known to be there. One is
+  // the promoters and the other is who they brought, and neither needs the
+  // other read first.
+  const [everybody, customers] = await Promise.all([
+    schema.ok ? promoterRows() : [],
+    // Who brought whom, which is what the list is ranked on. A customer
+    // belongs to whoever brought them for life, so their whole lifetime
+    // spend is what that promoter is worth to the shop.
+    schema.ok ? customerRows().catch(() => []) : [],
+  ]);
   const theirs = (code: string) => customers.filter((one) => one.promoterCode === code);
   const brought = new Map(
     everybody.map((one) => {
@@ -141,10 +145,12 @@ export default async function PromotersAdmin({
   // the list rather than an empty page.
   const one = who === "" ? null : (everybody.find((row) => row.code === who) ?? null);
 
-  const url = await siteUrl();
-  // What their link is worth to whoever opens it, read off the code itself
-  // so a brief sent today cannot promise ₦500 that was switched off in May.
-  const perk = await publicOffer((await safeSettings()).promoter_perk_code);
+  const [url, perk] = await Promise.all([
+    siteUrl(),
+    // What their link is worth to whoever opens it, read off the code itself
+    // so a brief sent today cannot promise ₦500 that was switched off in May.
+    safeSettings().then((one) => publicOffer(one.promoter_perk_code)),
+  ]);
 
   // About everybody, whoever is being looked at: the question "what do I owe
   // in total" does not change because the page is showing one person.
