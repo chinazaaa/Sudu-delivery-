@@ -18,6 +18,7 @@ import { feeFor, sameDayFee, splitFee, type Band } from "@/lib/fees";
 import {
   areasIn,
   canGoSameDay,
+  carGoesOn,
   dearestArea,
   mixedExtra,
   runCovers,
@@ -262,7 +263,11 @@ export default function Checkout({
    */
   const sameDaySlots =
     canGoSameDay(cartAreas) && shutToday.length === 0
-      ? allSlots.filter((one) => one.date <= dayAfter(today))
+      ? allSlots.filter(
+          (one) =>
+            one.date <= dayAfter(today) &&
+            carGoesOn(cartAreas, one.date, opensOn)
+        )
       : [];
 
   /*
@@ -301,7 +306,16 @@ export default function Checkout({
    * not on this one.
    */
   const carWindows = canGoSameDay(cartAreas)
-    ? allSlots.filter((one) => shutNames(one.date).length === 0)
+    ? allSlots.filter(
+        (one) =>
+          shutNames(one.date).length === 0 &&
+          // And only on the days a car can reach everywhere this cart
+          // touches. Ajah takes a car on the day the shop is already going
+          // that way and on no other, so with the day picker offering a
+          // fortnight, this is what stops somebody buying a Monday car to
+          // Ajah that nobody was ever going to drive.
+          carGoesOn(cartAreas, one.date, opensOn)
+      )
     : [];
   const dayChoices = daysOnOffer({
     runs: openable.map((one) => ({ id: one.id, runDate: one.runDate })),

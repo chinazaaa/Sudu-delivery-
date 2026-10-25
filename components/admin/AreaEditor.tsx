@@ -13,6 +13,7 @@ import {
   type AreaPair,
 } from "@/lib/areas";
 import { feeFor, type Band } from "@/lib/fees";
+import { DAY_NAMES, openDays, openDaysText } from "@/lib/open-days";
 
 /**
  * Where the shop delivers from, beyond Sangotedo.
@@ -43,6 +44,12 @@ export default function AreaEditor({
       ...one,
       runExtra: String(one.runExtra),
       sameDayExtra: String(one.sameDayExtra),
+      // Held as the list of weekdays while it is being ticked, and written
+      // back as text on save. Empty text means every day, so an area
+      // nobody has touched keeps behaving as it always has.
+      sameDayDays: one.sameDayDays?.trim()
+        ? openDays(one.sameDayDays)
+        : [0, 1, 2, 3, 4, 5, 6],
     }))
   );
 
@@ -52,6 +59,7 @@ export default function AreaEditor({
     runExtra: Number(one.runExtra) || 0,
     sameDayExtra: Number(one.sameDayExtra) || 0,
     sameDay: one.sameDay,
+    sameDayDays: openDaysText(one.sameDayDays ?? []),
   }));
 
   const edit = (index: number, patch: Partial<(typeof areas)[number]>) =>
@@ -187,6 +195,52 @@ export default function AreaEditor({
                 </span>
               </span>
             </label>
+
+            {/* Which days, once it can go at all.
+
+                Ajah takes a car, and only on the day the shop is already
+                going that way. Without this the switch was all or nothing:
+                on meant somebody could buy a Monday car to Ajah that
+                nobody was ever going to drive. */}
+            {area.sameDay && (
+              <div className="mt-2">
+                <span className="label">On these days</span>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {DAY_NAMES.map((day, weekday) => {
+                    const on = area.sameDayDays.includes(weekday);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() =>
+                          edit(index, {
+                            sameDayDays: on
+                              ? area.sameDayDays.filter((one) => one !== weekday)
+                              : [...area.sameDayDays, weekday],
+                          })
+                        }
+                        className={`pill-admin min-h-[34px] px-2.5 text-[13px] ${
+                          on ? "pill-admin-on" : ""
+                        }`}
+                      >
+                        {day.slice(0, 3)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="hint mt-1">
+                  {area.sameDayDays.length === 7
+                    ? "Every day."
+                    : area.sameDayDays.length === 0
+                      ? "No days, so no car goes here at all. Untick the box above instead."
+                      : `Only ${area.sameDayDays
+                          .slice()
+                          .sort((a, b) => a - b)
+                          .map((one) => DAY_NAMES[one])
+                          .join(", ")}.`}
+                </p>
+              </div>
+            )}
           </li>
         ))}
       </ul>
@@ -196,7 +250,14 @@ export default function AreaEditor({
         onClick={() =>
           setAreas([
             ...areas,
-            { id: "", name: "", runExtra: "0", sameDayExtra: "0", sameDay: false },
+            {
+              id: "",
+              name: "",
+              runExtra: "0",
+              sameDayExtra: "0",
+              sameDay: false,
+              sameDayDays: [0, 1, 2, 3, 4, 5, 6],
+            },
           ])
         }
         className="chip border-black/10 bg-white text-sm"

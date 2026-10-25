@@ -10,6 +10,8 @@ import {
 } from "./groups";
 import { feeFor, sameDayFee, splitFee, tripFee, type Band } from "./fees";
 import { feeOnTrip } from "./trip-fee";
+import { carGoesOn } from "./areas";
+import { DAY_NAMES, opensOn, weekdayOf } from "./open-days";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "./settings";
 import {
   activePromotion,
@@ -389,6 +391,28 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       error:
         `${far?.name ?? "That restaurant"} is too far for a car of its own. ` +
         "It goes on a run, so pick one and everything travels together.",
+    };
+  }
+
+  /*
+   * And not on a day the car cannot go there.
+   *
+   * An area can take a car of its own and still only on certain days: Ajah
+   * does, on the day the shop is already going that way. The checkout stops
+   * offering those windows, and this stops one being bought by anything
+   * that did not ask the checkout. Before the car is made, so a refusal
+   * does not leave an empty trip behind it.
+   */
+  if (sameDay && !carGoesOn(where.all, sameDay.slot.date, opensOn)) {
+    const shut = where.all.find(
+      (one) => one.id !== "" && !opensOn(one.sameDayDays ?? "", sameDay.slot.date)
+    );
+    return {
+      ok: false,
+      error:
+        `We do not drive to ${shut?.name ?? "there"} on a ` +
+        `${DAY_NAMES[weekdayOf(sameDay.slot.date)]}. ` +
+        "Pick a run, or another day.",
     };
   }
 

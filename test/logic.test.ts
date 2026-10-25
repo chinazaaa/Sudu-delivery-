@@ -94,8 +94,10 @@ import {
   parseAreaPairs,
   serialiseAreaPairs,
   withExtra,
+  carGoesOn,
   MIXED_AREA_EXTRA,
 } from "../lib/areas";
+import { opensOn } from "../lib/open-days";
 import { cartsInTime, howLong, needsDoing } from "../lib/needs-doing";
 import { howPaid, orderStory } from "../lib/order-story";
 import { codeFrom } from "../lib/promoter-applications";
@@ -6665,4 +6667,37 @@ test("picking a day: the page opens on today, then tomorrow", () => {
   // checkout to charge a run's fee.
   assert.equal(far?.runId, "wed");
   assert.equal(far?.at, null);
+});
+
+test("a car of its own only goes where it can go that day", () => {
+  // Ajah takes a car, but only on the day the shop is already going that
+  // way. Switched on without days, somebody could buy a Monday car to Ajah
+  // that nobody was ever going to drive.
+  const ajah = { id: "ajah", sameDay: true, sameDayDays: "6" };
+  const lekki = { id: "lekki", sameDay: true, sameDayDays: "" };
+  const ikoyi = { id: "ikoyi", sameDay: false, sameDayDays: "" };
+  const home = { id: "", sameDay: false, sameDayDays: "" };
+
+  const sat = "2026-10-31";
+  const mon = "2026-10-26";
+
+  assert.equal(carGoesOn([ajah], sat, opensOn), true);
+  assert.equal(carGoesOn([ajah], mon, opensOn), false);
+
+  // No days set is every day, so an area nobody has touched is unchanged.
+  assert.equal(carGoesOn([lekki], mon, opensOn), true);
+
+  // An area that cannot take a car at all is still no, whatever the day.
+  assert.equal(carGoesOn([ikoyi], sat, opensOn), false);
+
+  // One car fetches the whole cart, so the strictest area decides. Lekki
+  // is fine on a Monday and Ajah is not, and they travel together.
+  assert.equal(carGoesOn([lekki, ajah], mon, opensOn), false);
+  assert.equal(carGoesOn([lekki, ajah], sat, opensOn), true);
+
+  // Home is always drivable: the shop is in it.
+  assert.equal(carGoesOn([home], mon, opensOn), true);
+  assert.equal(carGoesOn([], mon, opensOn), true);
+  // And home riding along with a far area does not rescue it.
+  assert.equal(carGoesOn([home, ajah], mon, opensOn), false);
 });

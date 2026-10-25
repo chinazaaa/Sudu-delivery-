@@ -33,7 +33,46 @@ export type Area = {
    * rides a run or it does not come, rather than a promise broken on the day.
    */
   sameDay: boolean;
+  /**
+   * The weekdays a car of its own can go there, "0,6" for Sunday and
+   * Saturday. Empty is every day, so an area nobody has touched behaves
+   * exactly as it always has.
+   *
+   * Separate from `sameDay`, which is whether a car can ever go at all.
+   * Ajah can take one, but only on the day the shop is already going that
+   * way: switched on without this, somebody could buy a Monday car to Ajah
+   * that nobody was ever going to drive. Written the same way a kitchen's
+   * own opening days are, because it is the same question about a
+   * different thing.
+   */
+  sameDayDays?: string;
 };
+
+/**
+ * Whether a car of its own can reach everywhere this cart touches, on a
+ * given day.
+ *
+ * One car fetches all of it, so a cart is only drivable on a day every one
+ * of its areas allows. Home is always allowed: the ladders were written for
+ * Sangotedo and the shop is in it.
+ *
+ * Asked with the date the customer picked rather than today's, because the
+ * checkout lets somebody choose a day now and the question is about that
+ * day, not about this one.
+ */
+export function carGoesOn(
+  areas: { sameDay: boolean; sameDayDays?: string; id: string }[],
+  date: string,
+  /** Reads the weekday list. Passed in so this file stays free of the
+   *  open-days module, which knows about kitchens. */
+  allows: (days: string | null | undefined, date: string) => boolean
+): boolean {
+  const away = areas.filter((one) => one.id !== "");
+  if (away.length === 0) return true;
+  return away.every(
+    (one) => one.sameDay && allows(one.sameDayDays ?? "", date)
+  );
+}
 
 /** Sangotedo, or wherever the ladders were written for. No extra by definition. */
 export const HOME: Area = {
@@ -58,6 +97,9 @@ export function parseAreas(json: string | null | undefined): Area[] {
         // Off unless it says otherwise, because promising a car in three
         // hours to somewhere an hour away is a promise broken on the day.
         sameDay: one.sameDay === true,
+        // Empty is every day, the same as a kitchen's own days, so an area
+        // nobody has touched behaves exactly as it always has.
+        sameDayDays: String(one.sameDayDays ?? "").trim(),
       }));
   } catch {
     return [];
@@ -74,6 +116,7 @@ export function serialiseAreas(areas: Area[]): string {
         runExtra: Math.max(0, Math.round(one.runExtra || 0)),
         sameDayExtra: Math.max(0, Math.round(one.sameDayExtra || 0)),
         sameDay: one.sameDay === true,
+        sameDayDays: String(one.sameDayDays ?? "").trim(),
       }))
   );
 }
