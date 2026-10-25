@@ -145,9 +145,20 @@ export default async function AdminHome() {
   );
   // Where nothing is going either day, the next one that is, so the answer
   // is never just "no" with nowhere to go from it.
+  /*
+   * The next few that are going, not just the next one.
+   *
+   * One was enough when this only appeared on a day with nothing on it
+   * at all. It is the usual case now: the week has no Monday or Tuesday
+   * run, so from Sunday evening until Wednesday the whole board was one
+   * finished Sunday and one Wednesday. Three is a week in view without
+   * being the list of every run between here and Christmas, which is the
+   * planning document this card is deliberately not.
+   */
   const after = open
     .filter((batch) => batch.run_date > tomorrow)
-    .sort((a, b) => a.run_date.localeCompare(b.run_date))[0];
+    .sort((a, b) => a.run_date.localeCompare(b.run_date))
+    .slice(0, 3);
   /*
    * Whether there is anything still to come in the next two days.
    *
@@ -680,7 +691,7 @@ export default async function AdminHome() {
             </Link>
           }
         >
-          {soon.length === 0 && !after && (
+          {soon.length === 0 && after.length === 0 && (
             /* Still said when the settled row below is the only one there
                is: a run that has been delivered is not a car going out. */
             <p className="border-t-[1.5px] border-rule pt-3 text-[14.5px] text-muted">
@@ -693,7 +704,7 @@ export default async function AdminHome() {
               could not have been drawn here even if one had been passed. */}
           {[
             ...soon,
-            ...(after && !stillToCome ? [after] : []),
+            ...(stillToCome ? [] : after),
             ...(went ? [went] : []),
           ]
             /*
