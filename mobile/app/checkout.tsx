@@ -382,49 +382,6 @@ export default function Checkout() {
       ? feeOnRun(run?.flashFee ?? null)
       : 0;
 
-  /*
-   * The one alternative worth a sentence.
-   *
-   * Only where the fee comes from the container ladder on both sides: a
-   * market is priced by what the shopping comes to, and a promotion is a
-   * price rather than a ladder, so there is nothing to compare.
-   */
-  const otherWay = (() => {
-    if (items === 0) return null;
-
-    if (picked) {
-      // On a car of its own. Name the run whether or not it is cheaper: a
-      // run that prices level is still the answer to when else you could
-      // get this.
-      const soonest = runsHere[0];
-      if (!soonest) return null;
-      const fee = feeOnRun(soonest.flashFee);
-      const now = feeOnCar(picked);
-      return {
-        runId: soonest.id,
-        at: "",
-        said: `${soonest.deliveryWindow.charAt(0).toLowerCase()}${soonest.deliveryWindow.slice(1)} ${soonest.label.split(" · ")[0]}`,
-        fee,
-        saving: Math.max(0, now - fee),
-      };
-    }
-
-    /*
-     * On a run, and nothing to offer.
-     *
-     * This used to say "need it sooner, a car can be there at four for
-     * 6,500". It was the one way of asking for a different arrival back
-     * when the day was decided for you. The row of days above is that
-     * question asked properly, so the offer was being made twice, the
-     * second time in the shop's words rather than the customer's.
-     *
-     * The other direction stays: somebody who picked a car has not
-     * necessarily seen that a run is thousands cheaper, and that one is an
-     * argument about money, which sits beside the money further down.
-     */
-    return null;
-  })();
-
   // What a promotion does to this cart, worked out by the shop because that
   // is where the rules are. It prices delivery outright, so it wins over the
   // ladder and over the same day figure alike.
@@ -526,50 +483,6 @@ export default function Checkout() {
     }
   };
 
-  /**
-   * The other way of getting this here, and a way to take it.
-   *
-   * A car of its own can be two and a half thousand dearer than waiting for
-   * a run, and nobody should pay that without being told there was another
-   * way. It reads as a button because it is one: a sentence people cannot
-   * tell is tappable is a sentence they never tap.
-   *
-   * Written once and shown in one of two places, because it is really two
-   * arguments. "A car could be there sooner" is about time, so it sits with
-   * the time. "A run costs less" is about money, so it sits with the money,
-   * which is where the website has always put it and where somebody reading
-   * a fee they think is high will actually be looking.
-   */
-  const theOtherWay = () =>
-    otherWay ? (
-      <Pressable
-        onPress={() => {
-          if (picked) {
-            setDeliverAt("");
-            setRunId(otherWay.runId);
-          } else {
-            setDeliverAt(otherWay.at);
-          }
-        }}
-        style={{
-          backgroundColor: T.tint,
-          borderWidth: 2,
-          borderColor: T.ink,
-          borderRadius: 12,
-          paddingHorizontal: 12,
-          paddingVertical: 10,
-        }}
-      >
-        <Text style={{ color: T.brandDark, fontFamily: F.bodySemi, fontSize: 14, lineHeight: 20 }}>
-          {picked
-            ? `Rather pay less? ${otherWay.said} for ${naira(otherWay.fee)}` +
-              (otherWay.saving > 0 ? `, ${naira(otherWay.saving)} less.` : ".")
-            : `Need it sooner? A car of its own can be there ${otherWay.said}, for ${naira(otherWay.fee)}.`}
-          <Text style={{ textDecorationLine: "underline" }}> Tap for that.</Text>
-        </Text>
-      </Pressable>
-    ) : null;
-
   if (!shop) return <ActivityIndicator color={T.brand} style={{ marginTop: 40 }} />;
 
   const ready =
@@ -607,7 +520,10 @@ export default function Checkout() {
           gap: 8,
         }}
       >
-        <Ticket colour={T.volt}>{picked ? "A car of its own" : "Next run to PAU"}</Ticket>
+        {/* Not "a car of its own" or "next run to PAU". Which it is, is the
+            shop's business: the customer picks a day and pays what that day
+            costs. The website's step above this control says the same. */}
+        <Ticket colour={T.volt}>Choose when you want it</Ticket>
         <Display size={30} colour={T.shell}>
           {arriving}
         </Display>
@@ -1101,8 +1017,11 @@ export default function Checkout() {
           )
         )}
 
-        {/* A run for less, right under the fee it undercuts. */}
-        {otherWay && picked && theOtherWay()}
+        {/* "Pay 2,500 less: Wednesday is 4,000" used to sit here, under
+            the fee it undercut. It was money off for somebody who had not
+            asked, back when the day was decided for them and this was the
+            only way to change it. The row of days at the top is that
+            question asked properly. */}
 
         {applied && <Row label={`Code ${applied.code}`} value={`−${naira(applied.discount)}`} />}
         <View

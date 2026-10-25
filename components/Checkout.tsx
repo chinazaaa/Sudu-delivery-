@@ -508,9 +508,8 @@ export default function Checkout({
     far.length > 0 && farLines.length < cart.length && restCouldComeSooner;
 
   // The soonest way to eat, the same rule as everywhere else: a run today, a
-  // car of its own today, a run tomorrow, tomorrow's first window.
-  const todayRun = openable.find((one) => one.runDate === today) ?? null;
-  const laterRun = openable.find((one) => one.runDate > today) ?? null;
+  // car of its own today, a run tomorrow, tomorrow's first window. Only as a
+  // fallback now that the day is picked; see `firstDay` above.
   const decided = nextArrival(openable.map(runArrival), sameDaySlots, today);
   // A car of its own still carries a run id, because that is what the
   // coupon and the offer rules are asked about. The time is what decides
@@ -961,15 +960,6 @@ export default function Checkout({
   // agree to on a cart that cannot be bought at all.
   const mustAgreeWhen = !comesToday && !noRunThere && arrivingWhen !== "";
 
-  /*
-   * Comparing one way of getting the food here with the other.
-   *
-   * Only where the fee comes from the container ladder on both sides. A
-   * market is priced by what the shopping comes to, and a promotion is a
-   * price rather than a ladder, so there is nothing to compare.
-   */
-  const comparable = !shared && !promotion && itemCount > 0;
-
   /**
    * What this cart costs on a run, on a named run's numbers.
    *
@@ -996,23 +986,6 @@ export default function Checkout({
             bands
           )
         );
-
-  /**
-   * The next run, for somebody in a car of its own.
-   *
-   * Named whether or not it is cheaper. It usually is, by thousands, but a
-   * run that costs the same is still the answer to "when else could I get
-   * this", and hiding it because the arithmetic came out level leaves the
-   * question looking unanswered.
-   */
-  const runInstead = (() => {
-    const run = todayRun ?? laterRun;
-    if (!comparable || onARun || !run || !sameDay) return null;
-
-    const fee = feeOnRun(run.flashFee);
-    const now = sameDayFee(itemCount, sameDay.urgent, sameDayBands, urgentExtra);
-    return { id: run.id, label: run.label, fee, saving: Math.max(0, now - fee) };
-  })();
 
   // Naming friends to carry food for is a different thing from being in a
   // shared delivery, and doing both at once is two answers to one question.
@@ -2184,7 +2157,11 @@ export default function Checkout({
         <div className="flex justify-between text-muted">
           <span>
             {sameDay
-              ? `Delivery ${sameDay.phrase}${sameDay.urgent ? " · urgent" : ""}`
+              ? // The day is said underneath, the same as it is for a run.
+                // Saying it here as well printed "Delivery between 4pm and
+                // 7pm tomorrow" with "Between 4pm and 7pm tomorrow" directly
+                // under it.
+                `Delivery${sameDay.urgent ? " · urgent" : ""}`
               : shared
               ? "Delivery"
               : `Delivery (${itemCount} item${itemCount === 1 ? "" : "s"})`}
@@ -2316,26 +2293,12 @@ export default function Checkout({
             note="A car of its own is one order, one driver, one trip, so there is nobody to share the petrol with. A run carries everybody at once, which is why it costs less."
           />
         )}
-        {/* Outside the fold on purpose. The ladder is for somebody who asked
-            the question; this is money off for somebody who did not, and it
-            is no use to them behind a tap they have no reason to make. */}
-        {!shared && !promotion && sameDay && runInstead !== null && (
-          <button
-            type="button"
-            onClick={() => {
-              setDeliverAt("");
-              setBatchId(runInstead.id);
-            }}
-            className="mt-2 block w-full rounded-xl bg-brand-tint px-3 py-2 text-left font-semibold text-brand-dark"
-          >
-            {runInstead.saving > 0
-              ? `Pay ${naira(runInstead.saving)} less: ${runInstead.label} is ${naira(runInstead.fee)}.`
-              : `${runInstead.label} is ${naira(runInstead.fee)}.`}{" "}
-            <span className="underline decoration-dotted underline-offset-4">
-              Tap to move onto it.
-            </span>
-          </button>
-        )}
+        {/* "Pay 2,500 less: Wednesday is 4,000. Tap to move onto it" used
+            to sit here. It was money off for somebody who had not asked,
+            back when the day was decided for them and this was the only way
+            to change it. The day is a choice at the top of the page now, so
+            this was the same offer made twice, the second time as a nag
+            under the total. */}
         {/* Above the total, where money taken off belongs. Below it, the
             total read as the price before the discount and the line under it
             read as a promise nothing had been done about. */}
