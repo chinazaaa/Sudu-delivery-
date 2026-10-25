@@ -56,6 +56,7 @@ import {
   dayOfChoice,
   daySaid,
   daysOnOffer,
+  soonestDay,
 } from "@/lib/pick-a-day";
 import type { GroupMode } from "@/lib/types";
 import type { BatchView } from "@/lib/view";
@@ -306,6 +307,18 @@ export default function Checkout({
     runs: openable.map((one) => ({ id: one.id, runDate: one.runDate })),
     slots: carWindows,
   });
+  /*
+   * What the page opens on: today if anything at all goes today, then
+   * tomorrow, then the next day something goes.
+   *
+   * It used to open on the soonest arrival worked out across runs and
+   * cars together, which preferred a run three days out to a car tonight
+   * because the run is cheaper. That is the shop's reasoning, not the
+   * customer's: somebody at the checkout at six o'clock wants to know
+   * about tonight first and can choose to wait. The day is the question
+   * and the price is the answer to it, rather than the other way round.
+   */
+  const firstDay = soonestDay(dayChoices);
 
   // The runs that only fail because somebody is closed that day, and what
   // is closed on the soonest of them. Said in their words: "DO Bowls is
@@ -489,7 +502,13 @@ export default function Checkout({
   // coupon and the offer rules are asked about. The time is what decides
   // the price, and it wins wherever both are set.
   const [batchId, setBatchId] = useState(
-    adding?.batchId ?? decided?.runId ?? openable[0]?.id ?? ""
+    adding?.batchId ??
+      // A car of its own carries a run id too, so where the soonest day
+      // is a car day this still falls through to a real run.
+      firstDay?.runId ??
+      decided?.runId ??
+      openable[0]?.id ??
+      ""
   );
 
   // The run is picked once, when the page is drawn, and the cart can change
@@ -767,7 +786,11 @@ export default function Checkout({
   // else a car of its own today, else a run tomorrow, else tomorrow's first
   // window. Nobody is asked, because there is one right answer and the
   // dropdown that used to be here only made somebody find it.
-  const [deliverAt, setDeliverAt] = useState(decided?.at ?? "");
+  // Empty where the soonest day has a run on it, which is what tells the
+  // whole page it is on a run rather than a car.
+  const [deliverAt, setDeliverAt] = useState(
+    adding ? "" : (firstDay?.at ?? "")
+  );
   // Ticked by hand when the food is not coming today. See comesToday below.
   const [agreedWhen, setAgreedWhen] = useState(false);
   /*
@@ -1144,7 +1167,6 @@ export default function Checkout({
       choice: dayChoices.find((one) => one.date === date) ?? null,
     }));
     const further = dayChoices.filter((one) => !named.includes(one.date));
-    const furthest = further.at(-1)?.date ?? "";
     /*
      * The day that is picked, when it is further out than tomorrow.
      *
@@ -1205,29 +1227,32 @@ export default function Checkout({
           </p>
         )}
 
+        {/*
+            The days themselves, not a calendar.
+
+            This was a date box, and a date box on a phone opens the whole
+            month: every day of October was there to be tapped, including
+            the ones already gone. `min` and `max` are a suggestion that
+            iOS does not take, and the days that did nothing when tapped
+            outnumbered the ones that worked about five to one.
+
+            A list cannot offer a day the shop is not going out on, so
+            there is nothing to validate and nothing that ignores a tap.
+         */}
         {pickingDate && (
-          <div className="space-y-2">
-            <input
-              type="date"
-              className="field"
-              min={further[0]?.date ?? today}
-              max={furthest}
-              value={chosen && !near.some((one) => one.date === chosen.date) ? chosen.date : ""}
-              onChange={(e) => goTo(e.target.value)}
-              aria-label="The day you want it"
-            />
-            {/* Only the days something actually goes on. A calendar will
-                happily offer a Monday the shop cannot reach, and finding
-                that out by tapping it is worse than being told. */}
-            <p className="text-sm text-muted">
-              {further.length === 0
-                ? "Nothing further out is open yet."
-                : `We can do ${further
-                    .slice(0, 6)
-                    .map((one) => runDateLabel(one.date))
-                    .join(", ")}${further.length > 6 ? " and more" : ""}.`}
-            </p>
-          </div>
+          <select
+            className="field"
+            aria-label="The day you want it"
+            value={far}
+            onChange={(e) => goTo(e.target.value)}
+          >
+            <option value="">Which day?</option>
+            {further.map((one) => (
+              <option key={one.date} value={one.date}>
+                {runDateLabel(one.date)}
+              </option>
+            ))}
+          </select>
         )}
       </div>
     );

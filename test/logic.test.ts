@@ -6621,3 +6621,39 @@ test("picking a day: putting the dropdown back where the page moved it", () => {
   assert.equal(dayOfChoice(days, { runId: "gone", at: "" }), null);
   assert.equal(soonestDay([]), null);
 });
+
+test("picking a day: the page opens on today, then tomorrow", () => {
+  const slots = [
+    { at: "2026-10-25T18:00:00.000Z", date: "2026-10-25" },
+    { at: "2026-10-26T12:00:00.000Z", date: "2026-10-26" },
+  ];
+
+  // A run three days out is cheaper, and it is still not the answer to
+  // "when can I eat". Today goes first because today is on offer.
+  assert.equal(
+    soonestDay(daysOnOffer({ runs: [{ id: "wed", runDate: "2026-10-28" }], slots }))
+      ?.date,
+    "2026-10-25"
+  );
+
+  // Nothing today: tomorrow.
+  assert.equal(
+    soonestDay(
+      daysOnOffer({
+        runs: [{ id: "wed", runDate: "2026-10-28" }],
+        slots: slots.filter((one) => one.date !== "2026-10-25"),
+      })
+    )?.date,
+    "2026-10-26"
+  );
+
+  // Nothing either day: the next day something goes, which is the run.
+  const far = soonestDay(
+    daysOnOffer({ runs: [{ id: "wed", runDate: "2026-10-28" }], slots: [] })
+  );
+  assert.equal(far?.date, "2026-10-28");
+  // And it opens on the run rather than on a time, which is what tells the
+  // checkout to charge a run's fee.
+  assert.equal(far?.runId, "wed");
+  assert.equal(far?.at, null);
+});
