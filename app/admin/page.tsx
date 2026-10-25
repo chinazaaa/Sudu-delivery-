@@ -684,6 +684,21 @@ export default async function AdminHome() {
             ...(went ? [went] : []),
           ]
             /*
+             * Once each.
+             *
+             * Today's run stays in the first list after it has been
+             * driven, because a day whose driving is done is still the
+             * day being asked about, and the same run is also the last
+             * one that went. So the evening a run is marked delivered it
+             * was drawn twice, the same date, the same takings, the same
+             * profit, one above the other, which reads as two cars
+             * having gone out.
+             */
+            .filter(
+              (batch, index, all) =>
+                all.findIndex((one) => one.id === batch.id) === index
+            )
+            /*
              * What is still to come, soonest first, and then what has
              * been, most recent first.
              *
