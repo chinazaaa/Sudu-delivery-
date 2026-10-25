@@ -1582,7 +1582,19 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               hostels: startRef.current?.hostels ?? [],
               nextRun: startRef.current?.runs?.[0]?.said ?? "",
               cutOff: startRef.current?.runs?.[0]?.closes ?? "",
-              open: (startRef.current?.runs ?? []).length > 0,
+              /*
+               * A car of its own counts as open.
+               *
+               * This read runs alone, so on a day with no run the model
+               * was told "nothing is open for ordering right now" while
+               * the checkout was perfectly happy to sell a car. The week
+               * has no Monday or Tuesday run, so that is two days in
+               * seven of the chat turning people away from a shop that
+               * was open.
+               */
+              open:
+                (startRef.current?.runs ?? []).length > 0 ||
+                (startRef.current?.cars ?? []).length > 0,
             },
           }),
         })

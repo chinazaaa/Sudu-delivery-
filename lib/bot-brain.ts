@@ -112,7 +112,9 @@ export type ShopNow = {
   nextRun: string;
   /** When ordering shuts for it. */
   cutOff: string;
-  /** False when nothing is open, so it stops talking as though it were. */
+  /** False when nothing is open, so it stops talking as though it were.
+   *  A car of its own counts: a day with no run is still a day somebody
+   *  can order for. */
   open: boolean;
 };
 
@@ -133,6 +135,17 @@ export function shopBrief(shop: ShopNow): string {
     shop.open
       ? `The next run is ${shop.nextRun}. Ordering for it shuts at ${shop.cutOff}.`
       : "Nothing is open for ordering right now.",
+    "",
+    /*
+     * The day is a choice now, and the model kept answering as though the
+     * next run were the only one on offer.
+     *
+     * It is told the shape rather than the prices, because prices are the
+     * one thing it must never say: somebody asking for Monday on a week
+     * with no Monday run is asking a question with an answer, and "the
+     * next run is Wednesday" is not it.
+     */
+    "People pick the day they want their food, not a run. Any day can be had: where a run is going that day it travels on the run, and where none is it goes on a car of its own, which costs more. Never say which, and never say what either costs. If somebody asks about a day, say the checkout will show them that day and leave the figures to the shop.",
   ];
 
   if (shop.counters.length > 0) {
