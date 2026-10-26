@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { rememberCart } from "@/lib/carts";
+import { forgetCart, rememberCart } from "@/lib/carts";
 import { normalisePhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
@@ -34,9 +34,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     const phone = normalisePhone(String(body.phone ?? ""));
     const items = Number(body.items ?? 0);
 
-    // No number is nobody to chase, and an empty cart is nothing to chase
-    // them about. Exactly the two guards the website uses.
-    if (phone && Number.isFinite(items) && items > 0) {
+    // No number is nobody to chase. An emptied cart is something to say
+    // rather than a save to skip: ignored, the last full snapshot kept its
+    // timestamp and aged into a "left behind" alert about food somebody had
+    // deliberately taken out. Exactly what the website does.
+    if (phone && Number.isFinite(items) && items <= 0) {
+      await forgetCart(phone, String(body.batchId ?? "") || null);
+    } else if (phone && Number.isFinite(items) && items > 0) {
       await rememberCart({
         phone,
         name: String(body.name ?? "").trim(),
