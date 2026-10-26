@@ -1416,10 +1416,31 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
          */
         const elsewhere = placeAsked(said);
         if (elsewhere !== "") {
+          /*
+           * What we do buy from, said once and briefly.
+           *
+           * Somebody asking for Pizza Hut wants pizza, and Domino's is on
+           * the menu, cheaper, and going anyway. Leaving that out to
+           * protect the offer would be the chat keeping a useful thing to
+           * itself.
+           *
+           * After the offer rather than instead of it, which is the whole
+           * difference between an answer and a brush off. Four names at
+           * most: a list of everything is a wall, and the question
+           * underneath it is the one they came to answer.
+           */
+          const open = (startRef.current?.kitchens ?? []).map((one) => one.name);
+          const few = open.slice(0, 4);
+          const also =
+            few.length === 0
+              ? ""
+              : ` We are buying from <b>${few.join("</b>, <b>")}</b>` +
+                `${open.length > few.length ? " and others" : ""}, if one of those would do.`;
+
           bot(
             `We do not buy from <b>${elsewhere}</b> at the moment, but we can go ` +
-              "and get it for you.",
-            500
+              `and get it for you.${also}`,
+            520
           );
           askUsForRef.current?.("", elsewhere);
           return;
