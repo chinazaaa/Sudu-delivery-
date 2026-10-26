@@ -6783,3 +6783,41 @@ test("changing an order: whether it is worth doing anything", () => {
   );
   assert.equal(emptiesIt([], []), false);
 });
+
+test("the chat knows when somebody is asking about their own order", () => {
+  // The sentences people actually type.
+  for (const said of [
+    "where is my order",
+    "Where is my order?",
+    "wheres my food",
+    "my order has not arrived",
+    "my delivery is late",
+    "can i track my order",
+    "whats the status of my order",
+    "my food hasnt arrived",
+    "how far with my order",
+    "i am still waiting for my order",
+  ]) {
+    assert.equal(botIntentOf(said), "mine", said);
+  }
+
+  // Questions about the shop, which already have written answers and must
+  // not be turned into a sign-in.
+  for (const said of [
+    "where do you deliver",
+    "how much is delivery",
+    "what time do you deliver",
+    "do you deliver to ikoyi",
+  ]) {
+    assert.notEqual(botIntentOf(said), "mine", said);
+  }
+
+  // "Where is my delivery" carries the word delivery, and is not a
+  // question about what one costs.
+  assert.equal(botIntentOf("where is my delivery"), "mine");
+  assert.equal(botIntentOf("how much is delivery"), "fees");
+
+  // Ordinary ordering is not this.
+  assert.notEqual(botIntentOf("i want to order jollof"), "mine");
+  assert.notEqual(botIntentOf("2 chicken pie"), "mine");
+});

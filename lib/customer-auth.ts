@@ -68,6 +68,84 @@ export async function checkPin(phone: string, pin: string): Promise<PinResult> {
 }
 
 /**
+ * The number and the order number, for somebody who never kept their PIN.
+ *
+ * A PIN cannot be sent automatically: there is no way to text one, so
+ * every "we will send it to you" is really a person's evening. Somebody
+ * who has lost theirs still has the order number on their receipt, and
+ * asking for the two together is a question they can actually answer.
+ *
+ * Weaker than a PIN, and knowingly so. Order numbers run in sequence, so
+ * somebody holding a phone number could walk them until one landed. What
+ * makes that impractical is the lock the PIN already uses: the same
+ * counter, on the same row, so a handful of wrong guesses shuts the
+ * number for fifteen minutes whichever way they were guessing. A real
+ * customer needs one try and never sees it.
+ *
+ * Matched against this person's own orders only, by either of the two
+ * numbers an order carries: the one printed on it, and the short code in
+ * its link.
+ */
+export async function checkOrderNumber(
+  phone: string,
+  said: string
+): Promise<PinResult> {
+  const ref = said.trim().replace(/^#/, "");
+  if (ref === "") return { ok: false, error: "That order number is not right." };
+
+  const { data } = await db()
+    .from("customers")
+    .select("pin_fail_count, pin_locked_until")
+    .eq("phone", phone)
+    .maybeSingle();
+
+  if (!data) return { ok: false, error: "No orders found for that number." };
+  if (data.pin_locked_until && new Date(data.pin_locked_until) > new Date()) {
+    return { ok: false, error: "Too many wrong tries. Try again in 15 minutes." };
+  }
+
+  // Theirs, and the ones somebody sent them, the same two the orders page
+  // shows. A father orders and his son is the one standing at the block.
+  const digits = ref.replace(/\D/g, "");
+  const or = [
+    `short.eq.${ref}`,
+    ...(digits !== "" ? [`order_no.eq.${digits}`] : []),
+  ].join(",");
+
+  const { data: found } = await db()
+    .from("orders")
+    .select("id")
+    .or(`customer_phone.eq.${phone},deliver_to_phone.eq.${phone}`)
+    .or(or)
+    .limit(1);
+
+  if (((found ?? []) as unknown[]).length > 0) {
+    await db()
+      .from("customers")
+      .update({ pin_fail_count: 0, pin_locked_until: null })
+      .eq("phone", phone);
+    return { ok: true };
+  }
+
+  const failures = (data.pin_fail_count ?? 0) + 1;
+  await db()
+    .from("customers")
+    .update({
+      pin_fail_count: failures,
+      pin_locked_until:
+        failures >= MAX_FAILURES
+          ? new Date(Date.now() + LOCK_MINUTES * 60_000).toISOString()
+          : null,
+    })
+    .eq("phone", phone);
+
+  return {
+    ok: false,
+    error: "That order number is not on this phone number.",
+  };
+}
+
+/**
  * The same signed value the cookie carries, as a bearer token for the app.
  *
  * A phone app has no cookie jar worth the name, so it keeps this string and

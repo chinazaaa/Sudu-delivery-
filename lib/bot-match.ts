@@ -934,6 +934,13 @@ export type Intent =
   | "vague-order"
   /** A question, a complaint, or a refund: somebody with something to say. */
   | "question"
+  /**
+   * Where is my order.
+   *
+   * The most asked thing after what delivery costs, and the one the chat
+   * used to answer by pointing at another page. It knows the answer.
+   */
+  | "mine"
   /** What delivery costs, which is the single most asked thing. */
   | "fees"
   /** What there is, rather than which one of it. */
@@ -1035,6 +1042,32 @@ export function intentOf(said: string): Intent {
      pattern about not knowing something then has to carry it. */
   const flat = knit(flatten(said));
   if (flat === "") return "";
+
+  /*
+   * "Where is my order."
+   *
+   * Before the complaint case, because "my order has not arrived" carries
+   * neither of those words but is plainly this, and before the fees case,
+   * because "where is my delivery" carries the word delivery and is not a
+   * question about the price of one.
+   *
+   * It has to be about theirs. "Where do you deliver" is a question about
+   * the shop and already has a written answer; "my" or "I" is what makes
+   * it about the person asking. An order number works instead, because
+   * somebody who types one is holding a receipt.
+   */
+  if (
+    /\b(my|mine|our|i)\b/.test(flat) || /#?\b\d{4}\b/.test(flat)
+  ) {
+    if (
+      /\b(where|wheres|track|tracking|status|update|arrived|arriving|coming|come|delayed|late|eta|how far|still waiting|not here|hasnt arrived|has not arrived|didnt arrive|did not arrive)\b/.test(
+        flat
+      ) &&
+      /\b(order|orders|food|delivery|deliveries|package|parcel|stuff|things|items)\b/.test(flat)
+    ) {
+      return "mine";
+    }
+  }
 
   if (
     /\b(enquiry|enquiries|enquire|inquiry|inquiries|inquire|complaint|complaints|complain|question|questions|refund|refunds|refunded|my money back)\b/.test(

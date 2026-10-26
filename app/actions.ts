@@ -131,6 +131,22 @@ export async function submitOrder(
 
   if (!result.ok) return { error: result.error };
 
+  /*
+   * This device now knows whose it is.
+   *
+   * Placing an order proves the number as well as any PIN does: the person
+   * holding the phone typed it, got the order, and is about to be asked to
+   * pay for it. Without this they were a stranger to the site the moment
+   * they left the order page, so "where is my order" in the chat had to
+   * start by asking who they were, and the only way to get a PIN is to
+   * message a person, which is not self-serve at all.
+   *
+   * Never the only thing that proves it. The PIN still exists for a new
+   * phone, a cleared browser, or somebody checking from a laptop.
+   */
+  const theirs = normalisePhone(String(form.get("phone") ?? ""));
+  if (theirs) await signInCustomer(theirs).catch(() => {});
+
   // In a shared delivery the next thing that matters is the group filling up,
   // not this one order: there is no total to pay yet. So they land on the
   // board, with their own order marked so it knows which of them they are.

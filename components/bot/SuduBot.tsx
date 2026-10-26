@@ -683,6 +683,178 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     []
   );
 
+  /**
+   * "Where is my order?"
+   *
+   * The most asked thing after what delivery costs, and until now the chat
+   * answered it with directions: open this other page, sign in there, come
+   * back. The chat knows.
+   *
+   * Two ways in and no third. This device, when placing an order has
+   * already proved whose it is, which covers most people because most
+   * people check on the phone they ordered on. Otherwise the number and
+   * the PIN, the same two things the orders page asks for.
+   *
+   * Nothing is ever sent to anybody to make this work. There is no way to
+   * text a PIN, so a chat offering to would be promising somebody's
+   * evening work as though it were automatic. Without a PIN it hands over
+   * to a person, which is what actually happens today.
+   *
+   * It never answers on a number alone. This box sits on a public page and
+   * anybody can type anybody's number into it; the answer names a hostel
+   * and an hour, which is where a particular student will be standing and
+   * when. The same reason `known` answers yes or no and nothing else.
+   */
+  const whereIsMine = useCallback(
+    async (phone?: string, pin?: string, ref?: string): Promise<void> => {
+      const got = await working(
+        "Looking it up\u2026",
+        fetch("/api/bot/mine", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone: phone ?? "",
+            pin: pin ?? "",
+            ref: ref ?? "",
+          }),
+        })
+          .then((one) => one.json())
+          .catch(() => null)
+      );
+
+      if (!got || got.error === "lookup failed") {
+        bot("I could not reach the orders just now. A person can, though.", 460);
+        setAsk({
+          of: "buttons",
+          buttons: [
+            { said: "Ask on WhatsApp", look: "green", href: handOver("Where is my order?") },
+          ],
+        });
+        return;
+      }
+
+      if (got.need === "phone") {
+        bot("Of course. What number did you order on?", 460);
+        setAsk({
+          of: "text",
+          placeholder: "e.g. 0803 123 4567",
+          type: "tel",
+          onSay: (then) => {
+            me(then);
+            void whereIsMine(then);
+          },
+        });
+        return;
+      }
+
+      // The order number was wrong, or the number is locked after too many
+      // tries. Asked again rather than started again.
+      if (got.need === "ref") {
+        bot(got.error || "That order number is not on this number.", 440);
+        setAsk({
+          of: "text",
+          placeholder: "e.g. 1061",
+          onSay: (then) => {
+            me(then);
+            void whereIsMine(phone, undefined, then);
+          },
+          lead: {
+            said: "Ask a person instead",
+            go: () => {
+              window.location.href = handOver("I cannot get into my order.");
+            },
+          },
+        });
+        return;
+      }
+
+      if (got.need === "pin") {
+        if (got.error) bot(got.error, 420);
+        else {
+          bot(
+            "And your four digit PIN. It came on WhatsApp with your first order.",
+            460
+          );
+        }
+        setAsk({
+          of: "text",
+          placeholder: "4 digits",
+          onSay: (then) => {
+            me(then);
+            void whereIsMine(phone, then);
+          },
+          /*
+           * Nobody is sent anywhere for a forgotten PIN.
+           *
+           * Nothing here can text one, so "we will send it" would be a
+           * person's evening dressed up as automatic. The order number is
+           * on their receipt and is a question they can answer now.
+           */
+          lead: {
+            said: "I do not know my PIN",
+            go: () => {
+              me("I do not know my PIN");
+              bot(
+                "No trouble. What is the order number? It is on the order, like 1061.",
+                460
+              );
+              setAsk({
+                of: "text",
+                placeholder: "e.g. 1061",
+                onSay: (then) => {
+                  me(then);
+                  void whereIsMine(phone, undefined, then);
+                },
+              });
+            },
+          },
+        });
+        return;
+      }
+
+      const orders = (got.orders ?? []) as {
+        ref: string;
+        href: string;
+        total: number;
+        paid: boolean;
+        stage: string;
+        when: string;
+        runDate: string;
+        hostel: string;
+        live: boolean;
+      }[];
+
+      if (orders.length === 0) {
+        bot("Nothing on that number yet. Shall we fix that?", 460);
+        askOrderRef.current?.(true);
+        return;
+      }
+
+      for (const order of orders) {
+        const money = `${order.ref}, ${naira(order.total)}`;
+        const where = order.paid
+          ? `${order.stage || "Paid"}. ${order.when}${
+              order.hostel ? `, to ${order.hostel}` : ""
+            }.`
+          : "Not paid for yet, so it is not on the car. The order page has the account to pay into.";
+        bot(`${money}. ${where}`, 480);
+      }
+
+      setAsk({
+        of: "buttons",
+        buttons: [
+          { said: "Open my order", href: orders[0].href },
+          {
+            said: "Something is wrong with it",
+            look: "green",
+            href: handOver(`Something is wrong with ${orders[0].ref}.`),
+          },
+        ],
+      });
+    },
+    [bot, me, working, handOver]
+  );
+
   const sayFaq = useCallback(
     /**
      * @param after where to go once the answer has been given. The order
@@ -1137,6 +1309,19 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           // is how "which restaurants" got answered with "Ibeju-Lekki".
           sayFaq(said, undefined, meant === "menu")
         ) {
+          return;
+        }
+
+        /*
+         * Their own order, which the chat can simply answer.
+         *
+         * Before the question case, because "where is my order" is a
+         * question and used to be handed to a person along with every
+         * other one. It is the most asked thing after what delivery
+         * costs, and the chat knows the answer.
+         */
+        if (meant === "mine") {
+          void whereIsMine();
           return;
         }
 
