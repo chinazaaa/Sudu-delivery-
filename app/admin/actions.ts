@@ -1893,10 +1893,12 @@ export async function addMenuItem(form: FormData): Promise<void> {
   const price = Number(form.get("price_food"));
   if (!name || !Number.isFinite(price) || price < 0) return;
 
+  const restaurantId = String(form.get("restaurant_id"));
   await db().from("menu_items").insert({
-    restaurant_id: String(form.get("restaurant_id")),
+    restaurant_id: restaurantId,
     category_id: String(form.get("category_id") ?? "") || null,
     name,
+    slug: (await freeItemSlug(restaurantId, name)) || null,
     price_food: Math.round(price),
     description: String(form.get("description") ?? "").trim(),
     image_url:
@@ -1927,6 +1929,7 @@ export async function createFullItem(form: FormData): Promise<void> {
       restaurant_id: restaurantId,
       category_id: String(form.get("category_id") ?? "") || null,
       name,
+      slug: (await freeItemSlug(restaurantId, name)) || null,
       price_food: Math.round(price),
       description: String(form.get("description") ?? "").trim(),
       image_url:
@@ -3878,6 +3881,45 @@ async function freeSlug(name: string): Promise<string> {
   return "";
 }
 
+/**
+ * A dish's own readable link, with the kitchen's name in front of it.
+ *
+ * Same shape the migration made: the counter, then the dish, so a link reads
+ * dominos-pepperoni-pizza and says where the food comes from. Without this,
+ * an item added from here is only ever reachable as a uuid, which is neither
+ * a thing anybody pastes into a group chat nor a thing a search engine can
+ * read a word of.
+ *
+ * Empty when there is nothing to make one out of, and empty is fine: the
+ * page falls back to the uuid, exactly as it did for everything.
+ */
+async function freeItemSlug(restaurantId: string, name: string): Promise<string> {
+  const { data: shop } = await db()
+    .from("restaurants")
+    .select("name, slug")
+    .eq("id", restaurantId)
+    .maybeSingle();
+  const place = shop as { name?: string; slug?: string | null } | null;
+  if (!place) return "";
+
+  const base = slugFor(`${place.slug || place.name || ""} ${name}`).slice(0, 90);
+  if (base === "") return "";
+
+  const { data } = await db()
+    .from("menu_items")
+    .select("slug")
+    .like("slug", `${base}%`);
+  const taken = new Set(
+    ((data ?? []) as { slug?: string | null }[]).map((one) => one.slug ?? "")
+  );
+
+  if (!taken.has(base)) return base;
+  for (let at = 2; at < 200; at += 1) {
+    if (!taken.has(`${base}-${at}`)) return `${base}-${at}`;
+  }
+  return "";
+}
+
 export async function addRestaurant(form: FormData): Promise<void> {
   await assertAdmin();
   const name = String(form.get("name") ?? "").trim();
@@ -4332,6 +4374,7 @@ export async function importMenu(form: FormData): Promise<void> {
       restaurant_id: restaurantId,
       category_id: categoryId,
       name: item.name,
+      slug: (await freeItemSlug(restaurantId, item.name)) || null,
       price_food: item.price,
       description: item.description,
       // Unpriced or sold-out items are created but hidden, so nobody can order

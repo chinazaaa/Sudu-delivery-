@@ -82,6 +82,7 @@ async function readMenu(): Promise<MenuView[]> {
       .map(
         (i): ItemView => ({
           id: i.id,
+          href: i.slug || i.id,
           name: i.name,
           price: i.price_food,
           available: i.available,
@@ -369,6 +370,7 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
     items: menuItems.map(
       (i): ItemView => ({
         id: i.id,
+        href: i.slug || i.id,
         name: i.name,
         price: i.price_food,
         available: i.available,

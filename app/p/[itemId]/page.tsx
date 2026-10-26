@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import AddToCart from "@/components/AddToCart";
 
 import Thumb from "@/components/Thumb";
@@ -15,6 +15,11 @@ import { saidAbout } from "@/lib/product-said";
 import { deliveryIn, returnsPolicy } from "@/lib/offer-shipping";
 
 export const dynamic = "force-dynamic";
+
+/** Whether this is the thing that was asked for, by its name or by the uuid
+ *  every link sent before the names existed still says. */
+const isIt = (item: { id: string; href: string }, ref: string) =>
+  item.href === ref || item.id === ref;
 
 /**
  * What this thing is, in a sentence, for anywhere a sentence is needed.
@@ -32,8 +37,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { itemId } = await params;
   const menu = await menuView();
-  const place = menu.find((m) => m.items.some((i) => i.id === itemId));
-  const item = place?.items.find((i) => i.id === itemId);
+  const place = menu.find((m) => m.items.some((i) => isIt(i, itemId)));
+  const item = place?.items.find((i) => isIt(i, itemId));
   if (!place || !item) return {};
 
   const filed = place.categories.find((one) => one.id === item.categoryId);
@@ -41,7 +46,10 @@ export async function generateMetadata({
   return {
     title: `${item.name} from ${place.restaurant.name}`,
     description: saidAbout(item, place.restaurant.name),
-    alternates: { canonical: `/p/${item.id}` },
+    // The readable address, never the uuid, even when the uuid is what was
+    // typed: two addresses for one page split what the page is worth, and
+    // the one with the dish's name in it is the one worth having.
+    alternates: { canonical: `/p/${item.href}` },
     // A pot of sauce is bought alongside a dish, never looked for. The page
     // stays, because the menu links to it; it is just not offered up.
     robots: isExtra(filed?.name) ? { index: false, follow: true } : undefined,
@@ -72,9 +80,25 @@ export default async function ProductPage({
     valueBandsOfEach(),
   ]);
 
-  const place = menu.find((m) => m.items.some((i) => i.id === itemId));
-  const item = place?.items.find((i) => i.id === itemId);
+  const place = menu.find((m) => m.items.some((i) => isIt(i, itemId)));
+  const item = place?.items.find((i) => isIt(i, itemId));
   if (!place || !item) notFound();
+
+  /*
+   * One page, one address.
+   *
+   * A dish answers to its uuid as well as its name, because every link ever
+   * sent on WhatsApp says the uuid and none of them may break. This sends
+   * the old one to the address the rest of the site uses, carrying the cart
+   * line along so a tap from the basket still lands on the right choices.
+   *
+   * Only when there is a name to send it to: without a slug the href is the
+   * uuid, and redirecting the uuid to itself is a loop.
+   */
+  if (item.href !== itemId) {
+    const line = editingKey === "" ? "" : `?line=${encodeURIComponent(editingKey)}`;
+    permanentRedirect(`/p/${item.href}${line}`);
+  }
 
   const alsoFrom = place.items.filter((i) => i.id !== item.id).slice(0, 6);
   const category = place.categories.find((c) => c.id === item.categoryId);
@@ -181,7 +205,7 @@ export default async function ProductPage({
             {alsoFrom.map((other) => (
               <Link
                 key={other.id}
-                href={`/p/${other.id}`}
+                href={`/p/${other.href}`}
                 className="w-40 shrink-0 overflow-hidden rounded-2xl bg-paper shadow-card"
               >
                 <span className="block h-28">

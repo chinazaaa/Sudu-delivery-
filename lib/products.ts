@@ -24,6 +24,10 @@ export const PER_PAGE = 24;
 
 export type Product = {
   id: string;
+  /** This thing's own readable address: /p/dominos-pepperoni-pizza. The
+   *  uuid where there is no name to use, which is the skincare and pharmacy
+   *  shelves and nothing else. */
+  href: string;
   name: string;
   description: string;
   price: number;
@@ -250,6 +254,7 @@ export async function browseProducts(
       const place = byId.get(one.restaurant_id);
       return {
         id: one.id,
+        href: one.slug || one.id,
         name: one.name,
         description: one.description ?? "",
         price: one.price_food,

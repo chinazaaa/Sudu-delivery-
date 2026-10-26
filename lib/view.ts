@@ -34,6 +34,10 @@ export type MenuView = {
 
 export type ItemView = {
   id: string;
+  /** The half of its link anybody can read, falling back to the id where
+   *  there is no name to use. Same shape as a restaurant's href, for the
+   *  same reason. */
+  href: string;
   name: string;
   price: number;
   available: boolean;

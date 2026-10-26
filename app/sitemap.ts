@@ -145,14 +145,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .map((one) => one.id)
     );
 
-    const items = (
-      await everyRow<{ id: string; category_id: string | null }>((from, to) =>
+    // The name as well as the id, because the name is the address the rest
+    // of the site links to now and a sitemap that disagrees with every link
+    // on the site splits what each of them is worth. The slug column is
+    // newer than some databases, so ask for it and fall back rather than
+    // letting one missing field empty the whole sitemap.
+    type Row = { id: string; slug?: string | null; category_id: string | null };
+    const readItems = (columns: string) =>
+      everyRow<Row>((from, to) =>
         db()
           .from("menu_items")
-          .select("id, category_id")
+          .select(columns)
           .in("restaurant_id", ids)
           .order("id")
           .range(from, to)
+      );
+
+    const items = (
+      await readItems("id, slug, category_id").catch(() =>
+        readItems("id, category_id")
       )
     ).filter((item) => !(item.category_id && extras.has(item.category_id)));
 
@@ -242,7 +253,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.8,
       })),
       ...items.map((item) => ({
-        url: `${site}/p/${item.id}`,
+        url: `${site}/p/${item.slug || item.id}`,
         changeFrequency: "weekly" as const,
         priority: 0.5,
       })),

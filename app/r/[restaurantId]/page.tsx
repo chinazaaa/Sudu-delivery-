@@ -205,7 +205,7 @@ export default async function RestaurantPage({
                do not disagree about the same dish. */
             description: saidAbout(item, place.restaurant.name),
             image: photoOf(item, place.restaurant),
-            url: `${site}/p/${item.id}`,
+            url: `${site}/p/${item.href}`,
             brand: { "@type": "Brand", name: place.restaurant.name },
             offers: {
               "@type": "Offer",

@@ -28,6 +28,7 @@ import { weekAround } from "../lib/time";
 import { monthOf, nextMonth } from "../lib/standing";
 import { googleTagId, instagramLink, numberOr, shopEmails, xLink } from "../lib/settings";
 import { isExtra } from "../lib/shelf";
+import { shelfSeo } from "../lib/shelf-seo";
 import { emptyAndDone } from "../lib/batches";
 import { stillAGuess } from "../lib/profit";
 import { pauseAfter, waitLeft, waitSaid } from "../lib/admin-gate";
@@ -7148,4 +7149,53 @@ test("what to suggest instead is about the same food, not the first four", () =>
 
   // A shop with nothing but shelves suggests nobody rather than a stall.
   assert.deepEqual(botInsteadOf("pizza hut", [{ id: "s", name: "Sudu Shop" }]), []);
+});
+
+test("a shelf page says which shelf it is, and only a real one", () => {
+  const facets = {
+    shelves: [{ name: "Cleansers" }, { name: "Korean Skin Care" }],
+    brands: [{ name: "CeraVe" }],
+  };
+  const seo = (asked: Record<string, string>) =>
+    shelfSeo({ path: "/skincare", shopName: "Skincare", asked, facets });
+
+  // The bare counter keeps the card its layout writes.
+  assert.equal(seo({}).title, null);
+  assert.equal(seo({}).canonical, "/skincare");
+
+  // A real shelf is a page of its own, and says so.
+  const cleansers = seo({ shelf: "Cleansers" });
+  assert.equal(cleansers.canonical, "/skincare?shelf=Cleansers");
+  assert.ok(cleansers.title?.startsWith("Cleansers"));
+  assert.equal(cleansers.noindex, false);
+
+  // Spelled however they typed it, answered as the shop spells it.
+  assert.equal(seo({ shelf: "cleansers" }).canonical, "/skincare?shelf=Cleansers");
+
+  // A space in the name survives the round trip.
+  assert.equal(
+    seo({ shelf: "Korean Skin Care" }).canonical,
+    "/skincare?shelf=Korean%20Skin%20Care"
+  );
+
+  // A brand is the half people search for, so it wins over the shelf.
+  assert.equal(
+    seo({ shelf: "Cleansers", brand: "CeraVe" }).canonical,
+    "/skincare?brand=CeraVe"
+  );
+
+  // A shelf nobody has: the same page, not a page of its own.
+  assert.equal(seo({ shelf: "Nonsense" }).canonical, "/skincare");
+
+  // Sorting and paging are the same shelf in a different order.
+  assert.equal(
+    seo({ shelf: "Cleansers", sort: "cheap", page: "3" }).canonical,
+    "/skincare?shelf=Cleansers"
+  );
+  assert.equal(seo({ sort: "cheap" }).canonical, "/skincare");
+
+  // A search somebody typed is never a page worth listing.
+  const searched = seo({ q: "cerave" });
+  assert.equal(searched.noindex, true);
+  assert.equal(searched.canonical, "/skincare");
 });

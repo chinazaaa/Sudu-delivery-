@@ -91,6 +91,13 @@ export type ItemOption = {
 export type MenuItem = {
   id: string;
   restaurant_id: string;
+  /** The readable half of a link: /p/dominos-pepperoni-pizza. The kitchen's
+   *  name is in front of the dish because a link saying where the food comes
+   *  from is half of what somebody searching wants to know, and because
+   *  "Coke" is on nine menus. Empty on a database that has not had the
+   *  migration run, and on skincare and pharmacy, which are browsed by shelf
+   *  rather than one product at a time. */
+  slug?: string | null;
   name: string;
   price_food: number;
   /** What it costs at the counter, before the shop's markup. Null means

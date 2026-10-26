@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { safeSettings } from "@/lib/settings";
@@ -17,6 +18,7 @@ import {
 import { naira } from "@/lib/money";
 import { deliverySlots } from "@/lib/same-day";
 import { hoursByDay, sameDayPricing } from "@/lib/settings";
+import { shelfSeo } from "@/lib/shelf-seo";
 import Shelf from "@/components/Shelf";
 import ShelfBar from "@/components/ShelfBar";
 
@@ -36,18 +38,57 @@ export const dynamic = "force-dynamic";
  * what to take. It says it here, it says it again at checkout, and the
  * terms say it at length.
  */
+/**
+ * A shelf's own title and its own address.
+ *
+ * Written here rather than in the layout because a layout cannot see what
+ * was asked for, and the thing worth saying about this page is which shelf
+ * or whose brand it is showing. See lib/shelf-seo.ts: a hundred and eighty
+ * of these addresses are in the sitemap, and until now every one of them
+ * told Google it was a copy of the bare counter.
+ */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<Asked>;
+}): Promise<Metadata> {
+  const asked = await searchParams;
+  const [shop, facets] = await Promise.all([
+    pharmacyShop().catch(() => null),
+    pharmacyFacets().catch(() => ({ shelves: [], brands: [] })),
+  ]);
+
+  const seo = shelfSeo({
+    path: "/pharmacy",
+    shopName: shop?.name ?? "Pharmacy",
+    asked,
+    facets,
+  });
+
+  return {
+    // Null leaves the layout's own card alone, which is what the bare
+    // counter wants: that one is written by hand.
+    ...(seo.title ? { title: seo.title, description: seo.description ?? undefined } : {}),
+    alternates: { canonical: seo.canonical },
+    robots: seo.noindex ? { index: false, follow: false } : undefined,
+  };
+}
+
+/** What the filters above the shelf put in the address. */
+type Asked = {
+  shelf?: string;
+  brand?: string;
+  q?: string;
+  sort?: string;
+  under?: string;
+  over?: string;
+  page?: string;
+};
+
 export default async function PharmacyPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    shelf?: string;
-    brand?: string;
-    q?: string;
-    sort?: string;
-    under?: string;
-    over?: string;
-    page?: string;
-  }>;
+  searchParams: Promise<Asked>;
 }) {
   const settings = await safeSettings();
   const shop = await pharmacyShop();

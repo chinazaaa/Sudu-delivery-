@@ -37,7 +37,22 @@ export async function generateMetadata({
       "Pan-Atlantic University. Search by dish, filter by restaurant, one " +
       "delivery for the lot.",
     alternates: { canonical: query === "" ? "/products" : `/products?${query}` },
-    robots: asked.q ? { index: false, follow: true } : undefined,
+    /*
+     * A search nobody should follow out of.
+     *
+     * This page was noindex and follow, which asks a search engine not to
+     * list the page and then invites it to walk every link on it. Each of
+     * those links carries the query along, so one crawled search becomes a
+     * restaurant times a category times a sort order: three hundred and
+     * twenty six addresses crawled, every one of them noindex, on a shop
+     * where real dish pages are still waiting to be crawled for the first
+     * time.
+     *
+     * So a typed search is a dead end now. Nothing is lost by it: every
+     * restaurant, every aisle and every dish is reachable from the menu and
+     * listed in the sitemap, which is where that crawling belongs.
+     */
+    robots: asked.q ? { index: false, follow: false } : undefined,
   };
 }
 
@@ -152,6 +167,7 @@ export default async function ProductsPage({
     category: one.category,
     item: {
       id: one.id,
+      href: one.href,
       name: one.name,
       price: one.price,
       available: true,
