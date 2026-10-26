@@ -81,7 +81,11 @@ export type RunOnOffer = {
   closes: string;
 };
 
-export type CarOnOffer = { date: string };
+export type CarOnOffer = {
+  date: string;
+  /** "between 4pm and 7pm", off the hours admin set for that day. */
+  window?: string;
+};
 
 /** The next date on or after today that falls on this weekday. */
 export function nextOn(weekday: number, today: string): string {
@@ -145,8 +149,17 @@ export function sayWhen(args: {
   const onARunDay = (run: RunOnOffer, word: string) =>
     `Yes, ${word}, ${lower(run.window)}. Orders close ${run.closes}.${from(feeFrom)}`;
 
-  const onACarDay = (word: string) =>
-    `Yes, ${word}. You pick the time at the checkout.${from(carFrom)}`;
+  /*
+   * A day the shop is not already driving.
+   *
+   * Said exactly like any other day, because to the person asking it is
+   * one: a window and a price. They do not pick a time, they pick a day,
+   * and the window comes off the hours admin set for it.
+   */
+  const onACarDay = (word: string, window: string) =>
+    window === ""
+      ? `Yes, ${word}.${from(carFrom)}`
+      : `Yes, ${word}, ${lower(window)}.${from(carFrom)}`;
 
   const soonestRun = [...runs].sort((a, b) => a.runDate.localeCompare(b.runDate))[0];
   const soonestCar = [...cars].sort((a, b) => a.date.localeCompare(b.date))[0];
@@ -162,7 +175,8 @@ export function sayWhen(args: {
     }
     if (soonestCar) {
       const word = whichDay(soonestCar.date, today);
-      return `We are delivering ${word}. You pick the time at the checkout.${from(carFrom)}`;
+      const when = soonestCar.window ? `, ${lower(soonestCar.window)}` : "";
+      return `We are delivering ${word}${when}.${from(carFrom)}`;
     }
     return "";
   }
@@ -179,7 +193,8 @@ export function sayWhen(args: {
 
   const run = runs.find((one) => one.runDate === date);
   if (run) return onARunDay(run, word);
-  if (cars.some((car) => car.date === date)) return onACarDay(word);
+  const car = cars.find((one) => one.date === date);
+  if (car) return onACarDay(word, car.window ?? "");
 
   // Nothing that day. What is next beats a flat no.
   const after = [...runs, ...cars.map((car) => ({ ...car, runDate: car.date }))]

@@ -6841,7 +6841,12 @@ test("the chat answers questions about which days it delivers", () => {
       closes: "4:30 pm",
     },
   ];
-  const cars = [{ date: "2026-10-25" }, { date: "2026-10-26" }];
+  // The window comes off the hours admin set for that day. Nobody picks a
+  // time: they pick a day, and this is when it lands.
+  const cars = [
+    { date: "2026-10-25", window: "Between 4pm and 7pm" },
+    { date: "2026-10-26", window: "Between 12pm and 3pm" },
+  ];
   const money = (amount: number) => `N${amount}`;
   const shop = {
     runs,
@@ -6886,12 +6891,15 @@ test("the chat answers questions about which days it delivers", () => {
 
   // Soonest first, and today beats a cheaper Wednesday: "when do you
   // deliver next" is a question about time.
-  assert.match(next, /^We are delivering today\./);
-
-  // Today has no run, so it is a day they pick the time on.
-  assert.match(now, /^Yes, today\./);
-  assert.match(now, /pick the time at the checkout/);
+  /*
+   * A day the shop is not already driving reads exactly like one it is:
+   * a window and a price. Nobody is asked to pick a time.
+   */
+  assert.match(now, /^Yes, today, between 4pm and 7pm\./);
   assert.match(now, /starts at N6500/);
+  assert.ok(!/pick the time/.test(now), now);
+
+  assert.match(next, /^We are delivering today, between 4pm and 7pm\./);
 
   // Wednesday is a day the shop is already driving: the window and the
   // cut-off, at the cheaper floor.

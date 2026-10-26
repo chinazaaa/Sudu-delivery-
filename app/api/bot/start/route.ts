@@ -190,6 +190,11 @@ export async function GET(): Promise<NextResponse> {
             at: slot.at,
             label: slot.label,
             phrase: slot.phrase,
+            /* The hours on their own, "between 4pm and 7pm", so the chat
+               can say when a day lands the same way it says it for any
+               other day. Nobody picks a time: they pick a day and the
+               window comes off the hours admin set. */
+            window: slot.window,
             day: slot.day,
             date: slot.date,
             /* Going out within the hour costs extra on the same day
