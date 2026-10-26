@@ -17,6 +17,7 @@ import {
   lineLike,
   splitOrder,
   intentOf,
+  kitchenAsked,
   looksLikeAQuestion,
   namedIn,
   without,
@@ -1346,6 +1347,30 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
          * is written in admin. Only where there is one: with nothing
          * written, each of these still has a sensible next question.
          */
+        /*
+         * "Can I order from Domino's?"
+         *
+         * Yes, and then the next question. It used to be answered with a
+         * yes and a full stop, or worse, with a written line about the
+         * menu in general, and somebody who had just told the chat
+         * exactly what they wanted had to start again. Whoever asks this
+         * is asking because they want to order from them.
+         */
+        const askedAbout = kitchenAsked(said, startRef.current?.kitchens ?? []);
+        if (askedAbout) {
+          const kitchen = (startRef.current?.kitchens ?? []).find(
+            (one) => one.id === askedAbout.id
+          );
+          if (kitchen) {
+            /* The question that follows names them, so this does not:
+               the name twice in two lines reads as a machine. */
+            bot("Yes, of course.", 420);
+            queue.current = [kitchen];
+            askOrderRef.current?.();
+            return;
+          }
+        }
+
         // Before the written answers, for the same reason as above.
         if (sayWhichDays(said)) return;
 

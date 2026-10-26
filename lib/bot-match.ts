@@ -1036,6 +1036,49 @@ const FILLER = new Set([
  * because "I want lunch" is a sentence about wanting lunch, and nothing on
  * the menu is called it.
  */
+/**
+ * "Can I order from Domino's?"
+ *
+ * A question about whether a kitchen is on, which deserves a yes and then
+ * the next question, rather than a yes and a full stop. Somebody who asks
+ * this is somebody who wants to order from them, so the answer ends by
+ * asking what they would like.
+ *
+ * Only a question. "2 dodo pizza" names a kitchen too and is an order, not
+ * an enquiry, and sending it here would make somebody type their order
+ * twice. So the sentence has to be asking, and it has to carry no count.
+ *
+ * Returns the kitchen it is about, or null.
+ */
+export function kitchenAsked(
+  said: string,
+  kitchens: { id: string; name: string }[]
+): { id: string; name: string } | null {
+  if (kitchens.length === 0) return null;
+  const flat = knit(flatten(said));
+  if (flat === "") return null;
+
+  // Asking rather than ordering.
+  const asking =
+    /\b(can|could|do|does|are|is|have|got|possible|able)\b/.test(flat) ||
+    /\?/.test(said);
+  if (!asking) return null;
+
+  // A count turns it into an order, and an order already has somewhere
+  // better to go.
+  if (/\b\d+\b/.test(flat)) return null;
+  if (/\b(one|two|three|four|five|six|seven|eight|nine|ten)\b/.test(flat)) {
+    return null;
+  }
+
+  const found = namedIn(said, kitchens);
+  // Exactly one. Two named kitchens is a comparison, which is a different
+  // conversation and a worse thing to guess at.
+  if (found.length !== 1) return null;
+
+  return found[0];
+}
+
 export function intentOf(said: string): Intent {
   /* The apostrophes put back, so "I don't know" is the same sentence as
      "I dont know". Flattening alone leaves an orphaned t, and every

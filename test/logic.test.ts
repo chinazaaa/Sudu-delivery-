@@ -220,6 +220,7 @@ import {
   asksForQty as botAsksForQty,
   splitOrder as botSplitOrder,
   intentOf as botIntentOf,
+  kitchenAsked as botKitchenAsked,
   basketLines,
   looksLikeAQuestion as botLooksLikeAQuestion,
   nameIn as botNameIn,
@@ -6948,4 +6949,39 @@ test("the chat counts days the way a calendar does", () => {
   assert.equal(nextOn(0, "2026-10-25"), "2026-10-25");
   assert.equal(nextOn(1, "2026-10-25"), "2026-10-26");
   assert.equal(nextOn(6, "2026-10-25"), "2026-10-31");
+});
+
+test("asking whether a kitchen is on gets a yes and the next question", () => {
+  const kitchens = [
+    { id: "d", name: "Domino's Pizza" },
+    { id: "c", name: "Chicken Republic" },
+    { id: "b", name: "Burger King" },
+  ];
+  const asked = (said: string) => botKitchenAsked(said, kitchens);
+
+  // The question this exists for, in the shapes people type it.
+  assert.equal(asked("can i order from dominos")?.id, "d");
+  assert.equal(asked("Can I order from Domino's?")?.id, "d");
+  assert.equal(asked("do you have chicken republic")?.id, "c");
+  assert.equal(asked("is burger king available")?.id, "b");
+  assert.equal(asked("do you deliver from dominos")?.id, "d");
+
+  /*
+   * An order is not an enquiry.
+   *
+   * "2 dodo pizza" names a kitchen and is somebody ordering. Sent here it
+   * would be answered with "yes, what would you like", and they would
+   * have to type it a second time.
+   */
+  assert.equal(asked("2 dominos pizza"), null);
+  assert.equal(asked("two chicken republic wraps"), null);
+  assert.equal(asked("dominos pepperoni"), null);
+
+  // Two kitchens is a comparison, which is a different conversation.
+  assert.equal(asked("dominos or burger king?"), null);
+
+  // Nothing named, nothing to answer.
+  assert.equal(asked("can i order"), null);
+  assert.equal(asked("can i order from pizza hut"), null);
+  assert.equal(botKitchenAsked("can i order from dominos", []), null);
 });
