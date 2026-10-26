@@ -57,16 +57,37 @@ export default async function HomePage() {
     activeBands(),
   ]);
   const sameDayOn = settings.same_day_on === "on";
-  // Today's times go while somebody is out driving tonight's run: one
-  // driver cannot do both. Tomorrow's stay. See lib/one-driver.ts.
-  const slots = sameDayOn
-    ? await carsOnOffer(
-        slotsWorthOffering(
-          deliverySlots(new Date(), await hoursByDay()),
-          batches.map((one) => ({ run_date: one.run_date, window: one.delivery_window_text }))
+
+  /*
+   * The windows and the shelves, together.
+   *
+   * Both only want the settings and the runs, which the wave above has
+   * already fetched, and neither wants anything from the other. Asked one
+   * after the next they were two lots of latency on the page every single
+   * visitor waits for.
+   *
+   * Today's times go while somebody is out driving tonight's run: one
+   * driver cannot do both. Tomorrow's stay. See lib/one-driver.ts.
+   */
+  const [slots, packed, skincareShelf, pharmacyShelf, quotes] = await Promise.all([
+    sameDayOn
+      ? hoursByDay().then((hours) =>
+          carsOnOffer(
+            slotsWorthOffering(
+              deliverySlots(new Date(), hours),
+              batches.map((one) => ({
+                run_date: one.run_date,
+                window: one.delivery_window_text,
+              }))
+            )
+          )
         )
-      )
-    : [];
+      : Promise.resolve([]),
+    liveOccasions(),
+    skincareOn(settings) ? skincareShop() : Promise.resolve(null),
+    pharmacyOn(settings) ? pharmacyShop() : Promise.resolve(null),
+    shownSays(settings.google_quotes),
+  ]);
 
   /*
    * The menu without its choices.
@@ -131,12 +152,6 @@ export default async function HomePage() {
    * fetched together. Where they are used has nothing to do with when they
    * have to be asked for.
    */
-  const [packed, skincareShelf, pharmacyShelf, quotes] = await Promise.all([
-    liveOccasions(),
-    skincareOn(settings) ? skincareShop() : Promise.resolve(null),
-    pharmacyOn(settings) ? pharmacyShop() : Promise.resolve(null),
-    shownSays(settings.google_quotes),
-  ]);
   const packedBoxes = await boxesAcross(packed.map((one) => one.id));
   // Together, because neither needs the other and this page is the one
   // thing every visitor waits for. A photograph of the best thing on each
