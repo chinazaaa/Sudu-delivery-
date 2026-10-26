@@ -8,7 +8,7 @@ import { lastOrderForPhone, perkFor, type LinkPerk } from "@/lib/orders";
 import { accountNumber, normalisePhone } from "@/lib/phone";
 import { cameFromNow, linkCouponNow } from "@/lib/where-from";
 import { tidyChannel } from "@/lib/came-from";
-import { rememberCart, type CartBasket } from "@/lib/carts";
+import { forgetCart, rememberCart, type CartBasket } from "@/lib/carts";
 import { countCheckoutLinkUse, getCheckoutLink } from "@/lib/checkout-links";
 import { arrivalNow } from "@/lib/arrival-server";
 import { OPENED, sprung, tooFast, TRAP } from "@/lib/guard";
@@ -178,7 +178,15 @@ export async function keepCart(form: FormData): Promise<void> {
   if (!phone) return;
 
   const items = Number(form.get("items") ?? 0);
-  if (!Number.isFinite(items) || items <= 0) return;
+  if (!Number.isFinite(items)) return;
+
+  // An emptied cart is a thing that happened, not a save to skip. Ignored,
+  // the last full snapshot stayed where it was and was chased an hour later
+  // about food somebody had deliberately taken out.
+  if (items <= 0) {
+    await forgetCart(phone, String(form.get("batch_id") ?? "") || null);
+    return;
+  }
 
   await rememberCart({
     phone,

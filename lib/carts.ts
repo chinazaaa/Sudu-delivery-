@@ -130,6 +130,41 @@ export async function rememberCart(cart: {
 }
 
 /**
+ * They took everything out of it, so there is nothing to chase.
+ *
+ * Emptying a cart used to say nothing at all: the browser stopped saving
+ * the moment the last item went, so the last full snapshot sat there with
+ * its old timestamp and aged into a "left behind" alert. Somebody who had
+ * deliberately cleared their cart got chased about the food they had just
+ * decided against.
+ *
+ * Marked rather than deleted. That somebody built a cart and emptied it is
+ * worth knowing, and it reads differently from one they drifted away from.
+ * A save after this clears the mark, so filling it again makes it
+ * chaseable exactly as before.
+ */
+export async function forgetCart(
+  phone: string,
+  batchId: string | null
+): Promise<void> {
+  if (!phone) return;
+  await db()
+    .from("carts")
+    .update({
+      items: 0,
+      value: 0,
+      summary: "",
+      lines: null,
+      handled_at: new Date().toISOString(),
+      handled_reason: "Emptied it themselves",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("phone", phone)
+    .eq("batch_id", batchId)
+    .is("converted_at", null);
+}
+
+/**
  * Marks a cart as bought, so nobody is chased for an order they placed.
  *
  * Every open cart of theirs, not only the one on this run. A cart is saved
@@ -241,6 +276,10 @@ export async function abandonedCarts(
     .select("*")
     .is("converted_at", null)
     .is("handled_at", null)
+    // Nothing in it is nothing to chase, however it got that way. The mark
+    // above is what empties one, and this is the belt to its braces: a row
+    // reading "0 items" on the chase list is a phone call with no subject.
+    .gt("items", 0)
     .lt("updated_at", cutoff)
     .order("updated_at", { ascending: false })
     .limit(200);

@@ -15,6 +15,7 @@ import RateOrder from "@/components/RateOrder";
 import { PHOTO_LABEL } from "@/lib/parcels";
 import { photosFor } from "@/lib/parcel-photos";
 import StageTimeline from "@/components/StageTimeline";
+import GetTheApp from "@/components/GetTheApp";
 import ShareDelivery from "@/components/ShareDelivery";
 import ShareLink from "@/components/ShareLink";
 import SplitCollect from "@/components/SplitCollect";
@@ -633,6 +634,17 @@ export default async function OrderPage({
             />
           )}
         </section>
+      )}
+
+      {/* Offered here because this is the page somebody refreshes waiting
+          for their dinner, and the app is the thing that would stop them
+          having to. Only while there is still something to be told: under
+          a delivered order it is an advert with no argument in it. */}
+      {!over && order.batch.stage !== "handed_out" && order.status !== "delivered" && (
+        <GetTheApp
+          appId={settings.ios_app_id}
+          androidPackage={settings.android_package}
+        />
       )}
 
       {/* The car is the thing worth sharing: one delivery fee covers whatever

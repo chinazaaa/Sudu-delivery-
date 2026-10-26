@@ -33,7 +33,21 @@ export default function KeepCart({
 
   useEffect(() => {
     const digits = phone.replace(/\D/g, "");
-    if (digits.length < 10 || items === 0) return;
+    if (digits.length < 10) return;
+
+    /*
+     * An empty cart is only worth saying where one was saved first.
+     *
+     * Taking the last thing out used to stop the saving dead, so the last
+     * full snapshot kept its timestamp and turned into a "left behind"
+     * alert about food somebody had deliberately removed. Now it is told.
+     *
+     * But only when this page has already saved something. A cart is read
+     * out of the browser after the page draws, so every checkout is
+     * momentarily empty, and forgetting on that would wipe a real cart
+     * every time somebody opened the page in a second tab.
+     */
+    if (items === 0 && last.current === "") return;
 
     const snapshot = `${digits}|${batchId}|${items}|${value}|${name}|${hostel}`;
     if (snapshot === last.current) return;
