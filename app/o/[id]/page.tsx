@@ -16,6 +16,7 @@ import { PHOTO_LABEL } from "@/lib/parcels";
 import { photosFor } from "@/lib/parcel-photos";
 import StageTimeline from "@/components/StageTimeline";
 import GetTheApp from "@/components/GetTheApp";
+import ChangeOrder from "@/components/ChangeOrder";
 import ShareDelivery from "@/components/ShareDelivery";
 import ShareLink from "@/components/ShareLink";
 import SplitCollect from "@/components/SplitCollect";
@@ -499,6 +500,34 @@ export default async function OrderPage({
               Transfer details are being set up. Message us and we will send them
               to you.
             </p>
+          )}
+
+          {/* The duplicate this exists to stop.
+
+              Somebody orders one pack of rice and then wants two. Ordering
+              again is one tap and changing the first was not, so people
+              ordered again and the shop cancelled the first by hand, every
+              time. Only while nothing has been paid: once the money has
+              landed the shop may already have bought the food, and what
+              comes back is a refund rather than a smaller number.
+
+              The bag of ice is left out. It is on the order because
+              something in it travels on ice, and it is not the customer's
+              to take off. */}
+          {canStillMove && order.shares.length <= 1 && (
+            <ChangeOrder
+              orderId={order.id}
+              lines={order.lines
+                .filter((line) => line.menu_item_id !== settings.ice_item_id)
+                .map((line) => ({
+                  id: line.id,
+                  name: line.name,
+                  restaurant: line.restaurant,
+                  qty: line.qty,
+                  unitPrice: line.unit_price_at_order,
+                  choices: line.choices.join(", "),
+                }))}
+            />
           )}
 
           {/* Before paying is exactly when somebody realises they want another
@@ -1163,10 +1192,11 @@ function HelpUs({
   return (
     <section className="card flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 className="font-bold">Need anything?</h2>
+        <h2 className="font-bold">Want to change this order?</h2>
         <p className="text-sm text-muted">
-          A change, a question, or something wrong with the order. A person
-          answers.
+          Message us rather than ordering again: more of something, less of
+          it, or taking it off. A question or something wrong with the order
+          comes here too, and a person answers.
         </p>
       </div>
       <a

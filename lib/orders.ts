@@ -11,6 +11,13 @@ import {
 import { feeFor, sameDayFee, splitFee, tripFee, type Band } from "./fees";
 import { feeOnTrip } from "./trip-fee";
 import { carGoesOn } from "./areas";
+import {
+  applyWanted,
+  emptiesIt,
+  somethingChanged,
+  whyNotChangeable,
+  type WantedQty,
+} from "./order-change";
 import { DAY_NAMES, opensOn, weekdayOf } from "./open-days";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "./settings";
 import {
@@ -2273,6 +2280,164 @@ export async function moveOrder(
   }
 
   return { ok: true, orderId };
+}
+
+/**
+ * The customer changing what is in their own unpaid order.
+ *
+ * Somebody orders one pack of rice and then wants two. Ordering again is
+ * one tap and changing the first was not, so people ordered again and the
+ * shop cancelled the first by hand, every time. The cheapest path wins, so
+ * the cheapest path has to be the right one.
+ *
+ * Priced from scratch afterwards, exactly the way moving an unpaid order to
+ * another night is. `retotal` deliberately leaves the fee alone, which is
+ * right for a gift box where the car is already agreed and wrong here: the
+ * delivery goes by how much of the car the order fills, so a third pack of
+ * rice becoming a fourth crosses a rung and the shop would carry the
+ * difference on every edit.
+ *
+ * Quantities and nothing else. Adding something that is not already on the
+ * order is the menu's job, and this stays the one thing it can be trusted
+ * to get right.
+ */
+export async function changeOrderLines(
+  orderId: string,
+  wanted: WantedQty[]
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const order = await getOrder(orderId);
+  if (!order) return { ok: false, error: "That order no longer exists." };
+
+  const no = whyNotChangeable({
+    status: order.status,
+    shares: order.shares.length,
+    stillOpen: isOrderable(order.batch),
+  });
+  if (no !== "") return { ok: false, error: no };
+
+  /*
+   * The bag of ice is the shop's, not theirs.
+   *
+   * It is put on because something in the order travels on ice, and it is
+   * one bag however many tubs there are. Letting a stepper near it would
+   * let somebody take the ice off the ice cream.
+   */
+  const iceItem = (await safeSettings()).ice_item_id ?? "";
+  const theirs = order.lines.filter((line) => line.menu_item_id !== iceItem);
+  const asked = wanted.filter((one) =>
+    theirs.some((line) => line.id === one.lineId)
+  );
+
+  const now = theirs.map((line) => ({ id: line.id, qty: line.qty }));
+  if (!somethingChanged(now, asked)) return { ok: true };
+  if (emptiesIt(now, asked)) {
+    return {
+      ok: false,
+      error:
+        "That takes everything off the order. Use cancel below if you no longer want it.",
+    };
+  }
+
+  const { keep, drop } = applyWanted(now, asked);
+
+  // The options go first: a line with choices hanging off it is a line the
+  // database will not delete, and a half removed line is worse than none.
+  if (drop.length > 0) {
+    await db().from("order_item_options").delete().in("order_item_id", drop);
+    await db().from("order_items").delete().in("id", drop);
+  }
+  for (const line of keep) {
+    const was = now.find((one) => one.id === line.id);
+    if (!was || was.qty === line.qty) continue;
+    await db().from("order_items").update({ qty: line.qty }).eq("id", line.id);
+  }
+
+  /*
+   * And the ice goes when the last thing needing it does.
+   *
+   * Only ever downwards here. Nothing can be added to an order on this
+   * path, so an order that did not need ice before cannot start needing
+   * it; one that stops needing it would otherwise be charged for a bag of
+   * ice to keep nothing cold.
+   */
+  const iceLine = order.lines.find((line) => line.menu_item_id === iceItem);
+  if (iceItem !== "" && iceLine) {
+    const onIce = await itemsNeedingIce();
+    const left = keep.some((line) => {
+      const was = theirs.find((one) => one.id === line.id);
+      return was ? onIce.has(was.menu_item_id) : false;
+    });
+    if (!left) {
+      await db().from("order_item_options").delete().eq("order_item_id", iceLine.id);
+      await db().from("order_items").delete().eq("id", iceLine.id);
+    }
+  }
+
+  // Priced again from what is actually on it now, the same way a move
+  // prices an unpaid order. Read back rather than worked out from the
+  // patch, so what is charged follows the database and not this function's
+  // opinion of it.
+  const after = await getOrder(orderId);
+  if (!after) return { ok: false, error: "That order no longer exists." };
+
+  const repriced = await repeatLines(after);
+  if (repriced.blocked.length > 0) {
+    const names = repriced.blocked.map((item) => `${item.name} is ${item.reason}`);
+    return { ok: false, error: `${names.join(", ")}. Take it off the order first.` };
+  }
+
+  const food = repriced.lines.reduce(
+    (total, line) => total + line.unitPrice * line.qty,
+    0
+  );
+
+  // What rides along in the cool box rather than taking a container of its
+  // own, kept out of the count exactly as it is everywhere else.
+  const byBox = await stepFeeOfEach();
+  const ridingHere = repriced.lines.filter((line) => byBox[line.itemId]);
+  const ridingThere = ridingHere.reduce((count, line) => count + line.qty, 0);
+  const items = repriced.lines
+    .filter((line) => ridingThere === 0 || !byBox[line.itemId])
+    .reduce((count, line) => count + line.qty, 0);
+  let worstBox: StepFee | null = null;
+  for (const line of ridingHere) {
+    const one = byBox[line.itemId];
+    if (worstBox === null || one.firstFee > worstBox.firstFee) worstBox = one;
+  }
+
+  // Never urgent. The extra is for asking at an hour's notice, and this is
+  // somebody tidying up an order they already placed.
+  const fee = feeRidingAlong({
+    stepCount: ridingThere,
+    steps: worstBox,
+    otherFee: await feeOnTrip(
+      after.batch,
+      items,
+      repriced.lines.map((line) => line.restaurantId)
+    ),
+  });
+
+  // The lines carry today's prices too, so the order reads as it is charged.
+  for (const line of after.lines) {
+    const match = repriced.lines.find((row) => row.itemId === line.menu_item_id);
+    if (match && match.unitPrice !== line.unit_price_at_order) {
+      await db()
+        .from("order_items")
+        .update({ unit_price_at_order: match.unitPrice })
+        .eq("id", line.id);
+    }
+  }
+
+  await db()
+    .from("orders")
+    .update({
+      subtotal_food: food,
+      fee,
+      total: Math.max(0, food + fee - after.discount),
+    })
+    .eq("id", orderId);
+
+  return { ok: true };
 }
 
 export type RepeatBlock = {

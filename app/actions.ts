@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getOrder, moveOrder, orderLinkId, placeOrder, previewCoupon, saveRating } from "@/lib/orders";
+import { changeOrderLines, getOrder, moveOrder, orderLinkId, placeOrder, previewCoupon, saveRating } from "@/lib/orders";
 import { lastOrderForPhone, perkFor, type LinkPerk } from "@/lib/orders";
 import { accountNumber, normalisePhone } from "@/lib/phone";
 import { cameFromNow, linkCouponNow } from "@/lib/where-from";
@@ -742,4 +742,37 @@ async function whichDoor(): Promise<"web" | "desk"> {
     // less than an order lost.
     return "web";
   }
+}
+
+export type ChangeState = { ok: boolean; error: string | null };
+
+/**
+ * The customer changing their own unpaid order.
+ *
+ * Every guard that matters is on the server, because the page in front of
+ * them is a page and a page can be anything by the time it posts. Paid
+ * orders, closed runs and shared deliveries are refused here whatever the
+ * form says, and the words come back from the one place that decides them.
+ */
+export async function changeMyOrder(
+  _prev: ChangeState,
+  form: FormData
+): Promise<ChangeState> {
+  const id = String(form.get("order_id") ?? "").trim();
+  if (id === "") return { ok: false, error: "That order no longer exists." };
+
+  // One field per line, named for the line it is about, so nothing has to
+  // be matched up by position.
+  const wanted: { lineId: string; qty: number }[] = [];
+  for (const [key, value] of form.entries()) {
+    if (!key.startsWith("qty_")) continue;
+    wanted.push({ lineId: key.slice(4), qty: Number(value) });
+  }
+
+  const result = await changeOrderLines(id, wanted);
+  if (!result.ok) return { ok: false, error: result.error };
+
+  revalidatePath("/o", "layout");
+  revalidatePath("/orders");
+  return { ok: true, error: null };
 }

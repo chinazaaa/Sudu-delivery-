@@ -98,6 +98,13 @@ import {
   MIXED_AREA_EXTRA,
 } from "../lib/areas";
 import { opensOn } from "../lib/open-days";
+import {
+  applyWanted,
+  emptiesIt,
+  somethingChanged,
+  whyNotChangeable,
+  MOST_OF_ONE,
+} from "../lib/order-change";
 import { cartsInTime, howLong, needsDoing } from "../lib/needs-doing";
 import { howPaid, orderStory } from "../lib/order-story";
 import { codeFrom } from "../lib/promoter-applications";
@@ -6700,4 +6707,79 @@ test("a car of its own only goes where it can go that day", () => {
   assert.equal(carGoesOn([], mon, opensOn), true);
   // And home riding along with a far area does not rescue it.
   assert.equal(carGoesOn([home, ajah], mon, opensOn), false);
+});
+
+test("changing an order: whose it is to change", () => {
+  const fine = { status: "pending", shares: 1, stillOpen: true };
+  assert.equal(whyNotChangeable(fine), "");
+
+  // Paid is the shop's job: what comes back is a refund, not a smaller sum.
+  assert.match(whyNotChangeable({ ...fine, status: "paid" }), /paid for/);
+  assert.match(whyNotChangeable({ ...fine, status: "delivered" }), /paid for/);
+
+  // One car, several people, one fee between them. Moving one part moves
+  // everybody's share, which is a conversation rather than a stepper.
+  assert.match(whyNotChangeable({ ...fine, shares: 3 }), /shared delivery/);
+
+  // Past the cut-off the food is bought.
+  assert.match(whyNotChangeable({ ...fine, stillOpen: false }), /closed/);
+});
+
+test("changing an order: what the lines become", () => {
+  const lines = [
+    { id: "rice", qty: 1 },
+    { id: "chicken", qty: 2 },
+    { id: "drink", qty: 1 },
+  ];
+
+  // The case this was built for: one pack of rice becomes two.
+  const two = applyWanted(lines, [{ lineId: "rice", qty: 2 }]);
+  assert.deepEqual(two.keep.find((one) => one.id === "rice"), { id: "rice", qty: 2 });
+  assert.deepEqual(two.drop, []);
+  // Everything it was not asked about is left exactly as it was.
+  assert.equal(two.keep.length, 3);
+  assert.equal(two.keep.find((one) => one.id === "chicken")?.qty, 2);
+
+  // Nought takes the line off.
+  const gone = applyWanted(lines, [{ lineId: "drink", qty: 0 }]);
+  assert.deepEqual(gone.drop, ["drink"]);
+  assert.equal(gone.keep.length, 2);
+
+  // A stuck thumb on a stepper does not order ninety packs of rice.
+  assert.equal(
+    applyWanted(lines, [{ lineId: "rice", qty: 900 }]).keep[0].qty,
+    MOST_OF_ONE
+  );
+  // Nor does a number that is not one.
+  assert.deepEqual(applyWanted(lines, [{ lineId: "rice", qty: NaN }]).drop, ["rice"]);
+  assert.deepEqual(applyWanted(lines, [{ lineId: "rice", qty: -4 }]).drop, ["rice"]);
+  // A half is a whole: half a pack of rice is not a thing anybody sells.
+  assert.equal(applyWanted(lines, [{ lineId: "rice", qty: 2.7 }]).keep[0].qty, 2);
+
+  // A line the order does not have is not invented.
+  assert.equal(applyWanted(lines, [{ lineId: "nothing", qty: 5 }]).keep.length, 3);
+});
+
+test("changing an order: whether it is worth doing anything", () => {
+  const lines = [
+    { id: "rice", qty: 1 },
+    { id: "chicken", qty: 2 },
+  ];
+
+  assert.equal(somethingChanged(lines, []), false);
+  // The same numbers sent back is not a change, however it was typed.
+  assert.equal(
+    somethingChanged(lines, [{ lineId: "rice", qty: 1 }, { lineId: "chicken", qty: 2 }]),
+    false
+  );
+  assert.equal(somethingChanged(lines, [{ lineId: "rice", qty: 2 }]), true);
+  assert.equal(somethingChanged(lines, [{ lineId: "rice", qty: 0 }]), true);
+
+  // Taking everything out is a cancellation, which lives somewhere else.
+  assert.equal(emptiesIt(lines, [{ lineId: "rice", qty: 0 }]), false);
+  assert.equal(
+    emptiesIt(lines, [{ lineId: "rice", qty: 0 }, { lineId: "chicken", qty: 0 }]),
+    true
+  );
+  assert.equal(emptiesIt([], []), false);
 });
