@@ -346,7 +346,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const askBudgetRef = useRef<(() => void) | null>(null);
   /** The custom-order step, held in a box because the box question offers
    *  it as one of its two answers. */
-  const askUsForRef = useRef<((first: string) => void) | null>(null);
+  const askUsForRef = useRef<((first: string, place?: string) => void) | null>(null);
   /** Said no to a discount code already. Asked once per version of the
    *  order: asking again on the same bill is nagging, and asking again
    *  after the order changed is the only honest thing to do, because what
@@ -1145,16 +1145,38 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   }, [askAQuestion]);
 
   const askUsFor = useCallback(
-    (first: string) => {
+    /**
+     * @param place where they already said it is from, where they did.
+     *   Asking "and where is it from" straight after somebody typed Pizza
+     *   Hut is the chat admitting it was not listening.
+     */
+    (first: string, place = "") => {
       bot(
-        "Tell me what you want and where it is from, and roughly what it costs if " +
-          "you know. A person goes and buys it, and comes back to you with the real " +
-          "price before any money moves.",
-        560
+        place !== ""
+          ? `What would you like from <b>${place}</b>?`
+          : "Tell me what you want and where it is from.",
+        520
+      );
+      /*
+       * What actually happens, which is not what this used to say.
+       *
+       * It said a person goes and buys it and comes back with the real
+       * price. Nobody buys anything before it is paid for: the price is
+       * not known, which is the whole reason this is not an ordinary
+       * order. Somebody checks what it costs, says so, and only then does
+       * any money or any buying happen.
+       */
+      bot(
+        "Someone will check what it costs and message you on WhatsApp. You pay, " +
+          "then we buy it and bring it over with your order.",
+        520
       );
       setAsk({
         of: "text",
-        placeholder: first || "e.g. a Caesar salad from Debonairs",
+        placeholder:
+          place !== ""
+            ? "e.g. a large pepperoni"
+            : first || "e.g. a Caesar salad from Debonairs",
         onSay: async (wanted) => {
           me(wanted);
           setAsk({ of: "nothing" });
@@ -1166,7 +1188,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  wanted,
+                  /* Where they said it was from, carried through. Asked
+                     "what would you like from Pizza Hut", somebody
+                     answers "a large pepperoni", and the list in admin
+                     would otherwise hold a pepperoni from nowhere. */
+                  wanted:
+                    place !== "" && !wanted.toLowerCase().includes(place.toLowerCase())
+                      ? `${wanted} from ${place}`
+                      : wanted,
                   name: mine.name,
                   phone: mine.phone,
                   hostel: mine.hostel,
@@ -1392,7 +1421,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               "and get it for you.",
             500
           );
-          askUsForRef.current?.(`what you want from ${elsewhere}`);
+          askUsForRef.current?.("", elsewhere);
           return;
         }
 
