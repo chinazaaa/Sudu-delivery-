@@ -6842,6 +6842,16 @@ test("the chat answers questions about which days it delivers", () => {
     },
   ];
   const cars = [{ date: "2026-10-25" }, { date: "2026-10-26" }];
+  const money = (amount: number) => `N${amount}`;
+  const shop = {
+    runs,
+    cars,
+    today,
+    feeFrom: 4000,
+    carFrom: 6500,
+    farther: ["Lekki", "Ajah", "Ikoyi"],
+    money,
+  };
 
   // Which day is being asked about.
   assert.equal(dayAsked("when is the next run"), "next");
@@ -6855,36 +6865,70 @@ test("the chat answers questions about which days it delivers", () => {
   assert.equal(dayAsked("where is my order today"), null);
   assert.equal(dayAsked("i want chicken today"), null);
 
-  // The next run, with the car mentioned because it is genuinely sooner.
-  const next = sayWhen({ asked: "next", runs, cars, today });
-  assert.match(next, /next run is Wednesday, 28 Oct/);
-  assert.match(next, /between 5pm and 7pm/);
-  assert.match(next, /close 3:00 pm/);
-  assert.match(next, /car of its own can come/);
+  const next = sayWhen({ ...shop, asked: "next" });
+  const now = sayWhen({ ...shop, asked: "today" });
+  const wed = sayWhen({ ...shop, asked: { weekday: 3 } });
+  const sat = sayWhen({ ...shop, asked: { weekday: 6 } });
 
-  // Today: no run, but a car can go, which is a yes.
-  const now = sayWhen({ asked: "today", runs, cars, today });
+  /*
+   * Not one word of the shop's own vocabulary.
+   *
+   * Nobody at PAU knows what a run is, and nobody needs to: whether the
+   * shop is already driving that evening or making the trip for one order
+   * is the shop's business, and the only part the customer sees is the
+   * price.
+   */
+  for (const said of [next, now, wed, sat]) {
+    assert.ok(!/\brun\b/i.test(said), said);
+    assert.ok(!/\bcar of its own\b/i.test(said), said);
+    assert.ok(!/\bscheduled\b/i.test(said), said);
+  }
+
+  // Soonest first, and today beats a cheaper Wednesday: "when do you
+  // deliver next" is a question about time.
+  assert.match(next, /^We are delivering today\./);
+
+  // Today has no run, so it is a day they pick the time on.
   assert.match(now, /^Yes, today\./);
-  assert.match(now, /car of its own/);
+  assert.match(now, /pick the time at the checkout/);
+  assert.match(now, /starts at N6500/);
 
-  // A day with a run on it names the window and the cut-off.
-  const wed = sayWhen({ asked: { weekday: 3 }, runs, cars, today });
-  assert.match(wed, /^Yes\. There is a run on Wednesday/);
-  assert.match(wed, /orders close 3:00 pm/);
+  // Wednesday is a day the shop is already driving: the window and the
+  // cut-off, at the cheaper floor.
+  assert.match(wed, /^Yes, on Wednesday, between 5pm and 7pm\./);
+  assert.match(wed, /Orders close 3:00 pm/);
+  assert.match(wed, /starts at N4000/);
 
-  // A day with neither: say so, and say what is next rather than just no.
-  const far = sayWhen({ asked: { weekday: 6 }, runs, cars, today });
-  assert.match(far, /^Not on Saturday, sorry\./);
-  assert.match(far, /next run is Wednesday, 28 Oct/);
+  // A figure is never said as though it were the price everywhere.
+  assert.match(wed, /more if the food comes from Lekki, Ajah or Ikoyi/);
 
-  // A shop with nothing going at all says nothing here, because that is a
-  // sentence about the shop rather than about a day.
-  assert.equal(sayWhen({ asked: "today", runs: [], cars: [], today }), "");
-  assert.equal(sayWhen({ asked: null, runs, cars, today }), "");
+  /*
+   * A day with nothing on it says so, and nothing more.
+   *
+   * Saturday is past everything the shop has on, so there is nothing to
+   * offer instead. Pointing at Wednesday here would be answering a
+   * question about next weekend with a day that has already gone.
+   */
+  assert.equal(sat, "Not on Saturday, sorry.");
+
+  // But where something IS going after the day they asked about, it is
+  // offered rather than leaving them with a flat no.
+  const mon = sayWhen({ ...shop, asked: { weekday: 1 }, cars: [] });
+  assert.match(mon, /^Not tomorrow, sorry\./);
+  assert.match(mon, /soonest is Wednesday, 28 Oct, between 5pm and 7pm/);
+
+  // Nothing going at all is a sentence about the shop, not about a day.
+  assert.equal(sayWhen({ ...shop, asked: "today", runs: [], cars: [] }), "");
+  assert.equal(sayWhen({ ...shop, asked: null }), "");
+
+  // A shop with no areas costing extra does not trail off into a comma.
+  const plain = sayWhen({ ...shop, asked: { weekday: 3 }, farther: [] });
+  assert.match(plain, /starts at N4000\.$/);
 
   // The window never reads as a label dropped into a sentence.
-  assert.ok(!/ Between /.test(next));
-  assert.ok(!/ Between /.test(wed));
+  for (const said of [next, now, wed, sat]) {
+    assert.ok(!/ Between /.test(said), said);
+  }
 });
 
 test("the chat counts days the way a calendar does", () => {

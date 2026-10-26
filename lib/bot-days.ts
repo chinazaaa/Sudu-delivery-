@@ -96,32 +96,75 @@ export function nextOn(weekday: number, today: string): string {
 }
 
 /**
- * The answer, in the shop's voice.
+ * The answer, in the customer's words.
  *
- * Empty means the chat should not try: no runs and no cars is a shop that
- * is shut, and that is a sentence about the shop rather than about a day.
+ * No runs and no cars of their own. Nobody at PAU knows what a run is, and
+ * nobody needs to: whether the shop is already driving that evening or
+ * making the trip for one person is the shop's business, and the only part
+ * of it the customer can see is the price. So the answer is the day, the
+ * window, and what delivery starts at.
+ *
+ * A floor, never a price. What it actually comes to depends on how much of
+ * the car the order fills and how far the food is coming, and the checkout
+ * is the only thing that knows both. "From" is the same word the front page
+ * uses for the same reason.
+ *
+ * Empty means the chat should not try: nothing going at all is a sentence
+ * about the shop rather than about a day.
  */
 export function sayWhen(args: {
   asked: DayAsked;
   runs: RunOnOffer[];
   cars: CarOnOffer[];
   today: string;
+  /** What delivery starts at on a day the shop is already driving. */
+  feeFrom: number;
+  /** What it starts at on a day it is not. Dearer, because the trip is
+   *  being made for one order. */
+  carFrom: number;
+  /** How the shop writes money. Passed in so this file holds no opinion
+   *  about currency. */
+  money: (amount: number) => string;
+  /** The places that cost more than the floor, by name. A figure on its
+   *  own reads as the price, and somebody ordering from Ikoyi would be
+   *  told a number thousands short of what they will pay. */
+  farther?: string[];
 }): string {
-  const { asked, runs, cars, today } = args;
+  const { asked, runs, cars, today, feeFrom, carFrom, money } = args;
+  const farther = args.farther ?? [];
   if (asked === null) return "";
   if (runs.length === 0 && cars.length === 0) return "";
 
-  const soonest = [...runs].sort((a, b) => a.runDate.localeCompare(b.runDate))[0];
+  const more =
+    farther.length > 0
+      ? `, and more if the food comes from ${saidList(farther)}`
+      : "";
+  const from = (amount: number) =>
+    amount > 0 ? ` Delivery starts at ${money(amount)}${more}.` : "";
+
+  const onARunDay = (run: RunOnOffer, word: string) =>
+    `Yes, ${word}, ${lower(run.window)}. Orders close ${run.closes}.${from(feeFrom)}`;
+
+  const onACarDay = (word: string) =>
+    `Yes, ${word}. You pick the time at the checkout.${from(carFrom)}`;
+
+  const soonestRun = [...runs].sort((a, b) => a.runDate.localeCompare(b.runDate))[0];
+  const soonestCar = [...cars].sort((a, b) => a.date.localeCompare(b.date))[0];
 
   if (asked === "next") {
-    if (!soonest) {
-      return "No run is going just now, but a car of its own can still come. Pick a day at the checkout and it prices it for you.";
+    // Whichever is actually sooner. "When do you deliver next" is a
+    // question about time, and a day the shop is already driving is not a
+    // better answer to it for being cheaper.
+    const runFirst =
+      soonestRun && (!soonestCar || soonestRun.runDate <= soonestCar.date);
+    if (runFirst) {
+      return `We are delivering ${soonestRun.said}, ${lower(soonestRun.window)}. Orders close ${soonestRun.closes}.${from(feeFrom)}`;
     }
-    const also =
-      cars.some((car) => car.date < soonest.runDate)
-        ? " Sooner than that, a car of its own can come, which costs more because nobody else is sharing it."
-        : "";
-    return `Our next run is ${soonest.said}, ${lower(soonest.window)}. Orders close ${soonest.closes}.${also}`;
+    if (soonestCar) {
+      const word = whichDay(soonestCar.date, today);
+      return `We are delivering ${word}. You pick the time at the checkout.${from(carFrom)}`;
+    }
+    return "";
   }
 
   const date =
@@ -132,42 +175,42 @@ export function sayWhen(args: {
         : nextOn(asked.weekday, today);
   if (date === "") return "";
 
-  const word =
-    asked === "today"
-      ? "today"
-      : asked === "tomorrow"
-        ? "tomorrow"
-        : onThat(date, today);
+  const word = whichDay(date, today);
 
   const run = runs.find((one) => one.runDate === date);
-  if (run) {
-    return `Yes. There is a run ${word}, ${lower(run.window)}, and orders close ${run.closes}.`;
-  }
+  if (run) return onARunDay(run, word);
+  if (cars.some((car) => car.date === date)) return onACarDay(word);
 
-  if (cars.some((car) => car.date === date)) {
-    return `Yes, ${word}. No run is going that day, so it comes on a car of its own, which costs more because nobody else is sharing it. Pick the day at the checkout and it prices it for you.`;
-  }
+  // Nothing that day. What is next beats a flat no.
+  const after = [...runs, ...cars.map((car) => ({ ...car, runDate: car.date }))]
+    .filter((one) => (one as { runDate: string }).runDate > date)
+    .sort((a, b) =>
+      (a as { runDate: string }).runDate.localeCompare((b as { runDate: string }).runDate)
+    )[0] as RunOnOffer | undefined;
 
-  // Nothing that day. The next thing that is going beats a flat no.
-  const after = [...runs]
-    .filter((one) => one.runDate > date)
-    .sort((a, b) => a.runDate.localeCompare(b.runDate))[0];
+  if (after && after.window) {
+    return `Not ${word}, sorry. The soonest is ${after.said}, ${lower(after.window)}.`;
+  }
   if (after) {
-    return `Not ${word}, sorry. The next run is ${after.said}, ${lower(after.window)}.`;
-  }
-  if (soonest) {
-    return `Not ${word}, sorry. The next run is ${soonest.said}, ${lower(soonest.window)}.`;
+    return `Not ${word}, sorry. The soonest is ${whichDay((after as unknown as CarOnOffer).date, today)}.`;
   }
   return `Not ${word}, sorry.`;
 }
 
-/** "on Saturday", for a weekday further out than tomorrow. */
-function onThat(date: string, today: string): string {
+/** "today", "tomorrow", or "on Saturday". */
+function whichDay(date: string, today: string): string {
+  if (date === today) return "today";
+  if (date === dayAfter(today)) return "tomorrow";
   const on = new Date(`${date}T12:00:00Z`);
   if (Number.isNaN(on.getTime())) return "then";
   const name = WEEKDAYS[on.getUTCDay()];
-  const said = name.charAt(0).toUpperCase() + name.slice(1);
-  return date === today ? "today" : `on ${said}`;
+  return `on ${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+}
+
+/** "Lekki, Ajah or Ikoyi", the way somebody would say it out loud. */
+function saidList(names: string[]): string {
+  if (names.length === 1) return names[0];
+  return `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
 }
 
 /** A window said inside a sentence, where a capital letter mid sentence is

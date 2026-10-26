@@ -11,6 +11,7 @@ import { liveOccasions } from "@/lib/boxes";
 import { giftyDishes } from "@/lib/products";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
 import { deliverySlots, slotsWorthOffering, windowHours } from "@/lib/same-day";
+import { allAreas } from "@/lib/areas-server";
 import { headlineFee } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
 import { runDateLabel } from "@/lib/time";
@@ -208,6 +209,18 @@ export async function GET(): Promise<NextResponse> {
       kitchens,
       // What delivery starts at, said as a floor rather than as the price.
       feeFrom: headlineFee(bands),
+      /*
+       * The places that cost more than the floor.
+       *
+       * A figure on its own reads as the price, and somebody whose food
+       * comes from Ikoyi is then told a number three and a half thousand
+       * short of what they will pay. Named rather than counted, because
+       * "some areas cost more" answers nothing: a student knows whether
+       * they are ordering from Lekki.
+       */
+      farther: (await allAreas())
+        .filter((one) => one.id !== "" && (one.runExtra > 0 || one.sameDayExtra > 0))
+        .map((one) => one.name),
       codes,
       faqs,
       card,
@@ -283,6 +296,7 @@ export async function GET(): Promise<NextResponse> {
       carFrom: 0,
       kitchens: [],
       feeFrom: 0,
+      farther: [],
       whatsapp: "",
       email: "",
       you: null,

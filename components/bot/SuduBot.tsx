@@ -62,6 +62,9 @@ type Start = {
   cars: Car[];
   carFrom: number;
   feeFrom: number;
+  /** The places that cost more than that floor, by name, so a figure is
+   *  never said as though it were the price everywhere. */
+  farther?: string[];
   /** Whether there is a code anybody could type tonight. */
   codes: boolean;
   /** What the chat is allowed to answer on its own: the shop's own words,
@@ -728,6 +731,12 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         runs: startRef.current?.runs ?? [],
         cars: startRef.current?.cars ?? [],
         today: lagosToday(),
+        // Floors, read off the shop's own ladders when the chat opened, so
+        // a band changed in admin changes what is said here.
+        feeFrom: startRef.current?.feeFrom ?? 0,
+        carFrom: startRef.current?.carFrom ?? 0,
+        farther: startRef.current?.farther ?? [],
+        money: naira,
       });
       if (answer === "") return false;
 
