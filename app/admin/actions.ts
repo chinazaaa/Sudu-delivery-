@@ -3964,6 +3964,11 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       // All seven, or none ticked, both mean "every day": a restaurant
       // nobody has thought about must behave exactly as it always has.
       open_days: openDaysText(form.getAll("open_days").map((one) => Number(one))),
+      /* What they sell, for the chat to answer "can I order from Pizza
+         Hut" with the places that do pizza rather than the first three
+         on the list. A name cannot carry this: Panarottis says nothing
+         about pizza, and no name says that Burger King does chicken. */
+      tags: String(form.get("tags") ?? "").trim(),
       /* Whether the chat may put this counter forward when somebody says
          they do not know what to order. A shelf of cooking oil and a shelf
          of serums are both on the shop and neither is dinner, and the shop

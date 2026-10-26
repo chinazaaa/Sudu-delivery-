@@ -61,7 +61,7 @@ import { isCorrection } from "@/lib/bot-brain";
 type Start = {
   hostels: string[];
   runs: Run[];
-  kitchens: { id: string; name: string }[];
+  kitchens: { id: string; name: string; tags?: string }[];
   cars: Car[];
   carFrom: number;
   feeFrom: number;

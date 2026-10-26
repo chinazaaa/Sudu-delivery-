@@ -228,6 +228,24 @@ export default async function RestaurantAdmin({
           </p>
         </div>
 
+        <div>
+          <label className="label" htmlFor="tags">What they sell</label>
+          <input
+            id="tags"
+            name="tags"
+            defaultValue={restaurant.tags ?? ""}
+            placeholder="pizza, ice cream"
+            className="field"
+          />
+          <p className="mt-1 text-xs text-muted">
+            Separated by commas. Asked for somewhere we do not buy from, the
+            chat offers the counters that sell the same thing: somebody
+            asking for Pizza Hut is offered the pizza places and not the
+            first three on the list. Put everything they really do, so Burger
+            King carries chicken as well as burgers.
+          </p>
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="label">Address</label>

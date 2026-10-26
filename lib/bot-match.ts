@@ -1204,18 +1204,42 @@ export function kindOf(name: string): string {
  */
 export function insteadOf(
   place: string,
-  kitchens: { id: string; name: string }[],
+  kitchens: { id: string; name: string; tags?: string }[],
   most = 4
 ): { id: string; name: string }[] {
   const real = kitchens.filter((one) => !NOT_A_KITCHEN.test(one.name));
   const kind = kindOf(place);
 
   if (kind !== "") {
-    const same = real.filter((one) => kindOf(one.name) === kind);
+    /*
+     * What a counter sells, as the shop typed it in admin.
+     *
+     * Read off the name before this, which worked for Domino's Pizza and
+     * not for Panarottis, and could never know that Burger King does
+     * chicken or that Domino's has an ice cream section. A name is a
+     * guess about a menu; a tag is somebody who has seen the menu saying
+     * what is on it.
+     *
+     * The name is still read where nothing is tagged, so a counter added
+     * tonight and tagged tomorrow is not invisible in between.
+     */
+    const sells = (one: { name: string; tags?: string }) => {
+      const tags = tagsOf(one.tags);
+      return tags.length > 0 ? tags.includes(kind) : kindOf(one.name) === kind;
+    };
+    const same = real.filter(sells);
     if (same.length > 0) return same.slice(0, most);
   }
 
   return real.slice(0, most);
+}
+
+/** The tags on a counter, as admin wrote them: "pizza, ice cream". */
+export function tagsOf(text: string | null | undefined): string[] {
+  return String(text ?? "")
+    .split(",")
+    .map((one) => flatten(one).trim())
+    .filter((one) => one !== "");
 }
 
 export function intentOf(said: string): Intent {

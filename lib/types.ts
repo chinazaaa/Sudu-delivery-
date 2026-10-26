@@ -52,6 +52,11 @@ export type Restaurant = {
   /** The weekday numbers it opens, Sunday being 0. Empty is every day,
    *  which is nearly all of them. */
   open_days?: string;
+  /** What this counter sells, comma separated: "pizza, ice cream". Used to
+   *  suggest somewhere else when somebody asks for a place we do not buy
+   *  from. Empty until somebody fills it in, and then the chat falls back
+   *  to reading the counter's name. */
+  tags?: string;
 };
 
 export type MenuCategory = {

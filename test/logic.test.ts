@@ -7045,6 +7045,19 @@ test("a misspelled kitchen is still ours, and is never offered as a favour", () 
 });
 
 test("what to suggest instead is about the same food, not the first four", () => {
+  // What each one sells, as it is tagged in admin.
+  const TAGS: Record<string, string> = {
+    "Burger King": "burger, chicken",
+    "Chicken Republic": "chicken, burger",
+    "Cold Stone Creamery": "ice cream",
+    "Dodo Pizza": "pizza",
+    "Domino's Pizza": "pizza, ice cream",
+    KFC: "chicken, burger",
+    "Krispy Kreme": "doughnut, coffee",
+    Panarottis: "pizza",
+    "Scoop'd Ice Cream": "ice cream",
+  };
+
   // The shop's real counters, names and all.
   const kitchens = [
     "Burger King",
@@ -7063,7 +7076,7 @@ test("what to suggest instead is about the same food, not the first four", () =>
     "Scoop'd Ice Cream",
     "Skincare",
     "Sudu Shop",
-  ].map((name, at) => ({ id: String(at), name }));
+  ].map((name, at) => ({ id: String(at), name, tags: TAGS[name] ?? "" }));
   const names = (place: string) =>
     botInsteadOf(place, kitchens).map((one) => one.name);
 
@@ -7075,8 +7088,32 @@ test("what to suggest instead is about the same food, not the first four", () =>
     "Panarottis",
   ]);
 
-  // A chain whose name says nothing about itself.
-  assert.deepEqual(names("mcdonalds"), ["Burger King"]);
+  /*
+   * What a counter sells is tagged, not guessed from its name.
+   *
+   * No name could ever say that Burger King does chicken or that
+   * Domino's has an ice cream section, and Panarottis says nothing about
+   * pizza. Asked about KFC, all three chicken places come back.
+   */
+  assert.deepEqual(names("mcdonalds"), [
+    "Burger King",
+    "Chicken Republic",
+    "KFC",
+  ]);
+  assert.deepEqual(names("an ice cream place"), [
+    "Cold Stone Creamery",
+    "Domino's Pizza",
+    "Scoop'd Ice Cream",
+  ]);
+
+  // An untagged counter still answers off its name, so one added tonight
+  // and tagged tomorrow is not invisible in between.
+  assert.deepEqual(
+    botInsteadOf("pizza hut", [{ id: "x", name: "Mama's Pizza" }]).map(
+      (one) => one.name
+    ),
+    ["Mama's Pizza"]
+  );
 
   /*
    * Never a counter that is not a restaurant.

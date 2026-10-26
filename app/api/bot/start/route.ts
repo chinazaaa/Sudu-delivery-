@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { openBatches, carsOnOffer } from "@/lib/batches";
 import { hostelNames } from "@/lib/hostels";
 import { shopEmails } from "@/lib/settings";
-import { openRestaurants } from "@/lib/menu";
+import { kitchenTags, openRestaurants } from "@/lib/menu";
 import { anyCodeToType } from "@/lib/coupons";
 import { faqsForChat } from "@/lib/faq";
 import { cardOnOffer } from "@/lib/cards";
@@ -151,7 +151,21 @@ export async function GET(): Promise<NextResponse> {
         };
       });
 
-    const kitchens = menu.map((place) => ({ id: place.id, name: place.name }));
+    /*
+     * The counters, with what each of them sells.
+     *
+     * The tag is how the chat answers "can I order from Pizza Hut" with
+     * the three places that do pizza rather than the first three on the
+     * list. Read off the counter rather than guessed from its name:
+     * Panarottis says nothing about pizza, and no name could ever say
+     * that Burger King does chicken.
+     */
+    const tags = await kitchenTags();
+    const kitchens = menu.map((place) => ({
+      id: place.id,
+      name: place.name,
+      tags: tags[place.id] ?? "",
+    }));
 
     /*
      * A car sent out for one order, where the shop is still offering them.

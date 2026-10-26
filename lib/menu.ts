@@ -388,6 +388,27 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
  * Read once per request. The bar is on every page and so is the footer, and
  * nine rows fetched nine times is nine waits for one unchanging list.
  */
+/**
+ * What each counter sells, as admin typed it: "pizza, ice cream".
+ *
+ * Its own read rather than a column on `openRestaurants`, because that
+ * list is on every page in the shop and this is wanted in one place. Empty
+ * where the column has not been added yet, which leaves everything
+ * reading it falling back to the counter's name.
+ */
+export const kitchenTags = cache(async function kitchenTags(): Promise<
+  Record<string, string>
+> {
+  const { data, error } = await db().from("restaurants").select("id, tags");
+  if (error) return {};
+  return Object.fromEntries(
+    ((data ?? []) as { id: string; tags?: string | null }[]).map((one) => [
+      one.id,
+      String(one.tags ?? ""),
+    ])
+  );
+});
+
 export const openRestaurants = cache(async function openRestaurants(): Promise<
   { id: string; name: string; href: string }[]
 > {
