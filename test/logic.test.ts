@@ -221,6 +221,7 @@ import {
   splitOrder as botSplitOrder,
   intentOf as botIntentOf,
   kitchenAsked as botKitchenAsked,
+  placeAsked as botPlaceAsked,
   basketLines,
   looksLikeAQuestion as botLooksLikeAQuestion,
   nameIn as botNameIn,
@@ -6984,4 +6985,59 @@ test("asking whether a kitchen is on gets a yes and the next question", () => {
   assert.equal(asked("can i order"), null);
   assert.equal(asked("can i order from pizza hut"), null);
   assert.equal(botKitchenAsked("can i order from dominos", []), null);
+});
+
+test("a place we do not buy from is named back, not searched as a dish", () => {
+  // The question, and the name to say back to them.
+  assert.equal(botPlaceAsked("can i order from pizza hut"), "pizza hut");
+  assert.equal(botPlaceAsked("Can I order from KFC?"), "kfc");
+  assert.equal(botPlaceAsked("do you deliver from shoprite"), "shoprite");
+  assert.equal(botPlaceAsked("can you get me something from the mall"), "the mall");
+
+  // Not a place: ourselves, or nothing worth saying back.
+  assert.equal(botPlaceAsked("can i order from you"), "");
+  assert.equal(botPlaceAsked("can i order"), "");
+
+  // Not an ordering question at all. "From" is in half of everything.
+  assert.equal(botPlaceAsked("is the chicken from today"), "");
+  assert.equal(botPlaceAsked("where are you"), "");
+
+  // Fillers do not end up in the name read back to them.
+  assert.equal(botPlaceAsked("can i order from kfc today please"), "kfc");
+});
+
+test("a misspelled kitchen is still ours, and is never offered as a favour", () => {
+  const kitchens = [
+    { id: "d", name: "Domino's Pizza" },
+    { id: "c", name: "Chicken Republic" },
+    { id: "k", name: "Krispy Kreme" },
+    { id: "b", name: "Burger King" },
+  ];
+
+  /*
+   * The thing that would be worst to get wrong.
+   *
+   * Somebody types "Domino" and is told we do not buy from them and
+   * offered to have it fetched as a favour, when it is on the menu. Every
+   * one of these has to come back as ours.
+   */
+  for (const said of [
+    "can i order from domino",
+    "can i order from dominos",
+    "can i order from dominoes",
+    "can i order from Domino's",
+    "do you have chiken republic",
+    "can i order from krispy kream",
+    "do you have burgerking",
+    "do you deliver from burger kings",
+  ]) {
+    assert.ok(botKitchenAsked(said, kitchens) !== null, said);
+  }
+
+  // And a place that really is not ours comes back as one, so the chat
+  // can offer to go and buy it rather than searching the sentence.
+  for (const said of ["can i order from pizza hut", "do you deliver from kfc"]) {
+    assert.equal(botKitchenAsked(said, kitchens), null, said);
+    assert.notEqual(botPlaceAsked(said), "", said);
+  }
 });

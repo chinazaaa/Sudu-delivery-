@@ -1079,6 +1079,49 @@ export function kitchenAsked(
   return found[0];
 }
 
+/**
+ * The place somebody named that we do not buy from.
+ *
+ * "Can I order from Pizza Hut?" is a reasonable question with a good
+ * answer, and searching the whole sentence as though it were a dish is
+ * not it: that ends in "I cannot find can i order from pizza hut anywhere
+ * on the shop", which reads as a chat that was not listening.
+ *
+ * Asked only after the kitchens have been checked, so anything we do
+ * carry has already been answered with a yes. What comes back is the name
+ * they used, to say back to them and to put on the list of things people
+ * ask for.
+ *
+ * Empty where there is no place in the sentence to name.
+ */
+export function placeAsked(said: string): string {
+  const flat = knit(flatten(said));
+  if (flat === "") return "";
+
+  // It has to be asking to order, or this catches half the sentences
+  // anybody types. "From" alone is in "is the chicken from today".
+  if (!/\b(order|buy|get|deliver|delivery|have|carry|stock)\b/.test(flat)) {
+    return "";
+  }
+
+  const at = flat.match(/\b(?:from|at)\b\s+(.+)$/);
+  if (!at) return "";
+
+  const name = at[1]
+    .replace(/\b(please|pls|thanks|today|tomorrow|tonight|now)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Ourselves, and the words that are not a place at all.
+  if (name === "" || /^(you|us|there|here|them|it|anywhere|somewhere)$/.test(name)) {
+    return "";
+  }
+  // One word of two letters is not a restaurant, it is a typo.
+  if (name.length < 3) return "";
+
+  return name;
+}
+
 export function intentOf(said: string): Intent {
   /* The apostrophes put back, so "I don't know" is the same sentence as
      "I dont know". Flattening alone leaves an orphaned t, and every

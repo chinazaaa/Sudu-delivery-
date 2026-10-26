@@ -19,6 +19,7 @@ import {
   intentOf,
   kitchenAsked,
   looksLikeAQuestion,
+  placeAsked,
   namedIn,
   without,
   type Swap,
@@ -1369,6 +1370,30 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             askOrderRef.current?.();
             return;
           }
+        }
+
+        /*
+         * A place we do not buy from, named back rather than searched.
+         *
+         * "Can I order from Pizza Hut" is a reasonable question, and
+         * running the whole sentence through the menu ends in "I cannot
+         * find can i order from pizza hut anywhere on the shop", which
+         * reads as a chat that was not listening. The shop buys things
+         * nobody stocks every week, so the answer is not no: it is tell
+         * me what you want from there.
+         *
+         * After the kitchens above, so anything we really do carry has
+         * already been answered with a yes, misspelling and all.
+         */
+        const elsewhere = placeAsked(said);
+        if (elsewhere !== "") {
+          bot(
+            `We do not buy from <b>${elsewhere}</b> at the moment, but we can go ` +
+              "and get it for you.",
+            500
+          );
+          askUsForRef.current?.(`what you want from ${elsewhere}`);
+          return;
         }
 
         // Before the written answers, for the same reason as above.
