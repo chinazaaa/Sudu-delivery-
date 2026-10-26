@@ -7045,56 +7045,70 @@ test("a misspelled kitchen is still ours, and is never offered as a favour", () 
 });
 
 test("what to suggest instead is about the same food, not the first four", () => {
+  // The shop's real counters, names and all.
   const kitchens = [
-    { id: "s", name: "Sudu Shop" },
-    { id: "m", name: "Local Market" },
-    { id: "d", name: "Domino's Pizza" },
-    { id: "c", name: "Chicken Republic" },
-    { id: "dd", name: "Dodo Pizza" },
-    { id: "p", name: "Panarottis Pizza" },
-    { id: "k", name: "Krispy Kreme" },
-    { id: "b", name: "Burger King" },
-  ];
+    "Burger King",
+    "Chicken Republic",
+    "Cold Stone Creamery",
+    "Custom order",
+    "DO Bowls",
+    "Dodo Pizza",
+    "Domino's Pizza",
+    "KFC",
+    "Krispy Kreme",
+    "Local Market",
+    "Market Square",
+    "Panarottis",
+    "Pharmacy",
+    "Scoop'd Ice Cream",
+    "Skincare",
+    "Sudu Shop",
+  ].map((name, at) => ({ id: String(at), name }));
   const names = (place: string) =>
     botInsteadOf(place, kitchens).map((one) => one.name);
 
-  // Pizza Hut is pizza. The word is in both names and no table is needed.
+  // Pizza Hut is pizza, and all three of ours are offered. Panarottis has
+  // no pizza in its name, which is why the short list of names exists.
   assert.deepEqual(names("pizza hut"), [
-    "Domino's Pizza",
     "Dodo Pizza",
-    "Panarottis Pizza",
+    "Domino's Pizza",
+    "Panarottis",
   ]);
 
   // A chain whose name says nothing about itself.
-  assert.deepEqual(names("kfc"), ["Chicken Republic"]);
   assert.deepEqual(names("mcdonalds"), ["Burger King"]);
 
   /*
-   * The shop's own shelf and the market are real counters and the wrong
-   * answer to this question. Nobody asking for a pizza wants to be sent
-   * to a market stall.
+   * Never a counter that is not a restaurant.
+   *
+   * Custom order is a real row and the holder for things we go and buy,
+   * so offering it here would answer "can I order from Pizza Hut" with
+   * "you could order from Custom order". The shop's shelf, the markets,
+   * the pharmacy and skincare are the same kind of wrong.
    */
-  for (const place of ["pizza hut", "kfc", "somewhere nobody knows"]) {
+  for (const place of ["pizza hut", "mcdonalds", "somewhere nobody knows"]) {
     const said = names(place);
-    assert.ok(!said.includes("Sudu Shop"), place);
-    assert.ok(!said.includes("Local Market"), place);
+    for (const no of [
+      "Custom order",
+      "Sudu Shop",
+      "Local Market",
+      "Market Square",
+      "Pharmacy",
+      "Skincare",
+    ]) {
+      assert.ok(!said.includes(no), `${place} offered ${no}`);
+    }
   }
 
-  // Where the kind is not clear, a few of the restaurants, capped.
-  const vague = names("that place by the gate");
-  assert.equal(vague.length, 4);
-  assert.equal(vague[0], "Domino's Pizza");
+  // Where the kind is not clear, a few restaurants, capped.
+  assert.equal(names("that place by the gate").length, 4);
 
   // The kind itself, read off a name.
   assert.equal(botKindOf("Pizza Hut"), "pizza");
-  assert.equal(botKindOf("Dodo Pizza"), "pizza");
-  assert.equal(botKindOf("Chicken Republic"), "chicken");
-  assert.equal(botKindOf("Burger King"), "burger");
+  assert.equal(botKindOf("Panarottis"), "pizza");
+  assert.equal(botKindOf("Scoop'd Ice Cream"), "ice cream");
   assert.equal(botKindOf("Sudu Shop"), "");
 
   // A shop with nothing but shelves suggests nobody rather than a stall.
-  assert.deepEqual(
-    botInsteadOf("pizza hut", [{ id: "s", name: "Sudu Shop" }]),
-    []
-  );
+  assert.deepEqual(botInsteadOf("pizza hut", [{ id: "s", name: "Sudu Shop" }]), []);
 });

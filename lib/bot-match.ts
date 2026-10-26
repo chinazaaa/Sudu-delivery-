@@ -1132,6 +1132,8 @@ export function placeAsked(said: string): string {
  */
 const KINDS = [
   "pizza",
+  "ice cream",
+  "icecream",
   "chicken",
   "burger",
   "shawarma",
@@ -1147,14 +1149,25 @@ const KINDS = [
   "smoothie",
 ];
 
-/** Chains whose name does not say what they sell. Deliberately few. */
+/**
+ * Names that do not say what they sell, ours and other people's.
+ *
+ * Deliberately few, and a soft failure: a name nobody has listed simply
+ * gets a less pointed suggestion, never a wrong one. KFC is not here
+ * because we buy from them, so the question never reaches this.
+ */
 const CHAINS: Record<string, string> = {
-  kfc: "chicken",
+  // Ours.
+  panarottis: "pizza",
+  dodo: "pizza",
+  coldstone: "ice cream",
+  scoopd: "ice cream",
+  // Other people's.
   mcdonalds: "burger",
   mcdonald: "burger",
   subway: "sandwich",
   starbucks: "coffee",
-  coldstone: "ice cream",
+  dominos: "pizza",
 };
 
 /*
@@ -1164,7 +1177,8 @@ const CHAINS: Record<string, string> = {
  * and they are the wrong answer to "can I order from Pizza Hut": nobody
  * asking for a pizza wants to be sent to a market stall.
  */
-const NOT_A_KITCHEN = /\b(shop|market|store|supermarket|pharmacy|chemist|skincare)\b/i;
+const NOT_A_KITCHEN =
+  /\b(shop|market|store|supermarket|pharmacy|chemist|skincare|custom)\b/i;
 
 /** The food word a name carries, or empty. */
 export function kindOf(name: string): string {
