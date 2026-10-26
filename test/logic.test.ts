@@ -98,6 +98,7 @@ import {
   MIXED_AREA_EXTRA,
 } from "../lib/areas";
 import { opensOn } from "../lib/open-days";
+import { dayAsked, nextOn, sayWhen } from "../lib/bot-days";
 import {
   applyWanted,
   emptiesIt,
@@ -6820,4 +6821,79 @@ test("the chat knows when somebody is asking about their own order", () => {
   // Ordinary ordering is not this.
   assert.notEqual(botIntentOf("i want to order jollof"), "mine");
   assert.notEqual(botIntentOf("2 chicken pie"), "mine");
+});
+
+test("the chat answers questions about which days it delivers", () => {
+  // Sunday 25 Oct. There is no Monday or Tuesday run, which is the week
+  // that caused all of this.
+  const today = "2026-10-25";
+  const runs = [
+    {
+      said: "Wednesday, 28 Oct",
+      runDate: "2026-10-28",
+      window: "Between 5pm and 7pm",
+      closes: "3:00 pm",
+    },
+    {
+      said: "Thursday, 29 Oct",
+      runDate: "2026-10-29",
+      window: "Between 5pm and 7pm",
+      closes: "4:30 pm",
+    },
+  ];
+  const cars = [{ date: "2026-10-25" }, { date: "2026-10-26" }];
+
+  // Which day is being asked about.
+  assert.equal(dayAsked("when is the next run"), "next");
+  assert.equal(dayAsked("are you delivering today"), "today");
+  assert.equal(dayAsked("can you deliver tomorrow"), "tomorrow");
+  assert.deepEqual(dayAsked("do you deliver on saturday"), { weekday: 6 });
+  assert.deepEqual(dayAsked("are you running mon"), { weekday: 1 });
+
+  // Not every sentence with a day in it is this question.
+  assert.equal(dayAsked("2 jollof rice"), null);
+  assert.equal(dayAsked("where is my order today"), null);
+  assert.equal(dayAsked("i want chicken today"), null);
+
+  // The next run, with the car mentioned because it is genuinely sooner.
+  const next = sayWhen({ asked: "next", runs, cars, today });
+  assert.match(next, /next run is Wednesday, 28 Oct/);
+  assert.match(next, /between 5pm and 7pm/);
+  assert.match(next, /close 3:00 pm/);
+  assert.match(next, /car of its own can come/);
+
+  // Today: no run, but a car can go, which is a yes.
+  const now = sayWhen({ asked: "today", runs, cars, today });
+  assert.match(now, /^Yes, today\./);
+  assert.match(now, /car of its own/);
+
+  // A day with a run on it names the window and the cut-off.
+  const wed = sayWhen({ asked: { weekday: 3 }, runs, cars, today });
+  assert.match(wed, /^Yes\. There is a run on Wednesday/);
+  assert.match(wed, /orders close 3:00 pm/);
+
+  // A day with neither: say so, and say what is next rather than just no.
+  const far = sayWhen({ asked: { weekday: 6 }, runs, cars, today });
+  assert.match(far, /^Not on Saturday, sorry\./);
+  assert.match(far, /next run is Wednesday, 28 Oct/);
+
+  // A shop with nothing going at all says nothing here, because that is a
+  // sentence about the shop rather than about a day.
+  assert.equal(sayWhen({ asked: "today", runs: [], cars: [], today }), "");
+  assert.equal(sayWhen({ asked: null, runs, cars, today }), "");
+
+  // The window never reads as a label dropped into a sentence.
+  assert.ok(!/ Between /.test(next));
+  assert.ok(!/ Between /.test(wed));
+});
+
+test("the chat counts days the way a calendar does", () => {
+  assert.equal(dayAfter("2026-10-31"), "2026-11-01");
+  assert.equal(dayAfter("2026-12-31"), "2027-01-01");
+  assert.equal(dayAfter("not a date"), "");
+
+  // Sunday 25 Oct 2026. Asking for Sunday is today, not next week.
+  assert.equal(nextOn(0, "2026-10-25"), "2026-10-25");
+  assert.equal(nextOn(1, "2026-10-25"), "2026-10-26");
+  assert.equal(nextOn(6, "2026-10-25"), "2026-10-31");
 });

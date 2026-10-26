@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { naira } from "@/lib/money";
 import { pickFaq } from "@/lib/faq-match";
+import { dayAsked, sayWhen } from "@/lib/bot-days";
+import { lagosToday } from "@/lib/time";
 import { readBudget, toSpend, allIn, type Budget } from "@/lib/budget";
 import {
   find,
@@ -705,6 +707,36 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
    * and an hour, which is where a particular student will be standing and
    * when. The same reason `known` answers yes or no and nothing else.
    */
+  /**
+   * "When is the next run?" "Are you delivering today?" "Can you do Tuesday?"
+   *
+   * Asked constantly, and answered until now out of the written list,
+   * which can only say how the shop works in general. The chat is handed
+   * tonight's real runs and real car windows when it opens, so it says the
+   * true thing: this day, this window, closing at this time.
+   *
+   * Tried before the written answers for exactly that reason. A written
+   * answer about the runs is stale the moment a run moves; this cannot be.
+   */
+  const sayWhichDays = useCallback(
+    (said: string): boolean => {
+      const asked = dayAsked(said);
+      if (asked === null) return false;
+
+      const answer = sayWhen({
+        asked,
+        runs: startRef.current?.runs ?? [],
+        cars: startRef.current?.cars ?? [],
+        today: lagosToday(),
+      });
+      if (answer === "") return false;
+
+      bot(answer, 520);
+      return true;
+    },
+    [bot]
+  );
+
   const whereIsMine = useCallback(
     async (phone?: string, pin?: string, ref?: string): Promise<void> => {
       const got = await working(
@@ -1278,6 +1310,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         // back with "Where do you deliver?", which is a different
         // question, about PAU, and the chat then answered it: somebody who
         // asked which kitchens we buy from was told where we drive to.
+        // Which days the shop goes, answered off tonight's real runs
+        // rather than out of the written list, which can only say how the
+        // shop works in general and is stale the moment a run moves.
+        else if (sayWhichDays(said)) return;
         else if (sayFaq(said, undefined, intentOf(said) === "menu")) return;
       }
 
@@ -1301,6 +1337,9 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
          * is written in admin. Only where there is one: with nothing
          * written, each of these still has a sensible next question.
          */
+        // Before the written answers, for the same reason as above.
+        if (sayWhichDays(said)) return;
+
         if (
           meant !== "" &&
           meant !== "vague-order" &&
