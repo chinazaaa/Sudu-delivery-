@@ -1122,6 +1122,88 @@ export function placeAsked(said: string): string {
   return name;
 }
 
+/**
+ * What kind of place a name is, where the name says so.
+ *
+ * "Pizza Hut" is pizza, and so is Domino's: the word is in both names and
+ * no table is needed. A handful of chains say nothing about themselves,
+ * so those are listed, and the list is short on purpose because a wrong
+ * guess here recommends somebody chicken when they wanted a doughnut.
+ */
+const KINDS = [
+  "pizza",
+  "chicken",
+  "burger",
+  "shawarma",
+  "sushi",
+  "grill",
+  "doughnut",
+  "donut",
+  "coffee",
+  "cake",
+  "pasta",
+  "noodle",
+  "juice",
+  "smoothie",
+];
+
+/** Chains whose name does not say what they sell. Deliberately few. */
+const CHAINS: Record<string, string> = {
+  kfc: "chicken",
+  mcdonalds: "burger",
+  mcdonald: "burger",
+  subway: "sandwich",
+  starbucks: "coffee",
+  coldstone: "ice cream",
+};
+
+/*
+ * Counters that are not a restaurant.
+ *
+ * The shop's own shelf and the market are real counters and real orders,
+ * and they are the wrong answer to "can I order from Pizza Hut": nobody
+ * asking for a pizza wants to be sent to a market stall.
+ */
+const NOT_A_KITCHEN = /\b(shop|market|store|supermarket|pharmacy|chemist|skincare)\b/i;
+
+/** The food word a name carries, or empty. */
+export function kindOf(name: string): string {
+  const flat = flatten(name);
+  for (const [chain, kind] of Object.entries(CHAINS)) {
+    if (flat.replace(/\s+/g, "").includes(chain)) return kind;
+  }
+  for (const kind of KINDS) {
+    if (new RegExp(`\\b${kind}s?\\b`).test(flat)) return kind;
+  }
+  return "";
+}
+
+/**
+ * Who to suggest instead of a place we do not buy from.
+ *
+ * Somebody asking for Pizza Hut wants pizza, and sending them a list with
+ * a doughnut shop at the top of it is the chat answering a different
+ * question. Where the kind is clear, only the counters that sell that
+ * kind are named. Where it is not, a few of the restaurants are, and
+ * never the shop's own shelf or the market: nobody asking for a pizza
+ * wants to be sent to a market stall.
+ */
+export function insteadOf(
+  place: string,
+  kitchens: { id: string; name: string }[],
+  most = 4
+): { id: string; name: string }[] {
+  const real = kitchens.filter((one) => !NOT_A_KITCHEN.test(one.name));
+  const kind = kindOf(place);
+
+  if (kind !== "") {
+    const same = real.filter((one) => kindOf(one.name) === kind);
+    if (same.length > 0) return same.slice(0, most);
+  }
+
+  return real.slice(0, most);
+}
+
 export function intentOf(said: string): Intent {
   /* The apostrophes put back, so "I don't know" is the same sentence as
      "I dont know". Flattening alone leaves an orphaned t, and every

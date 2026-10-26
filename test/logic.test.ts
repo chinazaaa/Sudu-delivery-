@@ -222,6 +222,8 @@ import {
   intentOf as botIntentOf,
   kitchenAsked as botKitchenAsked,
   placeAsked as botPlaceAsked,
+  insteadOf as botInsteadOf,
+  kindOf as botKindOf,
   basketLines,
   looksLikeAQuestion as botLooksLikeAQuestion,
   nameIn as botNameIn,
@@ -7040,4 +7042,59 @@ test("a misspelled kitchen is still ours, and is never offered as a favour", () 
     assert.equal(botKitchenAsked(said, kitchens), null, said);
     assert.notEqual(botPlaceAsked(said), "", said);
   }
+});
+
+test("what to suggest instead is about the same food, not the first four", () => {
+  const kitchens = [
+    { id: "s", name: "Sudu Shop" },
+    { id: "m", name: "Local Market" },
+    { id: "d", name: "Domino's Pizza" },
+    { id: "c", name: "Chicken Republic" },
+    { id: "dd", name: "Dodo Pizza" },
+    { id: "p", name: "Panarottis Pizza" },
+    { id: "k", name: "Krispy Kreme" },
+    { id: "b", name: "Burger King" },
+  ];
+  const names = (place: string) =>
+    botInsteadOf(place, kitchens).map((one) => one.name);
+
+  // Pizza Hut is pizza. The word is in both names and no table is needed.
+  assert.deepEqual(names("pizza hut"), [
+    "Domino's Pizza",
+    "Dodo Pizza",
+    "Panarottis Pizza",
+  ]);
+
+  // A chain whose name says nothing about itself.
+  assert.deepEqual(names("kfc"), ["Chicken Republic"]);
+  assert.deepEqual(names("mcdonalds"), ["Burger King"]);
+
+  /*
+   * The shop's own shelf and the market are real counters and the wrong
+   * answer to this question. Nobody asking for a pizza wants to be sent
+   * to a market stall.
+   */
+  for (const place of ["pizza hut", "kfc", "somewhere nobody knows"]) {
+    const said = names(place);
+    assert.ok(!said.includes("Sudu Shop"), place);
+    assert.ok(!said.includes("Local Market"), place);
+  }
+
+  // Where the kind is not clear, a few of the restaurants, capped.
+  const vague = names("that place by the gate");
+  assert.equal(vague.length, 4);
+  assert.equal(vague[0], "Domino's Pizza");
+
+  // The kind itself, read off a name.
+  assert.equal(botKindOf("Pizza Hut"), "pizza");
+  assert.equal(botKindOf("Dodo Pizza"), "pizza");
+  assert.equal(botKindOf("Chicken Republic"), "chicken");
+  assert.equal(botKindOf("Burger King"), "burger");
+  assert.equal(botKindOf("Sudu Shop"), "");
+
+  // A shop with nothing but shelves suggests nobody rather than a stall.
+  assert.deepEqual(
+    botInsteadOf("pizza hut", [{ id: "s", name: "Sudu Shop" }]),
+    []
+  );
 });

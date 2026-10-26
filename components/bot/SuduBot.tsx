@@ -17,6 +17,7 @@ import {
   lineLike,
   splitOrder,
   intentOf,
+  insteadOf,
   kitchenAsked,
   looksLikeAQuestion,
   placeAsked,
@@ -1417,25 +1418,25 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         const elsewhere = placeAsked(said);
         if (elsewhere !== "") {
           /*
-           * What we do buy from, said once and briefly.
+           * What we do buy from, about the same food where we can tell.
            *
-           * Somebody asking for Pizza Hut wants pizza, and Domino's is on
-           * the menu, cheaper, and going anyway. Leaving that out to
-           * protect the offer would be the chat keeping a useful thing to
-           * itself.
+           * Somebody asking for Pizza Hut wants pizza, and Domino's, Dodo
+           * and Panarottis are all on the menu. Naming the first four
+           * counters instead would put a doughnut shop at the top of an
+           * answer about pizza, which is the chat answering a different
+           * question.
            *
            * After the offer rather than instead of it, which is the whole
-           * difference between an answer and a brush off. Four names at
-           * most: a list of everything is a wall, and the question
-           * underneath it is the one they came to answer.
+           * difference between an answer and a brush off.
            */
-          const open = (startRef.current?.kitchens ?? []).map((one) => one.name);
-          const few = open.slice(0, 4);
+          const few = insteadOf(elsewhere, startRef.current?.kitchens ?? []).map(
+            (one) => one.name
+          );
           const also =
             few.length === 0
               ? ""
-              : ` We are buying from <b>${few.join("</b>, <b>")}</b>` +
-                `${open.length > few.length ? " and others" : ""}, if one of those would do.`;
+              : ` We do buy from <b>${few.join("</b>, <b>")}</b>` +
+                ", if one of those would do.";
 
           bot(
             `We do not buy from <b>${elsewhere}</b> at the moment, but we can go ` +
