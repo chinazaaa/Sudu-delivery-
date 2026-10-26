@@ -47,9 +47,9 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 
 const TITLE = "Send food to your child at Pan-Atlantic University";
 const BLURB =
-  "Sudu delivers food and foodstuff straight to the hostels at Pan-Atlantic " +
-  "University. Pick a box, pay once, and we send you a photograph when it is " +
-  "in their hands. Delivering on campus since 2018.";
+  "Send provisions, foodstuff and hot food to your child at Pan-Atlantic " +
+  "University, straight to their hostel. Pay once, and we send you a " +
+  "photograph when it is in their hands. Delivering on campus since 2018.";
 
 /**
  * What a parent sees before they see the page at all.
@@ -215,6 +215,22 @@ export default async function ParentsPage() {
         " Your child does not have to do anything.",
     },
     {
+      /*
+       * The word a parent actually uses.
+       *
+       * Nobody in Lagos says "I am sending foodstuff to my daughter in
+       * school". They say provisions, and the page did not contain the
+       * word once. The answer is the same as the one above it, which is
+       * why it is short: it is here to be found, not to be read twice.
+       */
+      q: "Can I send provisions to my child at PAU?",
+      a:
+        "Yes. Provisions are most of what goes out: noodles, milk, cereal, " +
+        "garri, rice, soap, tissue, and whatever else they have asked you " +
+        "for. Put the list in one order, pay once, and it is carried onto " +
+        "campus and handed to them at their block.",
+    },
+    {
       q: "How do I know it was delivered?",
       a:
         "We send you a photograph when it is handed over. Every order has a " +
@@ -292,7 +308,8 @@ export default async function ParentsPage() {
       {
         "@type": "Service",
         name: "Send food to a student at Pan-Atlantic University",
-        serviceType: "Food and foodstuff delivery to university hostels",
+        serviceType:
+          "Provisions, foodstuff and food delivery to university hostels",
         image: `${SITE}/covers/sudu.png`,
         provider: {
           "@type": "Organization",
