@@ -106,14 +106,27 @@ const mono = localFont({
 
 const SITE = new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store");
 
+/*
+ * What the shop is, in the words somebody types looking for it.
+ *
+ * "Your fav foods to PAU" is the shop's own voice and reads well on the
+ * page. It is not what anybody searches: the phrase is food delivery, and
+ * the university has a full name that half the people looking for it use.
+ * Both are here now, and the restaurants after them, because a name
+ * somebody already knows is what makes a result worth tapping.
+ */
 const BLURB =
-  "KFC, Domino's, Chicken Republic and more from Sangotedo, delivered to " +
-  "Pan-Atlantic University. One payment, one run.";
+  "Food delivery to Pan-Atlantic University (PAU), Ibeju-Lekki. KFC, " +
+  "Domino's, Chicken Republic and more from Sangotedo, in one order and " +
+  "one payment.";
 
 export const metadata: Metadata = {
   metadataBase: SITE,
   title: {
-    default: "Sudu, your fav foods to PAU",
+    // The phrase first, the shop second. A title is the one line that has
+    // to earn the tap, and "Sudu" means nothing to somebody who has not
+    // heard of us yet.
+    default: "Food delivery to PAU, Pan-Atlantic University · Sudu",
     // A restaurant or a product page says its own name, then the shop's.
     template: "%s · Sudu",
   },
@@ -129,12 +142,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "Sudu",
-    title: "Sudu, your fav foods to PAU",
+    title: "Food delivery to PAU, Pan-Atlantic University · Sudu",
     description: BLURB,
     url: SITE,
     locale: "en_NG",
   },
-  twitter: { card: "summary_large_image", title: "Sudu, your fav foods to PAU", description: BLURB },
+  twitter: {
+    card: "summary_large_image",
+    title: "Food delivery to PAU, Pan-Atlantic University · Sudu",
+    description: BLURB,
+  },
   // No canonical here on purpose. Next hands a layout's metadata down to
   // every page under it, so one written here told Google that the menu, every
   // restaurant and all four hundred dishes were copies of the front page, and

@@ -289,9 +289,17 @@ export default function Home({
                   <br />
                   <span className="text-brand">Inside PAU.</span>
                 </h1>
+                {/* The sentence under the headline says what this is in the
+                    words somebody would type looking for it.
+
+                    The headline is the shop's own voice and stays that way,
+                    but "Outside food. Inside PAU." does not contain the
+                    phrase anybody searches, and neither did this. It reads
+                    the same out loud and now carries it. */}
                 <p className="max-w-[520px] text-[17px] leading-normal text-ink/80 sm:text-xl">
-                  {said(menu)} and more{where !== "" ? ` from ${where}` : ""}.
-                  Mix restaurants in one order, pay once, and collect it at your
+                  Food delivery to Pan-Atlantic University, from {said(menu)}
+                  {" "}and more{where !== "" ? ` in ${where}` : ""}. Mix
+                  restaurants in one order, pay once, and collect it at your
                   hostel block.
                 </p>
                 <div className="flex flex-wrap gap-3">
