@@ -632,6 +632,22 @@ export default function Home({
                   </tbody>
                 </table>
               </div>
+              {/* What the table does not say on its own.
+
+                  It starts at four thousand and reads as the price, which
+                  it is on a day a run is going. People pick their own day
+                  now, and a day without a run is a car of its own at its
+                  own ladder: somebody could read this, pick Monday, and
+                  meet a bigger number with nothing on the page having
+                  warned them. No second table, because two ladders side by
+                  side is the thing the checkout was built to stop
+                  somebody having to read. */}
+              <p className="text-sm text-muted lg:col-span-2">
+                These are the prices on a day we are already driving. Pick a
+                day we are not and it comes on a car of its own, which costs
+                more because nobody else is sharing it. You see the price
+                before you pay, either way.
+              </p>
             </section>
           )}
 
