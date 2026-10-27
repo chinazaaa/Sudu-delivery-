@@ -372,6 +372,52 @@ export default function Home({
             </div>
           </section>
 
+          {/*
+              What you fancy, before whose shop it is.
+
+              This was a thin row of chips below the kitchens, which is the
+              wrong way round for half the people who arrive. lib/food-kinds
+              says so itself: one half wants KFC and wants it now, the other
+              half has decided on rice and does not care whose it is, and
+              for that half a grid of restaurant names is a question rather
+              than an answer. They had to scroll past fifteen kitchens to
+              reach the word "rice".
+
+              Tiles rather than chips, because the whole job of this block
+              is to be the first thing a thumb lands on. Every other shop
+              that sells food on a phone opens this way and they are right
+              to: nobody arrives wanting a restaurant, they arrive hungry.
+          */}
+          <section aria-label="What kind of food" className="shell flex flex-col gap-6 pb-10 pt-12">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <h2 className="section-title">
+                What are you
+                <br />
+                in the mood for?
+              </h2>
+              <Link href="/products" className="pb-1 font-bold underline">
+                Browse the full menu
+              </Link>
+            </div>
+            <ul className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+              {FOOD_KINDS.map((kind) => (
+                <li key={kind.label}>
+                  <Link
+                    href={kindHref(kind)}
+                    className="flex h-full min-h-[104px] flex-col items-start justify-between gap-2 rounded-xl border-2 border-ink bg-paper p-4 transition active:translate-x-0.5 active:translate-y-0.5"
+                  >
+                    <span aria-hidden className="text-3xl leading-none">
+                      {kind.emoji}
+                    </span>
+                    <span className="font-display text-[19px] font-extrabold uppercase leading-none">
+                      {kind.label}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+
           {/* The kitchens, named. */}
           {menu.length > 0 && (
             <section className="shell flex flex-col gap-8 pb-10 pt-16">
@@ -379,7 +425,7 @@ export default function Home({
                 <h2 className="section-title">
                   {menu.length} kitchen{menu.length === 1 ? "" : "s"}.
                   <br />
-                  One run.
+                  One delivery.
                 </h2>
                 <Link href="/products" className="pb-1 font-bold underline">
                   Browse the full menu
@@ -462,21 +508,6 @@ export default function Home({
               </ul>
             </section>
           )}
-
-          {/* The kinds, wrapped rather than scrolled. */}
-          <section aria-label="What kind of food" className="shell pb-16 pt-4">
-            <div className="flex flex-wrap gap-2.5">
-              {FOOD_KINDS.map((kind, at) => (
-                <Link
-                  key={kind.label}
-                  href={kindHref(kind)}
-                  className={`chip px-5 ${at === 0 ? "chip-on" : "bg-transparent"}`}
-                >
-                  {kind.label}
-                </Link>
-              ))}
-            </div>
-          </section>
 
           {/* The boxes, on Ink: already packed, already priced. */}
           {packs.length > 0 && (
