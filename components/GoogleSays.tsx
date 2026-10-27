@@ -30,7 +30,7 @@ export default function GoogleSays({
   quotes: GoogleQuote[];
 }) {
   if (profile === "" && review === "") return null;
-  const scored = rating > 0;
+  const scored = rating > 0 && count >= ENOUGH_REVIEWS;
 
   return (
     <section className="bleed border-y-2 border-ink bg-volt">
@@ -95,6 +95,20 @@ export default function GoogleSays({
  * Nothing at all until there is a rating, because "★ on Google" with no
  * number is an advert for a thing nobody has said yet.
  */
+/**
+ * How many reviews a score needs before the score is worth saying.
+ *
+ * Four point nine from ten reads thinner than saying nothing: a number that
+ * small invites the reader to work out that ten people have been asked, and
+ * a shop that volunteers how few have spoken is arguing against itself. The
+ * quotes underneath do not have this problem, because one person saying a
+ * true thing is one person saying a true thing however many others did.
+ *
+ * It comes back on its own. Nothing to remember and nothing to undo: the
+ * day the count passes this, the badge is there.
+ */
+export const ENOUGH_REVIEWS = 25;
+
 export function GoogleChip({
   rating,
   count,
@@ -105,6 +119,8 @@ export function GoogleChip({
   href: string;
 }) {
   if (rating <= 0 || href === "") return null;
+  // Too few to be worth quoting a score from. See ENOUGH_REVIEWS.
+  if (count < ENOUGH_REVIEWS) return null;
 
   return (
     <a

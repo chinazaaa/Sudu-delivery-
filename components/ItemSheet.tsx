@@ -3,6 +3,7 @@
 import { readGroup } from "./GroupLink";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Thumb from "./Thumb";
 import { addLine, addPerson, setActivePerson, usePeople } from "@/lib/cart";
 import { naira } from "@/lib/money";
@@ -12,6 +13,19 @@ import { halfShown, pickedPrice } from "@/lib/pricing";
 /**
  * The choices sheet: size, flavour, extras, quantity, add. It slides up from
  * the bottom because that is where a thumb is.
+ *
+ * Hung on the body rather than wherever it was opened from.
+ *
+ * It is positioned against the screen, and a thing positioned against the
+ * screen stops being so the moment any parent of it has a transform: the
+ * browser measures it from that parent instead. The front page opens one of
+ * these from inside a block shifted sideways to run full width, so the sheet
+ * was laid out two thousand pixels up the document where nobody could see
+ * it. What you got was the dimmed page behind it and no sheet, which reads
+ * as the shop having frozen.
+ *
+ * A portal takes it out of that tree altogether, so no parent anybody adds
+ * later can swallow it again.
  */
 export default function ItemSheet({
   item,
@@ -61,7 +75,7 @@ export default function ItemSheet({
     });
   }
 
-  return (
+  const sheet = (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <div className="absolute inset-0 bg-ink/50 backdrop-blur-[2px]" onClick={onClose} aria-hidden />
 
@@ -300,4 +314,10 @@ export default function ItemSheet({
       )}
     </div>
   );
+
+  // Never during a server render, where there is no body to hang it on. This
+  // only renders after somebody has tapped something, so there always is one.
+  return typeof document === "undefined"
+    ? sheet
+    : createPortal(sheet, document.body);
 }
