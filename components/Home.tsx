@@ -308,9 +308,22 @@ export default function Home({
               the right: the page used to open on the run alone, which says
               nothing to the half of campus who were sent a link. */}
           <section className="border-b-2 border-ink">
-            <div className="shell grid gap-8 py-7 sm:py-12 lg:grid-cols-2 lg:items-center lg:gap-14 lg:py-16">
-              <div className="flex flex-col gap-4 sm:gap-7">
-                <div className="flex flex-wrap gap-2">
+            <div className="shell grid gap-6 py-5 sm:gap-8 sm:py-12 lg:grid-cols-2 lg:items-center lg:gap-14 lg:py-16">
+              <div className="flex flex-col gap-3.5 sm:gap-7">
+                {/*
+                    Last on a phone, first at a desk.
+
+                    Three of these wrap onto three lines on a narrow screen,
+                    which is more of the first screenful than the headline
+                    costs. They are worth having and worth having early on a
+                    wide screen, where they sit beside the headline for
+                    nothing. On a phone they were standing between somebody
+                    who just arrived and the two things they came for: when
+                    it comes, and the button that starts an order. Trust is
+                    what keeps somebody reading; it is not what they are
+                    looking for in the first second.
+                */}
+                <div className="order-last flex flex-wrap gap-2 lg:order-none">
                   <span className="ticket inline-block border-2 border-ink px-2.5 py-1.5">
                     On PAU campus since 2018
                   </span>
@@ -330,7 +343,12 @@ export default function Home({
                     href={google.profile || google.review}
                   />
                 </div>
-                <h1 className="font-display text-[min(19.5vw,4.75rem)] font-black uppercase leading-[0.86] tracking-[-0.005em] sm:text-[clamp(4rem,9vw,8rem)]">
+                {/* Smaller on a phone than it was. At 19.5vw two lines of
+                    this filled what was left of the screen after the app
+                    banner, the ribbon and the header had taken their 290,
+                    and everything that sells was under the fold. It is
+                    still the biggest thing on the page. */}
+                <h1 className="font-display text-[min(14vw,3.5rem)] font-black uppercase leading-[0.86] tracking-[-0.005em] sm:text-[clamp(4rem,9vw,8rem)]">
                   Outside food.
                   <br />
                   <span className="text-brand">Inside PAU.</span>
