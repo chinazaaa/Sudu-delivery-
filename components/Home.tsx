@@ -324,6 +324,29 @@ export default function Home({
                     Order as a parent
                   </Link>
                 </div>
+
+                {/*
+                    The two things the shop does that nobody knows it does.
+
+                    Ordering together and buying somebody else dinner are
+                    both built, both paid for, and both reachable only by
+                    somebody who already went looking in a menu. A student
+                    opening the front page sees a shop that sells them
+                    food, so that is the only thing they ever ask it for.
+
+                    Small on purpose. They are not what the page is for:
+                    the order above it is. These are the two doors beside
+                    the main one, and a door only has to be visible to be
+                    used.
+                */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Link href="/group" className="chip">
+                    Order together <span aria-hidden>→</span>
+                  </Link>
+                  <Link href="/send-a-gift-to-pau" className="chip">
+                    Send someone food <span aria-hidden>→</span>
+                  </Link>
+                </div>
               </div>
 
               {arriving !== "" && (
