@@ -127,6 +127,11 @@ export type MenuItem = {
   /** Has to travel on ice, so an order holding it gets a bag of ice block
    *  put on it. See lib/ice.ts. */
   needs_ice?: boolean;
+  /** How many have been ordered, all time. The shop's own measure of what
+   *  people actually buy, kept up as orders land. Absent on a database that
+   *  has not had the column, which reads as nought and simply means nothing
+   *  is popular yet. */
+  ordered_count?: number;
   /** Delivery priced by the cool box, as JSON: a first lot at one price and
    *  every further lot at another. For something small that people buy a lot
    *  of, where the container count is the wrong measure and the thing rides

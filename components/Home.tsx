@@ -17,6 +17,12 @@ import { useCart } from "@/lib/cart";
 import type { ItemView, MenuView } from "@/lib/view";
 import type { Slide } from "@/lib/slides";
 
+/** How many of the most-bought dishes the front page shows, and the fewest
+ *  it will show any of. Four cards is a row that looks like the shop ran out
+ *  rather than one that looks chosen. */
+const POPULAR_SHOWN = 8;
+const MIN_POPULAR = 4;
+
 /** One way into the shop: a card in the grid, and a slide in the slider. */
 export type Bucket = {
   href: string;
@@ -48,6 +54,7 @@ export default function Home({
   iosAppId = "",
   androidPackage = "",
   pitch = "",
+  iceItemId = "",
   fees = [],
   arrivalFee = 0,
   areaExtras = [],
@@ -80,6 +87,10 @@ export default function Home({
   packs?: { title: string; line: string; href: string }[];
   /** Written in admin. Empty falls back to a slide per restaurant. */
   slides: Slide[];
+  /** The bag of ice. It is put in the cart by the shop rather than asked
+   *  for, so it is left out of what people are ordering: it would climb
+   *  that list without anybody ever having chosen it. */
+  iceItemId?: string;
   /** The App Store id, or empty where the shop has no app to mention. */
   iosAppId?: string;
   androidPackage?: string;
@@ -155,6 +166,33 @@ export default function Home({
       setFetching("");
     }
   }
+
+  /*
+   * What people actually buy.
+   *
+   * Ranked on the shop's own count rather than on anything anybody chose,
+   * so it is the menu telling the page what is good rather than the other
+   * way round. Across every kitchen at once, because somebody who has not
+   * decided has not decided on a restaurant either.
+   *
+   * Only where there is enough of it to look deliberate. The count is young
+   * and most of the menu has never been ordered, so a short row reads as a
+   * shop with nothing in it rather than as a shop still learning what sells.
+   * Below the floor it shows nothing at all and the page simply goes on to
+   * the kitchens.
+   */
+  const popular = useMemo(() => {
+    const everything = menu.flatMap((place) =>
+      place.items.map((item) => ({ item, place }))
+    );
+    const bought = everything
+      .filter(
+        ({ item }) =>
+          item.available && item.orderedCount > 0 && item.id !== iceItemId
+      )
+      .sort((a, b) => b.item.orderedCount - a.item.orderedCount);
+    return bought.length >= MIN_POPULAR ? bought.slice(0, POPULAR_SHOWN) : [];
+  }, [menu, iceItemId]);
 
   const found = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -395,6 +433,37 @@ export default function Home({
               ))}
             </ul>
           </section>
+
+          {popular.length > 0 && (
+            <section className="shell flex flex-col gap-6 pb-10">
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <h2 className="section-title">
+                  What everyone
+                  <br />
+                  is ordering
+                </h2>
+                <Link href="/products" className="pb-1 font-bold underline">
+                  Browse the full menu
+                </Link>
+              </div>
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {popular.map(({ item, place }) => (
+                  <li key={item.id}>
+                    <ItemRow
+                      item={item}
+                      restaurant={place.restaurant}
+                      inCart={countFor(item.id)}
+                      onOpen={() => openItem(item, place)}
+                      opening={fetching === item.id}
+                      category={
+                        place.categories.find((c) => c.id === item.categoryId)?.name ?? ""
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {/* The kitchens, named. */}
           {menu.length > 0 && (

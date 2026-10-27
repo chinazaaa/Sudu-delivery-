@@ -90,6 +90,7 @@ async function readMenu(): Promise<MenuView[]> {
           description: i.description ?? "",
           categoryId: i.category_id ?? null,
           containerPct: pctOf(i),
+          orderedCount: i.ordered_count ?? 0,
           groups: groupsByItem.get(i.id) ?? [],
         })
       ),
@@ -378,6 +379,7 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
         description: i.description ?? "",
         categoryId: i.category_id ?? null,
           containerPct: pctOf(i),
+          orderedCount: i.ordered_count ?? 0,
         groups: groupsByItem.get(i.id) ?? [],
       })
     ),

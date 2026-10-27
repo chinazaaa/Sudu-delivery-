@@ -366,6 +366,10 @@ export default async function HomePage() {
       androidPackage={settings.android_package}
       menu={lightMenu}
       slides={slides}
+      // The bag of ice, so the most-bought row can leave it out. The shop
+      // puts it in the cart itself whenever something needs it, so it
+      // climbs that list without anybody ever having chosen it.
+      iceItemId={settings.ice_item_id ?? ""}
       // When something ordered right now would land, by the one rule every
       // other way of ordering uses: a run going today while it is taking
       // orders, a car of its own today, a run tomorrow, tomorrow's first

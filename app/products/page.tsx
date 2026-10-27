@@ -175,6 +175,9 @@ export default async function ProductsPage({
       description: one.description,
       categoryId: one.categoryId,
       containerPct: one.containerPct,
+      // Nought rather than the real count: this list is already
+      // ordered by it on the server, and no card here reads it.
+      orderedCount: 0,
       groups: groups.get(one.id) ?? [],
     },
     restaurant: {

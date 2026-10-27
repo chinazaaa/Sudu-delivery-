@@ -46,6 +46,9 @@ export type ItemView = {
   categoryId: string | null;
   /** How much of the car it takes, as a percentage of one container. */
   containerPct: number;
+  /** How many have been ordered, all time, so the front page can show what
+   *  people actually buy rather than what the shop would like them to. */
+  orderedCount: number;
   /** Size, flavour, extras. An item with none of these adds in one tap. */
   groups: OptionGroupView[];
   /**
