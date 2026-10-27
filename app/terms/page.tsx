@@ -345,6 +345,14 @@ export default async function TermsPage() {
           What we cannot do is keep food warm, hold a car up while everybody
           else on it waits, or leave a bag outside a room.
         </p>
+        <p>
+          On a day the campus will not let the car through the gate, the food
+          is handed over at the gate instead and we tell everybody on that trip
+          where to come. It has still been delivered and the fee stands: the
+          shopping was done, the drive was made, and whether a car is waved
+          through is the university&apos;s decision rather than ours. We bring
+          it to your block whenever we are allowed to, which is nearly always.
+        </p>
       </Clause>
 
       <Clause n={11} title="Your number and your PIN">
