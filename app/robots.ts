@@ -40,10 +40,31 @@ const READERS = [
   "Applebot-Extended",
 ];
 
+/**
+ * The one crawler told to go away, and why.
+ *
+ * On 27 October 2026 meta-externalads fetched three hundred and forty two
+ * thousand pages in half a day, walking every page on the shop about ten
+ * thousand five hundred times each. Google managed seven hundred and twenty
+ * five in the same window. It took a month's worth of the host's allowance
+ * overnight and read nothing it had not already read ten thousand times.
+ *
+ * It is the crawler Meta points at the landing pages behind its adverts, and
+ * it honours this file, which is the civilised way to settle it. The firewall
+ * rule alongside this is the uncivilised way, kept because a sign on a door
+ * only works on somebody who reads it.
+ *
+ * Deliberately not facebookexternalhit. That one draws the card when somebody
+ * pastes a link into WhatsApp, and this shop lives in WhatsApp: turning it
+ * away would cost far more than the bandwidth ever did.
+ */
+const TOO_MUCH = ["meta-externalads"];
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       { userAgent: "*", allow: "/", disallow: PRIVATE },
+      ...TOO_MUCH.map((userAgent) => ({ userAgent, disallow: "/" })),
       ...READERS.map((userAgent) => ({ userAgent, allow: "/", disallow: PRIVATE })),
     ],
     sitemap: `${process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store"}/sitemap.xml`,
