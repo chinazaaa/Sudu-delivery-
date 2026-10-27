@@ -57,7 +57,7 @@ export default function ArrivalStrip({
           the thing on the page that cannot be scrolled past. */}
       <span className="flex items-baseline justify-between gap-3">
         <span className="ticket text-volt">
-          {lastMinute ? LAST_MINUTE_SAID : "Next run to PAU"}
+          {lastMinute ? LAST_MINUTE_SAID : "Next delivery to PAU"}
         </span>
         <span className="ticket text-shell/60">Tap to browse</span>
       </span>
@@ -103,8 +103,8 @@ export default function ArrivalStrip({
           {also && (
             <span className="block text-shell/75">
               {also.sooner
-                ? `In a hurry? A car of its own can be there ${also.said}, for more.`
-                : `Rather pay less? A run gets it to you ${also.said}.`}
+                ? `In a hurry? We can be there ${also.said}, for more.`
+                : `Rather pay less? We can be there ${also.said} for less.`}
             </span>
           )}
         </span>

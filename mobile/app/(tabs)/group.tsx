@@ -394,8 +394,8 @@ export default function Group() {
                   >
                     <Text style={{ color: T.brandDark, fontFamily: F.bodyBold, fontSize: 13 }}>
                       {(takeOther ? decided : other)?.onARun
-                        ? `Rather pay less? A run gets it to you ${(takeOther ? decided : other)?.said}.`
-                        : `In a hurry? A car of its own can be there ${(takeOther ? decided : other)?.said}, for more.`}
+                        ? `Rather pay less? We can be there ${(takeOther ? decided : other)?.said} for less.`
+                        : `In a hurry? We can be there ${(takeOther ? decided : other)?.said}, for more.`}
                       <Text style={{ textDecorationLine: "underline" }}>
                         {" "}Tap to start the group on that instead.
                       </Text>

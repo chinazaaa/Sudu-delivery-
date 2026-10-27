@@ -440,7 +440,7 @@ export default function Home() {
                 this ticket. */}
             <Stripes style={{ right: -10, width: "34%", opacity: 0.8 }} />
             <View style={{ flex: 1, gap: 6 }}>
-              <Ticket colour={T.volt}>Next run to PAU</Ticket>
+              <Ticket colour={T.volt}>Next delivery to PAU</Ticket>
               <Display size={34} colour={T.shell}>
                 {arriving !== "" ? arriving : "Working out when…"}
               </Display>
@@ -463,8 +463,8 @@ export default function Home() {
               {also && (
                 <Text style={{ color: T.onInk, marginTop: 2 }}>
                   {decided?.onARun
-                    ? `In a hurry? A car of its own can be there ${also.said}, for more.`
-                    : `Rather pay less? A run gets it to you ${also.said}.`}
+                    ? `In a hurry? We can be there ${also.said}, for more.`
+                    : `Rather pay less? We can be there ${also.said} for less.`}
                 </Text>
               )}
             </View>
