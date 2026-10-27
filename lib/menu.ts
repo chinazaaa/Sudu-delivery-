@@ -76,7 +76,7 @@ async function readMenu(): Promise<MenuView[]> {
     },
     categories: categoryRows
       .filter((c) => c.restaurant_id === restaurant.id)
-      .map((c) => ({ id: c.id, name: c.name })),
+      .map((c) => ({ id: c.id, name: c.name, aisle: c.aisle ?? "" })),
     items: menuItems
       .filter((i) => i.restaurant_id === restaurant.id)
       .map(
@@ -367,7 +367,7 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
       closedDays: closedWord(restaurant.open_days),
       areaId: (restaurant.area ?? "").trim(),
     },
-    categories: categoryRows.map((c) => ({ id: c.id, name: c.name })),
+    categories: categoryRows.map((c) => ({ id: c.id, name: c.name, aisle: c.aisle ?? "" })),
     items: menuItems.map(
       (i): ItemView => ({
         id: i.id,

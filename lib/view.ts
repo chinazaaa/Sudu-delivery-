@@ -28,7 +28,10 @@ export type MenuView = {
      *  are the shop's to change in admin. */
     areaId: string;
   };
-  categories: { id: string; name: string }[];
+  /** The shop's aisle is carried alongside each kitchen's own word for a
+   *  section, so a page can tell a pot of sauce from a pizza without
+   *  reading either of their names. */
+  categories: { id: string; name: string; aisle?: string }[];
   items: ItemView[];
 };
 

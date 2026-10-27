@@ -33,6 +33,20 @@ export const AISLES = [
   "Extras & add-ons",
 ];
 
+/**
+ * The aisles that are not somebody's dinner.
+ *
+ * "For the room" is cards, gifting, pantry and toiletries: real things the
+ * shop sells and nothing anybody wants under a heading about what everyone
+ * is ordering. "Extras & add-ons" is a pot of sauce, which is bought
+ * alongside a meal and never instead of one.
+ *
+ * By aisle rather than by the name of a product or a counter, because the
+ * aisle is the shop's own filing and a name is a thing somebody retypes.
+ * Groceries stays in: a bunch of plantain is dinner.
+ */
+export const NOT_DINNER = ["For the room", "Extras & add-ons"];
+
 /** The aisles this shop uses, in the order they are shown. */
 export function aislesFrom(said: string | null | undefined): string[] {
   const lines = String(said ?? "")

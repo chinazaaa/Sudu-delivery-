@@ -12,6 +12,7 @@ import type { GoogleQuote } from "@/lib/settings";
 import { kitchenTile } from "@/lib/drawing";
 import Thumb from "./Thumb";
 import { FOOD_KINDS, kindHref } from "@/lib/food-kinds";
+import { NOT_DINNER } from "@/lib/aisles";
 import { naira } from "@/lib/money";
 import { useCart } from "@/lib/cart";
 import type { ItemView, MenuView } from "@/lib/view";
@@ -186,10 +187,17 @@ export default function Home({
       place.items.map((item) => ({ item, place }))
     );
     const bought = everything
-      .filter(
-        ({ item }) =>
-          item.available && item.orderedCount > 0 && item.id !== iceItemId
-      )
+      .filter(({ item, place }) => {
+        if (!item.available || item.orderedCount === 0) return false;
+        // Put in the cart by the shop rather than asked for, so it would
+        // climb this list with nobody having chosen it.
+        if (item.id === iceItemId) return false;
+        // Cards, toiletries and pots of sauce are real things the shop
+        // sells and none of them is anybody's dinner. Read off the aisle
+        // rather than off a name: see NOT_DINNER.
+        const filed = place.categories.find((c) => c.id === item.categoryId);
+        return !NOT_DINNER.includes(filed?.aisle ?? "");
+      })
       .sort((a, b) => b.item.orderedCount - a.item.orderedCount);
     return bought.length >= MIN_POPULAR ? bought.slice(0, POPULAR_SHOWN) : [];
   }, [menu, iceItemId]);
