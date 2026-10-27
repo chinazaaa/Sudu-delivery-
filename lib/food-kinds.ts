@@ -40,9 +40,12 @@ export const FOOD_KINDS: FoodKind[] = [
   // and puff puff, and not one of them says "small chops" in its name.
   { label: "Small chops", emoji: "🍢", category: "Small Chops" },
   { label: "Pasta", emoji: "🍝", q: "pasta" },
-  { label: "Cake", emoji: "🍰", q: "cake" },
+  // By aisle rather than by word. Cold Stone names every tub "... Ice
+  // Cream" and Scoop'd names them "Padi (1 Scoop)" and "Boku (3 Scoops)",
+  // so a search for the words finds one counter and misses the shop whose
+  // whole name is ice cream.
+  { label: "Ice cream", emoji: "🍦", aisle: "Ice cream" },
   { label: "Doughnuts", emoji: "🍩", q: "doughnut" },
-  { label: "Drinks", emoji: "🥤", aisle: "Drinks" },
 ];
 
 /** Where a chip goes: the everything list, already narrowed. */
