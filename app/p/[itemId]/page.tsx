@@ -74,11 +74,24 @@ export default async function ProductPage({
 }) {
   const { itemId } = await params;
   const editingKey = (await searchParams).line ?? "";
-  const [menu, settings, valueBandsOf] = await Promise.all([
-    menuView(),
-    safeSettings(),
-    valueBandsOfEach(),
-  ]);
+
+  /*
+   * The menu on its own first, and nothing else yet.
+   *
+   * These three used to be awaited together, which read as the faster thing
+   * to do and was the reason the redirect below arrived too late to be one.
+   * A redirect can only set a status code while the response is still
+   * unsent, and waiting on the fee ladders and the settings before deciding
+   * meant the page had begun streaming by the time it was decided. Next
+   * cannot send a 301 into a response it has already started, so it fell
+   * back to a meta refresh at 200: the old address kept answering with a
+   * whole page, which is the duplicate this was meant to end.
+   *
+   * The menu is the only one of the three the decision needs, and it is
+   * cached under the "menu" tag, so asking for it by itself costs nothing
+   * on the ordinary path where no redirect happens.
+   */
+  const menu = await menuView();
 
   const place = menu.find((m) => m.items.some((i) => isIt(i, itemId)));
   const item = place?.items.find((i) => isIt(i, itemId));
@@ -99,6 +112,13 @@ export default async function ProductPage({
     const line = editingKey === "" ? "" : `?line=${encodeURIComponent(editingKey)}`;
     permanentRedirect(`/p/${item.href}${line}`);
   }
+
+  // Everything the page itself needs, asked for only once it is settled that
+  // this page is the one being drawn.
+  const [settings, valueBandsOf] = await Promise.all([
+    safeSettings(),
+    valueBandsOfEach(),
+  ]);
 
   const alsoFrom = place.items.filter((i) => i.id !== item.id).slice(0, 6);
   const category = place.categories.find((c) => c.id === item.categoryId);
