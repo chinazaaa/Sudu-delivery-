@@ -1,7 +1,7 @@
 import { cache } from "react";
 
 import { db } from "./supabase";
-import { aislesFrom } from "./aisles";
+import { aislesFrom, NOT_DINNER } from "./aisles";
 import { safeSettings } from "./settings";
 import { onTheMenu } from "./shelf";
 import { pctOf } from "./containers";
@@ -216,6 +216,35 @@ export async function browseProducts(
     .gt("price_food", 0);
 
   if (categoryIds) query = query.in("category_id", categoryIds);
+
+  /*
+   * The bare list is the food list.
+   *
+   * Nothing chosen is where everybody lands, and sorted by what sells it put
+   * a packet of sanitary pads between a pizza and a burger. Real stock, a
+   * useful thing to be able to buy, and not what a shop puts in the window.
+   *
+   * So the unfiltered view leaves out the aisles that are not somebody's
+   * dinner, and only that view: choose the aisle, choose the shop, or search
+   * for it by name and it is all there exactly as before. Nothing is hidden,
+   * it just stops being the first thing a hungry person sees.
+   *
+   * Items filed under nothing stay, because a missing category is a gap in
+   * the filing rather than a statement about what the thing is.
+   */
+  const unfiltered =
+    !options.category && !options.aisle && !options.place && !options.query;
+  if (unfiltered) {
+    const notDinner = ((categories ?? []) as any[])
+      .filter((one) => NOT_DINNER.includes(String(one.aisle ?? "").trim()))
+      .map((one) => one.id as string);
+    if (notDinner.length > 0) {
+      query = query.or(
+        `category_id.is.null,category_id.not.in.(${notDinner.join(",")})`
+      );
+    }
+  }
+
   if (options.query) {
     const words = options.query.trim().replace(/[%,]/g, " ");
     if (words !== "") query = query.ilike("name", `%${words}%`);
