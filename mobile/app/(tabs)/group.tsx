@@ -12,6 +12,7 @@ import {
 } from "@/lib/api";
 import { cart, countItems, me, party, pastParties, useStored, type Party } from "@/lib/store";
 import { F, shadow, T } from "@/lib/theme";
+import { useWhileWatching } from "@/lib/while-watching";
 import { Display, Stripes, Ticket } from "@/components/ui";
 
 const SITE = "https://sudu.store";
@@ -109,11 +110,10 @@ export default function Group() {
     }
   }, [seated]);
 
-  useEffect(() => {
-    void look();
-    const timer = setInterval(look, 8000);
-    return () => clearInterval(timer);
-  }, [look]);
+  /* Fifteen seconds, which is what the website's cart has always used, and
+     only while the app is in front. Eight was quicker than a group board
+     ever changes and it ran on in the background besides. */
+  useWhileWatching(look, 15000);
 
   const start = async () => {
     setProblem("");

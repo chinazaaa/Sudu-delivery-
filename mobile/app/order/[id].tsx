@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -16,6 +16,7 @@ import { me, useStored } from "@/lib/store";
 import { whatsappTo } from "@/lib/whatsapp";
 import { Button, Card, Display, Stripes, Ticket } from "@/components/ui";
 import { F, T } from "@/lib/theme";
+import { useWhileWatching } from "@/lib/while-watching";
 
 /** The five steps an order goes through, the way somebody waiting reads it. */
 const STAGES = ["ordering", "closed", "at_counter", "on_the_road", "at_drop", "handed_out"];
@@ -41,12 +42,9 @@ export default function Order() {
     }
   }, [id]);
 
-  useEffect(() => {
-    void load();
-    // While somebody is waiting, the screen should keep up on its own.
-    const timer = setInterval(load, 30000);
-    return () => clearInterval(timer);
-  }, [load]);
+  // While somebody is waiting, the screen keeps up on its own: every half
+  // minute in front of them, and once more the moment they come back to it.
+  useWhileWatching(load, 30000);
 
   const move = async (batchId: string) => {
     if (!saved.token) {
