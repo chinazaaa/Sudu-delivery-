@@ -1,4 +1,5 @@
 import BoxShelf from "@/components/BoxShelf";
+import { occasionBySlug } from "@/lib/boxes";
 import CurateBox from "@/components/CurateBox";
 import { safeSettings } from "@/lib/settings";
 import HelpLine from "@/components/HelpLine";
@@ -26,11 +27,38 @@ export const metadata = {
  * So one shelf, one address, and /occasions sends anybody who has the old
  * link here.
  */
-export default async function CollectionsPage() {
+export default async function CollectionsPage({
+  searchParams,
+}: {
+  /** The shelf somebody was sent here from, where its day has been. */
+  searchParams: Promise<{ gone?: string }>;
+}) {
   const settings = await safeSettings();
+
+  /*
+   * Where they were actually going.
+   *
+   * A shelf whose day has passed sends anybody still holding its link up
+   * here, which is right: they wanted a box and there are plenty. Doing it
+   * silently was not. Somebody taps "Halloween boxes" in a message from
+   * last week and lands on a page about every box in the shop with no idea
+   * why, which reads as a broken link rather than as an answer.
+   *
+   * Looked up by its address rather than printed from the link, so the
+   * sentence on the page is a name out of the database and never whatever
+   * somebody typed into the query string.
+   */
+  const from = (await searchParams).gone?.trim() ?? "";
+  const over = from === "" ? null : await occasionBySlug(from).catch(() => null);
 
   return (
     <div className="space-y-10">
+      {over && (
+        <p className="rounded-xl border-2 border-ink bg-volt px-4 py-3 font-semibold">
+          {over.name} is over for this year, so that shelf has come down.
+          Everything else we pack is below.
+        </p>
+      )}
       <BoxShelf
         kind="all"
         base="/collections"

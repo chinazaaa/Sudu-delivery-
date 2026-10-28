@@ -78,9 +78,12 @@ export default async function BoxDetail({
    * Sent up to the shelf list rather than refused, because the person
    * following that link still wants a box, and a temporary redirect because
    * the shelf comes back next year at the same address.
+   *
+   * Carrying which shelf it was, so the list can say so in a line. Landing
+   * on every box in the shop with no explanation reads as a broken link.
    */
   if (occasion.happens_at && new Date(occasion.happens_at).getTime() < Date.now()) {
-    redirect(base);
+    redirect(`${base}?gone=${encodeURIComponent(occasion.slug)}`);
   }
   // One address for both kinds now, so there is nothing to send anybody to.
   if (kind !== "all" && occasion.kind !== kind) {
