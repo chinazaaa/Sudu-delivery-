@@ -190,6 +190,7 @@ export default async function BoxDetail({
           /* Only a thing with a whistle can run out of ways to arrive. A
              collection always has one: pick a day, or let us agree one. */
           shut={isTimed(occasion) && when.length === 0}
+          whatsapp={settings.whatsapp_number}
         />
       )}
 

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { orderBox, type BoxOrderState } from "@/app/collections/actions";
 import type { BoxView, WhenOption } from "@/lib/box-view";
 import { naira } from "@/lib/money";
+import { waLink } from "@/lib/whatsapp";
 import { OPENED, TRAP } from "@/lib/guard";
 import AbroadMoney, { type Money } from "./AbroadMoney";
 import { STANDARD_DAYS } from "@/lib/box-day";
@@ -39,6 +40,7 @@ export default function OccasionBoxes({
   me,
   note,
   shut,
+  whatsapp = "",
 }: {
   slug: string;
   boxes: BoxView[];
@@ -72,6 +74,9 @@ export default function OccasionBoxes({
   me: { name: string; hostel: string; paymentMethod: "transfer" | "card" } | null;
   note: string;
   shut: boolean;
+  /** Where "Customise" goes. Empty leaves the button off rather than
+   *  sending anybody to a dead link. */
+  whatsapp?: string;
 }) {
   const router = useRouter();
   const [state, act, busy] = useActionState<BoxOrderState, FormData>(orderBox, {
@@ -134,16 +139,6 @@ export default function OccasionBoxes({
   const goToRest = (showSwaps = false) => {
     setTimeout(() => {
       rest.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      // Opened once, here, rather than held open by state: controlling it
-      // would spring every one of them back open on the next render, which
-      // is every time somebody picks a swap.
-      if (showSwaps) {
-        rest.current
-          ?.querySelectorAll<HTMLDetailsElement>("details[data-swap]")
-          .forEach((one) => {
-            one.open = true;
-          });
-      }
     }, 60);
   };
 
@@ -161,6 +156,14 @@ export default function OccasionBoxes({
   useEffect(() => {
     if (state.orderId) router.push(`/o/${state.orderId}`);
   }, [state.orderId, router]);
+
+  /** A message that already says which box it is about, so nobody has to
+   *  explain themselves twice. */
+  const chatAbout = (name: string) =>
+    waLink(
+      whatsapp,
+      `Hi Sudu, I want the ${name}, with some changes. Here is what I would like in it:`
+    ) ?? "";
 
   const priceOf = (one: BoxView) =>
     one.food +
@@ -269,16 +272,28 @@ export default function OccasionBoxes({
                     )}
                     {on ? "Picked" : "Add box"}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPicked(one.id);
-                      goToRest(true);
-                    }}
-                    className="font-semibold underline-offset-4 hover:underline"
-                  >
-                    Swap something out
-                  </button>
+                  {/*
+                      One conversation, not twenty radio buttons.
+
+                      A hamper is sold by agreeing what goes in it, and that
+                      is a thing people do in words: take out the fish, put
+                      in more milk, my aunt does not drink. The swap list
+                      could only ever offer three alternatives per line that
+                      the shop had thought of in advance, and it put a price
+                      against each one, which is how a gift starts reading
+                      like a receipt. Nobody else selling these prices them
+                      line by line.
+                  */}
+                  {chatAbout(one.name) !== "" && (
+                    <a
+                      href={chatAbout(one.name)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold underline-offset-4 hover:underline"
+                    >
+                      Customise it
+                    </a>
+                  )}
                 </div>
               </div>
             </article>
@@ -323,67 +338,6 @@ export default function OccasionBoxes({
                     </span>
                   </div>
 
-                  {line.swaps.length > 0 && (
-                    <details className="mt-1" data-swap>
-                      <summary className="cursor-pointer list-none text-sm text-muted underline decoration-dotted underline-offset-4">
-                        Swap
-                      </summary>
-                      <div className="mt-2 space-y-1">
-                        {[
-                          {
-                            name: line.name,
-                            restaurant: line.restaurant,
-                            choices: line.choices,
-                            delta: 0,
-                          },
-                          ...line.swaps,
-                        ].map((option, index) => (
-                            <label
-                              key={`${line.id}-${index}`}
-                              className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm odd:bg-black/[0.03]"
-                            >
-                              <span className="flex items-center gap-2">
-                                <input
-                                  type="radio"
-                                  name={`swap_${line.id}`}
-                                  value={index - 1}
-                                  checked={(swaps[line.id] ?? -1) === index - 1}
-                                  onChange={() =>
-                                    setSwaps((was) => ({ ...was, [line.id]: index - 1 }))
-                                  }
-                                />
-                                <span>
-                                  {option.name}
-                                  {/* The choice, in the name itself where it
-                                      is the only thing telling two rows
-                                      apart. Spicy and crunchy are the same
-                                      pot at the same price, and printing
-                                      both as "POT Chicken (8 Pieces)" asks
-                                      somebody to guess. */}
-                                  {option.choices.length > 0 && (
-                                    <span className="font-semibold">
-                                      {" "}· {option.choices.join(", ")}
-                                    </span>
-                                  )}
-                                  <span className="block text-xs text-muted">
-                                    {option.restaurant}
-                                  </span>
-                                </span>
-                              </span>
-                              <span className="shrink-0 font-semibold text-muted">
-                                {option.delta === 0
-                                  ? index === 0
-                                    ? "as packed"
-                                    : "same price"
-                                  : option.delta > 0
-                                    ? `+${naira(option.delta)}`
-                                    : `−${naira(-option.delta)}`}
-                              </span>
-                            </label>
-                        ))}
-                      </div>
-                    </details>
-                  )}
                 </li>
               ))}
             </ul>
