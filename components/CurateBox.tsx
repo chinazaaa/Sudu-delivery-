@@ -56,6 +56,21 @@ export default function CurateBox({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [hostel, setHostel] = useState("");
+  /*
+   * A block on campus, or an address anywhere in Lagos.
+   *
+   * A box only ever asked which block, so anybody who is not a student had
+   * to claim a hostel they do not live in or give up. Food is fetched hot
+   * and driven straight over, so it goes to PAU and nowhere else; a box is
+   * found, packed and then carried, and it can be carried to a house in
+   * Awoyaya on the same day without the day being any different.
+   *
+   * Lagos and no further. Somebody in Abuja can buy a hamper in Abuja, and
+   * telling them that now is better than taking their money and ringing
+   * them on the day.
+   */
+  const [inPau, setInPau] = useState(true);
+  const [address, setAddress] = useState("");
   const [note, setNote] = useState("");
   const [kind, setKind] = useState<"" | "have" | "find">("");
   const [state, run] = useActionState<CurateState, FormData>(curateABox, {
@@ -290,24 +305,68 @@ export default function CurateBox({
                     />
                   </label>
                   <label className="flex flex-col gap-1">
-                    <span className="text-sm font-bold">Which block</span>
-                    {/* The shop's own list. A block nobody can match is a
-                        bag in a car with nowhere to take it, and a parent
-                        filling this in has never seen the place. */}
-                    <select
-                      name="hostel"
-                      value={hostel}
-                      onChange={(event) => setHostel(event.target.value)}
-                      className="field"
-                    >
-                      <option value="">Pick a block</option>
-                      {hostels.map((one) => (
-                        <option key={one} value={one}>
-                          {one}
-                        </option>
+                    <span className="text-sm font-bold">Where it goes</span>
+                    <div className="flex gap-2">
+                      {[
+                        { at: true, label: "At PAU" },
+                        { at: false, label: "Elsewhere in Lagos" },
+                      ].map((one) => (
+                        <button
+                          key={one.label}
+                          type="button"
+                          onClick={() => setInPau(one.at)}
+                          className={`chip flex-1 justify-center ${
+                            inPau === one.at
+                              ? "border-ink bg-ink text-white"
+                              : "border-black/10 bg-white"
+                          }`}
+                        >
+                          {one.label}
+                        </button>
                       ))}
-                      <option value="Not sure">I am not sure</option>
-                    </select>
+                    </div>
+
+                    {inPau ? (
+                      /* The shop's own list. A block nobody can match is a
+                         bag in a car with nowhere to take it, and a parent
+                         filling this in has never seen the place. */
+                      <select
+                        value={hostel}
+                        onChange={(event) => setHostel(event.target.value)}
+                        className="field"
+                      >
+                        <option value="">Pick a block</option>
+                        {hostels.map((one) => (
+                          <option key={one} value={one}>
+                            {one}
+                          </option>
+                        ))}
+                        <option value="Not sure">I am not sure</option>
+                      </select>
+                    ) : (
+                      <>
+                        <textarea
+                          value={address}
+                          onChange={(event) => setAddress(event.target.value)}
+                          rows={3}
+                          placeholder="Street, estate, area, and anything the driver needs to find you"
+                          aria-label="Your address in Lagos"
+                          className="field"
+                        />
+                        <span className="text-xs text-muted">
+                          Anywhere in Lagos. Outside Lagos we cannot bring it,
+                          and we would rather say so now than take your money
+                          and ring you on the day.
+                        </span>
+                      </>
+                    )}
+                    {/* One field goes to the server whichever was filled in,
+                        because the order has one place it is going. */}
+                    <input
+                      type="hidden"
+                      name="hostel"
+                      value={inPau ? hostel : address}
+                    />
                   </label>
                 </div>
 
@@ -329,7 +388,7 @@ export default function CurateBox({
                 )}
 
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <Send />
+                  <Send ready={inPau ? hostel.trim() !== "" : address.trim().length >= 8} />
                   {/* For whoever started typing and would rather say it.
                       It carries what is in the boxes, so changing your mind
                       halfway costs nothing. */}
@@ -365,10 +424,16 @@ export default function CurateBox({
   );
 }
 
-function Send() {
+/** `ready` is false while there is nowhere to take it: no block picked, or
+ *  an address too short to find a house by. */
+function Send({ ready }: { ready: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className="btn disabled:opacity-60">
+    <button
+      type="submit"
+      disabled={pending || !ready}
+      className="btn disabled:opacity-60"
+    >
       {pending ? "Sending…" : "Send it"}
     </button>
   );
