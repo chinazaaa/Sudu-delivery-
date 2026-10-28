@@ -36,10 +36,10 @@ const SHELF = "christmas";
 
 const TITLE = "Christmas hampers delivered in Ibeju-Lekki, Sangotedo and PAU";
 const BLURB =
-  "Christmas hampers made up and delivered around Ibeju-Lekki: Sangotedo, " +
-  "Awoyaya, Lakowe, Pan-Atlantic University, Ajah and Lekki. Food hampers " +
-  "and treat hampers, swap anything you do not want, and we bring it to " +
-  "the door rather than leaving it at a gate.";
+  "Christmas hampers for families, offices and staff, made up and delivered " +
+  "around Ibeju-Lekki: Sangotedo, Awoyaya, Lakowe, Bogije, Abijo and " +
+  "Pan-Atlantic University. Delivery is in the price, nothing in the hamper " +
+  "is fixed, and we bring it to the door rather than leaving it at a gate.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -155,6 +155,21 @@ export default async function ChristmasHampersPage() {
         "of biscuits does not, and it is the one people actually use.",
     },
     {
+      q: "Do you do corporate Christmas hampers or bulk orders?",
+      a:
+        "Yes. Offices, estates and small businesses around Ibeju-Lekki buy " +
+        "these for staff and for clients. Send a list and a figure a head, " +
+        "and you get one invoice, one delivery day and a price per hamper " +
+        "that comes down with the number of them.",
+    },
+    {
+      q: "Can I send hampers to several people at once?",
+      a:
+        "Yes, and you do not have to place them one at a time. Send the " +
+        "names, numbers and addresses in one message and the whole lot goes " +
+        "out together, each one with its own card.",
+    },
+    {
       q: "When do I need to order a Christmas hamper by?",
       a:
         "Earlier than you think. December is the one month every shop on " +
@@ -180,6 +195,10 @@ export default async function ChristmasHampersPage() {
         "@type": "Service",
         name: "Christmas hamper delivery in Ibeju-Lekki",
         serviceType: "Gift hamper delivery",
+        audience: [
+          { "@type": "Audience", audienceType: "Families" },
+          { "@type": "BusinessAudience", audienceType: "Companies and offices" },
+        ],
         image: `${SITE}/covers/sudu.png`,
         provider: { "@type": "Organization", name: "Sudu", url: SITE },
         areaServed: [
@@ -247,8 +266,9 @@ export default async function ChristmasHampersPage() {
           <dl className="space-y-3">
             <Reason title="A food hamper">
               Rice, oil, tinned tomatoes, semolina, and the rest of what a
-              week of cooking takes. This is what goes to a hostel manager, a
-              cleaner, a security man or a driver, and it is the one that gets
+              week of cooking takes. This is the one that goes to staff, to a
+              cleaner, a driver, a security man or a hostel manager, and to
+              anybody whose Christmas is easier for a full cupboard. It gets
               used rather than put on a shelf.
             </Reason>
             <Reason title="A treat hamper">
@@ -317,6 +337,25 @@ export default async function ChristmasHampersPage() {
             </ul>
           </Section>
         )}
+
+        <Section title="Ordering for a company">
+          <p>
+            Offices, estates and small businesses around Ibeju-Lekki buy
+            these for staff and for clients, and that is a different order
+            from one hamper: a list of names, one invoice, and a day
+            everything has to land on. We do that, and the price per hamper
+            comes down with the number of them.
+          </p>
+          {chat && (
+            <p>
+              Tell us how many and roughly what you want to spend a head on{" "}
+              <a href={chat} className="font-bold text-brand">
+                WhatsApp
+              </a>{" "}
+              and we will put it together and price it before anybody pays.
+            </p>
+          )}
+        </Section>
 
         <Section title="Doing a Secret Santa instead?">
           <p>
