@@ -32,8 +32,15 @@ export default function CurateBox({
   /** Which shelf they were looking at, so whoever answers knows what they
    *  were looking at when they asked. */
   shelf: string;
-  /** The shelf's own example of a change, which is a better prompt than
-   *  anything written here: one example cannot serve a cake and a bucket. */
+  /**
+   * What to suggest in the box where they say what they want.
+   *
+   * Not the shelf's custom_hint, which answers a different question: that
+   * one is an example of a change to a box that already exists ("swap the
+   * custard for another tin of milk"), and it read as nonsense here, where
+   * nothing exists yet. Empty falls back to the line below, in this
+   * shelf's own word for what it sells.
+   */
   hint: string;
   /** What this shelf sells, in the word the shop uses for it: "hamper" on
    *  the Christmas shelf, "box" everywhere else. Said rather than guessed,
@@ -228,7 +235,7 @@ export default function CurateBox({
                     onChange={(event) => setWanted(event.target.value)}
                     placeholder={
                       hint.trim() ||
-                      "A tin of milo, two packs of noodles, and a cake for Friday"
+                      `Rice, oil, a tin of milk, something sweet, and a bottle of wine. Or say who the ${thing} is for and roughly what you want to spend, and we will build one to it.`
                     }
                     className="field"
                   />

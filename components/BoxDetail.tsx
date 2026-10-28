@@ -223,7 +223,9 @@ export default async function BoxDetail({
           pack, which is most of what anybody wants and never all of it. */}
       <CurateBox
         shelf={occasion.name}
-        hint={occasion.custom_hint}
+        /* Not the shelf's change-hint: that is an example of changing a box
+           that exists, and nothing exists yet at this point. */
+        hint=""
         thing={occasion.item_word}
         whatsapp={settings.whatsapp_number}
       />
