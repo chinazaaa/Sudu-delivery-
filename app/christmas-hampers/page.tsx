@@ -5,6 +5,8 @@ import { askedFor } from "@/lib/page-faq";
 import PageHead from "@/components/PageHead";
 import { AlsoSee, Asked, Reason, Section, faqGraph, type Ask } from "@/components/Guide";
 import { boxesOf, occasionBySlug } from "@/lib/boxes";
+import { boxViews, type BoxView } from "@/lib/box-view";
+import { naira } from "@/lib/money";
 import { parseAreas } from "@/lib/areas";
 import { safeSettings } from "@/lib/settings";
 import { waLink } from "@/lib/whatsapp";
@@ -51,6 +53,19 @@ export default async function ChristmasHampersPage() {
   // Only a shelf that is actually open. A page advertising hampers that
   // cannot be bought is worse than one that says to message us.
   const boxes = shelf?.active ? await boxesOf(shelf.id) : [];
+  /*
+   * Drawn out with what is in them and what they come to.
+   *
+   * The page used to put the hampers up as a row of names, which told
+   * somebody nothing and told a search engine less. A hamper is sold on its
+   * contents: the whole question anybody has is what is in it and what it
+   * costs, and both are already known here.
+   *
+   * Priced off the menu as it stands rather than off a number typed when
+   * the box was made, so a price rise in December cannot leave the shop
+   * selling at a loss.
+   */
+  const shown: BoxView[] = boxes.length > 0 ? await boxViews(boxes).catch(() => []) : [];
 
   /*
    * The towns this page is actually for.
@@ -247,16 +262,38 @@ export default async function ChristmasHampersPage() {
           </dl>
         </Section>
 
-        {boxes.length > 0 && (
+        {shown.length > 0 && (
           <Section title="What is on the shelf">
-            <ul className="flex flex-wrap gap-2 pt-1">
-              {boxes.map((one) => (
+            <ul className="grid gap-4 sm:grid-cols-2">
+              {shown.map((one) => (
                 <li key={one.id}>
                   <Link
                     href={`/collections/${SHELF}`}
-                    className="inline-block rounded-full bg-paper px-3 py-1.5 text-sm font-bold shadow-card"
+                    className="flex h-full flex-col gap-2 rounded-2xl border-2 border-ink bg-paper p-5 transition active:translate-x-0.5 active:translate-y-0.5"
                   >
-                    {one.name}
+                    <span className="font-display text-[26px] font-extrabold uppercase leading-none">
+                      {one.name}
+                    </span>
+                    <span className="font-bold text-brand">
+                      {naira(one.food + one.runFee)}
+                      <span className="font-semibold text-ink/60">
+                        {" "}· delivery included
+                      </span>
+                    </span>
+                    {/* The contents, said plainly. It is the only question
+                        anybody has about a hamper, and a search engine
+                        reading this page has no other way to know. */}
+                    <span className="text-[15px] leading-relaxed text-ink/75">
+                      {one.lines
+                        .map((line) =>
+                          line.qty > 1 ? `${line.name} ×${line.qty}` : line.name
+                        )
+                        .join(", ")}
+                      .
+                    </span>
+                    <span className="ticket mt-auto pt-1 text-brand-dark">
+                      Swap anything in it
+                    </span>
                   </Link>
                 </li>
               ))}
