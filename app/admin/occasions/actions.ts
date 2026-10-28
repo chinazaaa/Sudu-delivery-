@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 import { db } from "@/lib/supabase";
 import { isSignedIn } from "@/lib/admin-auth";
@@ -242,6 +242,9 @@ export async function removeBox(form: FormData): Promise<void> {
 }
 
 function touch(): void {
+  // The footer reads which seasons are open, on every page in the site, so
+  // switching a shelf on has to clear that with everything else.
+  updateTag("menu");
   revalidatePath("/admin", "layout");
   revalidatePath("/collections", "layout");
   revalidatePath("/");

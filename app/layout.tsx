@@ -37,6 +37,7 @@ import { WHO_COOKIE } from "@/lib/came-from";
 import { promoterCalledName } from "@/lib/promoters";
 import LinkPerk from "@/components/LinkPerk";
 import "./globals.css";
+import { openSeasons } from "@/lib/boxes";
 
 /**
  * Where the site lives, for the absolute links that a share card and a
@@ -240,6 +241,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
    * is left out rather than linked: the page it points at is a not-found
    * while it is off.
    */
+  // Whatever shelf has a season of its own and is open: Christmas today,
+  // nothing most of the year. Cached, because this runs on every page.
+  const seasons = await openSeasons().catch(() => [] as { slug: string; name: string }[]);
+
   const counters: [string, string][] = [
     ...(skincareOn(settings) ? ([["/skincare", "Skincare"]] as [string, string][]) : []),
     ...(pharmacyOn(settings) ? ([["/pharmacy", "Pharmacy"]] as [string, string][]) : []),
@@ -424,6 +429,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {showFooter && (
             <SiteFooter
               counters={counters}
+              seasons={seasons}
               line={settings.footer_line}
               instagram={instagram}
               x={x}

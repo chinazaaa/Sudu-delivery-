@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+
 import { db } from "./supabase";
 import type { CartLine } from "./types";
 
@@ -431,3 +433,34 @@ export async function boxWhere(
     slug: on.slug,
   };
 }
+
+/**
+ * The shelves that have a season of their own, for the footer.
+ *
+ * A page written to be found, /christmas-hampers among them, is reachable
+ * from nowhere but a search until something links to it, and the footer is
+ * where the pages with no home in the header live. It cannot be a fixed
+ * link: a footer still offering Christmas hampers in March is a shop that
+ * nobody is minding.
+ *
+ * So it asks which seasonal shelves are open. Cached for a minute and
+ * cleared by admin, because this runs on every page in the site and the
+ * answer changes a few times a year.
+ */
+export const openSeasons = unstable_cache(
+  async (): Promise<{ slug: string; name: string }[]> => {
+    const { data, error } = await db()
+      .from("occasions")
+      .select("slug, name, starts_at, active")
+      .eq("active", true)
+      .not("starts_at", "is", null)
+      .order("starts_at", { ascending: true });
+    if (error) return [];
+    return ((data ?? []) as { slug: string; name: string }[]).map((one) => ({
+      slug: one.slug,
+      name: one.name,
+    }));
+  },
+  ["open-seasons"],
+  { revalidate: 60, tags: ["menu"] }
+);

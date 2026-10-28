@@ -17,6 +17,18 @@ import Wordmark from "./Wordmark";
  */
 type Group = { heading: string; links: { href: string; said: string; away?: boolean }[] };
 
+/**
+ * Shelves that have a page written for them, rather than only a shelf.
+ *
+ * /christmas-hampers is written for somebody typing "christmas hampers
+ * ibeju-lekki" into Google, and it says more about hampers than the shelf
+ * does. Where a season has one of these, the footer points at it; where it
+ * has not, it points at the shelf, which is always there.
+ */
+const WRITTEN: Record<string, string> = {
+  christmas: "/christmas-hampers",
+};
+
 export default function SiteFooter({
   line,
   instagram,
@@ -26,6 +38,7 @@ export default function SiteFooter({
   google = "",
   showPromoterLink,
   counters = [],
+  seasons = [],
 }: {
   /** The counters that are open, as [href, label]. A link to one that is
    *  switched off is a link to a not-found, and only the server knows. */
@@ -41,12 +54,21 @@ export default function SiteFooter({
   /** The shop's Google Business Profile. Empty and it is not offered. */
   google?: string;
   showPromoterLink: boolean;
+  /** Shelves that have a season of their own and are open now. A fixed
+   *  Christmas link would still be here in March. */
+  seasons?: { slug: string; name: string }[];
 }) {
   const groups: Group[] = [
     {
       heading: "Order",
       links: [
         { href: "/products", said: "Food" },
+        // Whatever season is open, first: it is the thing being sold this
+        // month and the only link anybody is looking for in December.
+        ...seasons.map((one) => ({
+          href: WRITTEN[one.slug] ?? `/collections/${one.slug}`,
+          said: one.name,
+        })),
         { href: "/collections", said: "Collections" },
         ...counters.map(([href, said]) => ({ href, said })),
         { href: "/parcel", said: "Parcels" },
