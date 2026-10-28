@@ -3090,6 +3090,7 @@ export async function saveCoupon(form: FormData): Promise<void> {
   if (!code || !Number.isFinite(amount) || amount < 0) return;
   if (amount === 0 && !sets) return;
 
+  const starts = String(form.get("starts_at") ?? "").trim();
   const expires = String(form.get("expires_at") ?? "").trim();
   const maxUses = Math.round(Number(form.get("max_uses") ?? 0));
 
@@ -3120,6 +3121,9 @@ export async function saveCoupon(form: FormData): Promise<void> {
     required_choice: choiceJson(form.getAll("required_choice").map(String)),
     note: String(form.get("note") ?? "").trim(),
     active: form.get("active") === "on",
+    // From the first minute of that day in Lagos. Blank is every code there
+    // has ever been: live the moment it is switched on.
+    starts_at: starts ? new Date(`${starts}T00:00:00+01:00`).toISOString() : null,
     // Blank means no limit, which is the normal case for a code in a group.
     expires_at: expires ? new Date(`${expires}T23:59:59+01:00`).toISOString() : null,
     max_uses: Number.isFinite(maxUses) && maxUses > 0 ? maxUses : null,

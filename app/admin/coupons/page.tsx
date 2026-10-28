@@ -351,6 +351,14 @@ export default async function CouponsAdmin({
                   {coupon.first_order_only ? "first order only" : "any order"}
                   {coupon.automatic ? " · applies by itself" : " · they type it"}
                   {coupon.same_day && " · also on a same day car"}
+                  {/* A code waiting for its day looks broken otherwise:
+                      switched on, in the list, and refused at the till. */}
+                  {coupon.starts_at &&
+                    new Date(coupon.starts_at) > new Date() &&
+                    ` · starts ${new Date(coupon.starts_at).toLocaleDateString("en-NG", {
+                      day: "numeric",
+                      month: "short",
+                    })}`}
                   {coupon.expires_at &&
                     ` · until ${new Date(coupon.expires_at).toLocaleDateString("en-NG", {
                       day: "numeric",
@@ -511,6 +519,7 @@ function valuesOf(coupon: Awaited<ReturnType<typeof listCoupons>>[number]): Coup
     note: coupon.note,
     active: coupon.active,
     first_order_only: coupon.first_order_only,
+    starts_at: coupon.starts_at ?? null,
     expires_at: coupon.expires_at,
     max_uses: coupon.max_uses,
     included_items: coupon.included_items,

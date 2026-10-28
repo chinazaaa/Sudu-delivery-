@@ -20,6 +20,16 @@ export type Coupon = {
   note: string;
   active: boolean;
   expires_at: string | null;
+  /**
+   * The moment it starts working.
+   *
+   * Null is every code there has ever been: live as soon as it is switched
+   * on. A date here is for an offer with a day of its own, Black Friday
+   * being the reason this exists: it is set up in advance and switches
+   * itself on at midnight, rather than waiting for somebody to remember at
+   * seven in the morning on the one day it matters.
+   */
+  starts_at: string | null;
   max_uses: number | null;
   used: number;
   first_order_only: boolean;
@@ -57,6 +67,22 @@ export type CouponWithRuns = Coupon & {
  * deploy that lands before the SQL does leaves every existing code working
  * exactly as it did.
  */
+/**
+ * Whether a code is inside its own window right now.
+ *
+ * One reading of the two dates, used everywhere, because this is asked in
+ * five places and five copies of it is how a code ends up live on the
+ * offer strip and refused at the till.
+ */
+export function inSeason(
+  coupon: { starts_at?: string | null; expires_at: string | null },
+  now: Date = new Date()
+): boolean {
+  if (coupon.starts_at && new Date(coupon.starts_at) > now) return false;
+  if (coupon.expires_at && new Date(coupon.expires_at) <= now) return false;
+  return true;
+}
+
 export async function couponPlaces(code: string): Promise<string[]> {
   try {
     const { data, error } = await db()
@@ -96,7 +122,7 @@ export async function liveOffers(): Promise<LiveOffer[]> {
   const live = offers.filter(
     (coupon) =>
       coupon.applies_to === "fee" &&
-      !(coupon.expires_at && new Date(coupon.expires_at) <= now) &&
+      inSeason(coupon, now) &&
       !(coupon.max_uses !== null && coupon.used >= coupon.max_uses)
   );
   if (live.length === 0) return [];
@@ -202,7 +228,7 @@ export async function anyCodeToType(): Promise<boolean> {
   try {
     const { data, error } = await db()
       .from("coupons")
-      .select("expires_at, max_uses, used")
+      .select("starts_at, expires_at, max_uses, used")
       .eq("active", true)
       .eq("automatic", false);
     if (error) return false;
@@ -210,7 +236,7 @@ export async function anyCodeToType(): Promise<boolean> {
     const now = new Date();
     return (data ?? []).some(
       (row) =>
-        !(row.expires_at && new Date(row.expires_at as string) <= now) &&
+        inSeason(row as { starts_at?: string | null; expires_at: string | null }, now) &&
         !(row.max_uses !== null && Number(row.used ?? 0) >= Number(row.max_uses))
     );
   } catch {
@@ -278,6 +304,9 @@ export async function checkCoupon(args: {
   // letting somebody type it would be the offer landing twice.
   if (coupon.automatic || coupon.applies_to === "fee") {
     return { ok: false, error: "That one applies by itself, with nothing to type." };
+  }
+  if (coupon.starts_at && new Date(coupon.starts_at) > new Date()) {
+    return { ok: false, error: "That one is not on yet. Try it again on the day." };
   }
   if (coupon.expires_at && new Date(coupon.expires_at) <= new Date()) {
     return { ok: false, error: "That code has expired." };
@@ -553,7 +582,7 @@ export async function publicOffer(code: string): Promise<PublicOffer | null> {
 
     const coupon = data as Coupon | null;
     if (!coupon || !coupon.active) return null;
-    if (coupon.expires_at && new Date(coupon.expires_at) <= new Date()) return null;
+    if (!inSeason(coupon)) return null;
     if (coupon.max_uses !== null && coupon.used >= coupon.max_uses) return null;
 
     const what = offerWording(coupon);
@@ -625,7 +654,7 @@ export async function dealsAt(
   const now = new Date();
   const live = coupons.filter(
     (coupon) =>
-      !(coupon.expires_at && new Date(coupon.expires_at) <= now) &&
+      inSeason(coupon, now) &&
       !(coupon.max_uses !== null && coupon.used >= coupon.max_uses)
   );
   if (live.length === 0) return [];

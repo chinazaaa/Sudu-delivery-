@@ -27,6 +27,7 @@ export type CouponFormValues = {
   note: string;
   active: boolean;
   first_order_only: boolean;
+  starts_at: string | null;
   expires_at: string | null;
   max_uses: number | null;
   included_items: number | null;
@@ -141,7 +142,9 @@ export default function CouponForm({
    */
   const [named, setNamed] = useState((values?.code ?? "") !== "");
   const [dated, setDated] = useState(
-    Boolean(values?.expires_at) || (values?.max_uses ?? null) !== null
+    Boolean(values?.starts_at) ||
+      Boolean(values?.expires_at) ||
+      (values?.max_uses ?? null) !== null
   );
   const windowSet = dated || when !== "every";
   const answered = 1 + (named ? 1 : 0) + (windowSet ? 1 : 0);
@@ -464,6 +467,27 @@ export default function CouponForm({
       ))}
 
       <div className="grid gap-3 sm:grid-cols-2">
+        {/* A day of its own, for an offer set up in advance. Black Friday
+            is the whole reason: it can be built in October and it switches
+            itself on at midnight, rather than waiting for somebody to
+            remember at seven in the morning on the one day it matters. */}
+        <div>
+          <label className="label" htmlFor={id("starts_at")}>
+            First day
+          </label>
+          <input
+            id={id("starts_at")}
+            name="starts_at"
+            type="date"
+            defaultValue={values?.starts_at ? values.starts_at.slice(0, 10) : ""}
+            onChange={(event) => setDated(event.target.value !== "")}
+            className="field field-admin"
+          />
+          <p className="hint mt-1">
+            Blank and it works the moment it is switched on. Set it and it
+            starts itself at midnight on that day, so you can build it now.
+          </p>
+        </div>
         <div>
           <label className="label" htmlFor={id("expires_at")}>
             Last day
