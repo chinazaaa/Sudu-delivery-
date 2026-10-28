@@ -26,7 +26,7 @@ import { waLink } from "@/lib/whatsapp";
 export default function CurateBox({
   shelf,
   hint,
-  hostels,
+  thing = "box",
   whatsapp,
 }: {
   /** Which shelf they were looking at, so whoever answers knows what they
@@ -35,7 +35,10 @@ export default function CurateBox({
   /** The shelf's own example of a change, which is a better prompt than
    *  anything written here: one example cannot serve a cake and a bucket. */
   hint: string;
-  hostels: string[];
+  /** What this shelf sells, in the word the shop uses for it: "hamper" on
+   *  the Christmas shelf, "box" everywhere else. Said rather than guessed,
+   *  because a page that calls a hamper a box reads as the wrong shop. */
+  thing?: string;
   /** The shop's number, so somebody who will not fill in a form can say it
    *  out loud instead. Most of this shop's conversations start there. */
   whatsapp?: string | null;
@@ -50,29 +53,11 @@ export default function CurateBox({
    * messages anybody on anybody's behalf.
    */
   const [wanted, setWanted] = useState("");
-  const [budget, setBudget] = useState("");
   // The rest of it, for the same reason: a refusal must not empty a form
   // somebody has just filled in.
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [hostel, setHostel] = useState("");
-  /*
-   * A block on campus, or an address anywhere in Lagos.
-   *
-   * A box only ever asked which block, so anybody who is not a student had
-   * to claim a hostel they do not live in or give up. Food is fetched hot
-   * and driven straight over, so it goes to PAU and nowhere else; a box is
-   * found, packed and then carried, and it can be carried to a house in
-   * Awoyaya on the same day without the day being any different.
-   *
-   * Lagos and no further. Somebody in Abuja can buy a hamper in Abuja, and
-   * telling them that now is better than taking their money and ringing
-   * them on the day.
-   */
-  const [inPau, setInPau] = useState(true);
-  const [address, setAddress] = useState("");
-  const [note, setNote] = useState("");
-  const [kind, setKind] = useState<"" | "have" | "find">("");
+  const [kind, setKind] = useState<"" | "find">("");
   const [state, run] = useActionState<CurateState, FormData>(curateABox, {
     error: "",
     done: false,
@@ -80,10 +65,9 @@ export default function CurateBox({
 
   const talk = waLink(
     whatsapp,
-    "Hi Sudu, I would like to put my own box together." +
+    `Hi Sudu, I would like a customised ${thing}.` +
       (shelf === "" ? "" : `\n\nI was looking at ${shelf}.`) +
-      (wanted.trim() === "" ? "" : `\n\nWhat I want: ${wanted.trim()}`) +
-      (budget.trim() === "" ? "" : `\nBudget: ${budget.trim()}`)
+      (wanted.trim() === "" ? "" : `\n\nWhat I want: ${wanted.trim()}`)
   );
 
   // The dialog takes the keyboard, and Escape closes it, because a panel
@@ -111,11 +95,11 @@ export default function CurateBox({
       <div className="card flex flex-col gap-2.5 p-4 sm:p-5">
         <span className="ticket text-brand-dark">Your own</span>
         <h2 className="font-display text-[26px] font-black uppercase leading-[0.95]">
-          Curate your own box
+          Curate your own {thing}
         </h2>
         <p className="text-sm leading-relaxed text-ink/75">
-          Nothing on the shelf quite it? Build one from the menu, or tell us what
-          you want and we will go and find it.
+          Nothing on the shelf quite it? Tell us what you want in it and we
+          will put it together, price it, and come back to you.
         </p>
         <button
           type="button"
@@ -141,16 +125,14 @@ export default function CurateBox({
             ref={box}
             role="dialog"
             aria-modal="true"
-            aria-label="Curate your own box"
+            aria-label={`Curate your own ${thing}`}
             className="relative max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-t-2xl border-2 border-ink bg-paper p-5 sm:rounded-2xl"
           >
             <div className="flex items-start justify-between gap-3">
               <h3 className="font-display text-[26px] font-black uppercase leading-[0.95]">
                 {state.done
                   ? "That is with us"
-                  : kind === "find"
-                    ? "What are we looking for?"
-                    : "What goes in it?"}
+                  : "What goes in it?"}
               </h3>
               <button
                 type="button"
@@ -169,80 +151,46 @@ export default function CurateBox({
               </p>
             ) : kind === "" ? (
               /*
-               * The one question worth asking first.
+               * Two ways of saying the same thing, not three.
                *
-               * These are two different jobs and only one of them is ours.
-               * Things on the menu are a basket: the shop already knows the
-               * price, the counter and the car, so it is a trip to the menu
-               * and nothing more. Things we do not carry have to be found and
-               * priced by a person, and saying so is better than taking an
-               * order we cannot price.
+               * There used to be a card sending people to the menu as well,
+               * which is a different question wearing the same coat: a
+               * hamper is not a basket of things off our shelves, it is a
+               * thing we go and find. So this asks the one question it has,
+               * and the chat sits under it for whoever would rather say it
+               * out loud.
                */
               <div className="mt-4 space-y-2.5">
-                {/*
-                   * Let go of the page before leaving it.
-                   *
-                   * While the dialog is up the body is held still, which is
-                   * what stops a flick behind it scrolling the page away.
-                   * Tapping through to the menu started the navigation with
-                   * that hold still on, so the new page was drawn at the old
-                   * offset: you landed in the footer and were thrown to the
-                   * top a moment later. The hold comes off first.
-                   */}
-                <Link
-                  href="/products"
-                  onClick={() => {
-                    document.body.style.overflow = "";
-                    setOpen(false);
-                  }}
-                  className="block rounded-xl border-2 border-ink p-4 transition active:translate-x-0.5 active:translate-y-0.5"
-                >
-                  <span className="block font-bold">Things you already have</span>
-                  <span className="mt-1 block text-sm leading-snug text-ink/70">
-                    Pick them off the menu. It all comes in one box on one
-                    delivery, and you see the price as you go.
-                  </span>
-                  <span className="mt-2 block text-sm font-extrabold text-brand">
-                    Open the menu
-                  </span>
-                </Link>
-
                 <button
                   type="button"
                   onClick={() => setKind("find")}
                   className="block w-full rounded-xl border-2 border-ink p-4 text-left transition active:translate-x-0.5 active:translate-y-0.5"
                 >
                   <span className="block font-bold">
-                    Things you want us to get
+                    Tell us what you want in it
                   </span>
                   <span className="mt-1 block text-sm leading-snug text-ink/70">
-                    Anything not on the menu. Tell us what it is and we will find
-                    it, price it, and bring it with the rest.
+                    Anything at all, on our shelves or not. We find it, price
+                    it, and come back to you on WhatsApp.
                   </span>
                   <span className="mt-2 block text-sm font-extrabold text-brand">
                     Tell us what you want
                   </span>
                 </button>
 
-                {/*
-                 * Not a third card, on purpose.
-                 *
-                 * The two above are the question: is the thing on our menu
-                 * or is it not. WhatsApp is not a third answer to that, it
-                 * is a different way of telling us the same answer, and
-                 * three equal cards would be two questions wearing one
-                 * coat. So it sits under both, where it reads as "or just
-                 * say it", which is how most of this shop's conversations
-                 * start anyway.
-                 */}
                 {talk && (
                   <a
                     href={talk}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-between gap-3 rounded-xl bg-wash px-4 py-3 text-sm font-semibold"
+                    className="flex items-center justify-between gap-3 rounded-xl border-2 border-ink px-4 py-3.5 text-left transition active:translate-x-0.5 active:translate-y-0.5"
                   >
-                    Or just message us about it
+                    <span>
+                      <span className="block font-bold">Or just message us</span>
+                      <span className="mt-1 block text-sm leading-snug text-ink/70">
+                        Most of this shop's conversations start there anyway.
+                      </span>
+                    </span>
                     <span aria-hidden className="text-brand">
                       →
                     </span>
@@ -252,9 +200,26 @@ export default function CurateBox({
             ) : (
               <form action={run} className="mt-4 space-y-2.5">
                 <input type="hidden" name="shelf" value={shelf} />
+                {/* So the list in admin says which kind of thing this is
+                    rather than leaving whoever answers to work it out from
+                    the shelf's name. */}
+                <input type="hidden" name="thing" value={thing} />
 
+                {/*
+                 * Three fields, because three is all this is for.
+                 *
+                 * It used to ask for a budget, a block or an address, and
+                 * anything else, which is a page of questions in front of
+                 * somebody who has not been quoted a price yet. None of it
+                 * is needed to answer them: the whole of this goes on to
+                 * WhatsApp, where the day, the place and the money are all
+                 * worked out properly anyway. What cannot be worked out
+                 * later is what they want and how to reach them.
+                 */}
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-bold">What should go in it</span>
+                  <span className="text-sm font-bold">
+                    What should go in it
+                  </span>
                   <textarea
                     name="wanted"
                     required
@@ -270,16 +235,6 @@ export default function CurateBox({
                 </label>
 
                 <div className="grid gap-2.5 sm:grid-cols-2">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-sm font-bold">Roughly what budget</span>
-                    <input
-                      name="budget"
-                      value={budget}
-                      onChange={(event) => setBudget(event.target.value)}
-                      placeholder="₦20,000"
-                      className="field"
-                    />
-                  </label>
                   <label className="flex flex-col gap-1">
                     <span className="text-sm font-bold">Your name</span>
                     <input
@@ -304,82 +259,7 @@ export default function CurateBox({
                       className="field"
                     />
                   </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="text-sm font-bold">Where it goes</span>
-                    <div className="flex gap-2">
-                      {[
-                        { at: true, label: "At PAU" },
-                        { at: false, label: "Elsewhere in Lagos" },
-                      ].map((one) => (
-                        <button
-                          key={one.label}
-                          type="button"
-                          onClick={() => setInPau(one.at)}
-                          className={`chip flex-1 justify-center ${
-                            inPau === one.at
-                              ? "border-ink bg-ink text-white"
-                              : "border-black/10 bg-white"
-                          }`}
-                        >
-                          {one.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {inPau ? (
-                      /* The shop's own list. A block nobody can match is a
-                         bag in a car with nowhere to take it, and a parent
-                         filling this in has never seen the place. */
-                      <select
-                        value={hostel}
-                        onChange={(event) => setHostel(event.target.value)}
-                        className="field"
-                      >
-                        <option value="">Pick a block</option>
-                        {hostels.map((one) => (
-                          <option key={one} value={one}>
-                            {one}
-                          </option>
-                        ))}
-                        <option value="Not sure">I am not sure</option>
-                      </select>
-                    ) : (
-                      <>
-                        <textarea
-                          value={address}
-                          onChange={(event) => setAddress(event.target.value)}
-                          rows={3}
-                          placeholder="Street, estate, area, and anything the driver needs to find you"
-                          aria-label="Your address in Lagos"
-                          className="field"
-                        />
-                        <span className="text-xs text-muted">
-                          Anywhere in Lagos. Outside Lagos we cannot bring it,
-                          and we would rather say so now than take your money
-                          and ring you on the day.
-                        </span>
-                      </>
-                    )}
-                    {/* One field goes to the server whichever was filled in,
-                        because the order has one place it is going. */}
-                    <input
-                      type="hidden"
-                      name="hostel"
-                      value={inPau ? hostel : address}
-                    />
-                  </label>
                 </div>
-
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-bold">Anything else</span>
-                  <input
-                    name="note"
-                    value={note}
-                    onChange={(event) => setNote(event.target.value)}
-                    placeholder="It is for a birthday on the 20th"
-                    className="field"
-                  />
-                </label>
 
                 {state.error !== "" && (
                   <p className="text-sm font-semibold text-brand-dark">
@@ -388,7 +268,7 @@ export default function CurateBox({
                 )}
 
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <Send ready={inPau ? hostel.trim() !== "" : address.trim().length >= 8} />
+                  <Send />
                   {/* For whoever started typing and would rather say it.
                       It carries what is in the boxes, so changing your mind
                       halfway costs nothing. */}
@@ -424,14 +304,12 @@ export default function CurateBox({
   );
 }
 
-/** `ready` is false while there is nowhere to take it: no block picked, or
- *  an address too short to find a house by. */
-function Send({ ready }: { ready: boolean }) {
+function Send() {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
-      disabled={pending || !ready}
+      disabled={pending}
       className="btn disabled:opacity-60"
     >
       {pending ? "Sending…" : "Send it"}

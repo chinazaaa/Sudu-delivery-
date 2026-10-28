@@ -206,6 +206,9 @@ export default async function BoxDetail({
           /* Only a thing with a whistle can run out of ways to arrive. A
              collection always has one: pick a day, or let us agree one. */
           shut={isTimed(occasion) && when.length === 0}
+          /* A shelf with a season has no standing order on it: nobody wants
+             a Christmas hamper again every month. */
+          seasonal={occasion.starts_at !== null}
           whatsapp={settings.whatsapp_number}
         />
       )}
@@ -216,7 +219,7 @@ export default async function BoxDetail({
       <CurateBox
         shelf={occasion.name}
         hint={occasion.custom_hint}
-        hostels={hostels}
+        thing={occasion.item_word}
         whatsapp={settings.whatsapp_number}
       />
 

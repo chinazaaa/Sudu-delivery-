@@ -21,6 +21,7 @@ export default function OccasionForm({
     name: string;
     blurb: string;
     when_word: string;
+    item_word?: string;
     tag: string;
     happens_at: string | null;
     closes_at: string | null;
@@ -87,6 +88,23 @@ export default function OccasionForm({
           birthday, a match or a games night is an occasion. Collections sit
           at /collections. Both kinds share the one public page now; the
           kind only decides where it sits in admin.
+        </p>
+      </div>
+
+      {/* What one of these is called. The shelf copy and the WhatsApp
+          message both read it, so a hamper is never called a box. */}
+      <div>
+        <label className="label">What one of these is called</label>
+        <input
+          name="item_word"
+          defaultValue={occasion?.item_word ?? "box"}
+          placeholder="box"
+          className="field"
+        />
+        <p className="mt-1 text-xs text-muted">
+          Singular, lower case. "hamper" on the Christmas shelf, "box"
+          everywhere else. It is the word in "Curate your own …" and in the
+          message somebody sends us about it.
         </p>
       </div>
 

@@ -62,6 +62,8 @@ export async function saveOccasion(
       blurb: String(form.get("blurb") ?? "").trim(),
       custom_hint: String(form.get("custom_hint") ?? "").trim().slice(0, 120),
       when_word: String(form.get("when_word") ?? "").trim() || "it starts",
+      item_word:
+        String(form.get("item_word") ?? "").trim().slice(0, 24) || "box",
       tag: String(form.get("tag") ?? "").trim().slice(0, 24),
       happens_at: happensAt,
       closes_at: closesAt,

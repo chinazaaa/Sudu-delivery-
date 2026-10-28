@@ -41,6 +41,7 @@ export default function OccasionBoxes({
   me,
   note,
   shut,
+  seasonal = false,
   whatsapp = "",
 }: {
   slug: string;
@@ -75,6 +76,10 @@ export default function OccasionBoxes({
   me: { name: string; hostel: string; paymentMethod: "transfer" | "card" } | null;
   note: string;
   shut: boolean;
+  /** A shelf with a season of its own: Christmas, not foodstuff. Nobody
+   *  wants a hamper again every month, so the standing order is left off
+   *  rather than sitting there as a question with one sensible answer. */
+  seasonal?: boolean;
   /** Where "Customise" goes. Empty leaves the button off rather than
    *  sending anybody to a dead link. */
   whatsapp?: string;
@@ -94,6 +99,16 @@ export default function OccasionBoxes({
   const [wantedOn, setWantedOn] = useState(soonest);
   const [anyDay, setAnyDay] = useState(false);
   const [again, setAgain] = useState(false);
+  /* Where it goes, when that is not a block on campus. The same toggle the
+     skincare counter has had for a while: a hamper is carried rather than
+     driven hot, so it can reach a house in Awoyaya on any day. */
+  const [inPau, setInPau] = useState(true);
+  const [address, setAddress] = useState("");
+  /* Most of these are bought for somebody else, so the driver needs the
+     person at the door rather than the person who paid. Blank means it is
+     for the buyer, which is the quieter half of the time. */
+  const [forSomeone, setForSomeone] = useState(false);
+  const [block, setBlock] = useState(me?.hostel ?? "");
   const [pay, setPay] = useState<"transfer" | "card">(me?.paymentMethod ?? "transfer");
   const [money, setMoney] = useState("");
 
@@ -469,7 +484,9 @@ export default function OccasionBoxes({
           </section>
 
           {/* One tick. Everything it needs only appears once it is ticked,
-              because a frequency nobody asked for is a field in the way. */}
+              because a frequency nobody asked for is a field in the way.
+              Off a seasonal shelf altogether: a hamper comes once. */}
+          {!seasonal && (
           <section className="card space-y-3">
             <label className="flex items-center gap-2 text-sm font-semibold">
               <input
@@ -512,6 +529,7 @@ export default function OccasionBoxes({
               </div>
             )}
           </section>
+          )}
 
           <section className="card space-y-3">
             <h2 className="font-bold">Where it goes</h2>
@@ -537,23 +555,117 @@ export default function OccasionBoxes({
                 />
               </div>
             </div>
-            <div>
-              <label className="label" htmlFor="box_hostel">Which block it goes to</label>
-              {hostels.length > 0 ? (
-                <select
-                  id="box_hostel"
-                  name="hostel"
-                  defaultValue={me?.hostel ?? ""}
-                  required
-                  className="field"
-                >
-                  <option value="">Pick one</option>
-                  {hostels.map((one) => (
-                    <option key={one} value={one}>{one}</option>
-                  ))}
-                </select>
+            <div className="space-y-2">
+              <span className="label">Where it goes</span>
+              <div className="flex gap-2">
+                {[
+                  { at: true, label: "At PAU" },
+                  { at: false, label: "Elsewhere in Lagos" },
+                ].map((one) => (
+                  <button
+                    key={one.label}
+                    type="button"
+                    onClick={() => setInPau(one.at)}
+                    className={`chip flex-1 justify-center ${
+                      inPau === one.at
+                        ? "border-ink bg-ink text-white"
+                        : "border-black/10 bg-white"
+                    }`}
+                  >
+                    {one.label}
+                  </button>
+                ))}
+              </div>
+
+              {inPau ? (
+                hostels.length > 0 ? (
+                  <select
+                    aria-label="Which block"
+                    value={block}
+                    onChange={(event) => setBlock(event.target.value)}
+                    className="field"
+                  >
+                    <option value="">Pick a block</option>
+                    {hostels.map((one) => (
+                      <option key={one} value={one}>{one}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    aria-label="Which block"
+                    value={block}
+                    onChange={(event) => setBlock(event.target.value)}
+                    className="field"
+                  />
+                )
               ) : (
-                <input id="box_hostel" name="hostel" defaultValue={me?.hostel ?? ""} required className="field" />
+                <>
+                  <textarea
+                    value={address}
+                    onChange={(event) => setAddress(event.target.value)}
+                    rows={3}
+                    placeholder="Street, estate, area, and anything the driver needs to find it"
+                    aria-label="The address in Lagos"
+                    className="field"
+                  />
+                  <span className="block text-xs text-muted">
+                    Anywhere in Lagos. Outside Lagos we cannot bring it.
+                  </span>
+                </>
+              )}
+              {/* One field reaches the server whichever was filled in,
+                  because an order has one place it is going. */}
+              <input
+                type="hidden"
+                name="hostel"
+                value={inPau ? block : address}
+              />
+            </div>
+
+            {/*
+                Who the driver rings.
+
+                Most hampers are bought for somebody else, and the number on
+                the order was always the buyer's: the driver would ring the
+                person who paid, standing somewhere else entirely, to ask
+                where to bring a basket. Off by default, because the other
+                half of the time it really is for them.
+            */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  checked={forSomeone}
+                  onChange={(event) => setForSomeone(event.target.checked)}
+                />
+                It is a gift for somebody else
+              </label>
+
+              {forSomeone && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <p className="text-xs text-muted sm:col-span-2">
+                    You pay and we deal with you about the money. These are
+                    who we ring when it is at the door.
+                  </p>
+                  <div>
+                    <label className="label" htmlFor="box_gift_name">
+                      Their name
+                    </label>
+                    <input id="box_gift_name" name="gift_name" className="field" />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="box_gift_phone">
+                      Their number
+                    </label>
+                    <input
+                      id="box_gift_phone"
+                      name="gift_phone"
+                      inputMode="tel"
+                      className="field"
+                      placeholder="The driver rings this one"
+                    />
+                  </div>
+                </div>
               )}
             </div>
 
@@ -595,31 +707,6 @@ export default function OccasionBoxes({
                 />
               </>
             )}
-
-            {/* Buying it for somebody else. Folded away, because most
-                orders are for whoever is typing and an extra pair of
-                boxes on every checkout is a tax on all of them. */}
-            <details className="rounded-xl bg-black/[0.03] p-3">
-              <summary className="cursor-pointer text-sm font-semibold text-brand">
-                It is a gift for somebody else
-              </summary>
-              <p className="mt-2 text-xs text-muted">
-                Fill these in and it goes to them instead. You pay, and we
-                deal with you about the money. The block above is theirs, and
-                these are who we call when it is at their door. Leave them
-                blank and it comes to you.
-              </p>
-              <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="label" htmlFor="gift_name">Their name</label>
-                  <input id="gift_name" name="gift_name" className="field" />
-                </div>
-                <div>
-                  <label className="label" htmlFor="gift_phone">Their number</label>
-                  <input id="gift_phone" name="gift_phone" inputMode="tel" className="field" />
-                </div>
-              </div>
-            </details>
 
             {/* A box is written at a high level on purpose: "a cake", "a
                 flower". Everything below that level is where somebody's own

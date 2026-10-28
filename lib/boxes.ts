@@ -107,6 +107,11 @@ export type Occasion = {
   custom_hint: string;
   /** What that time is called, so the copy reads like a person wrote it. */
   when_word: string;
+  /** What one of the things on this shelf is called, singular: "hamper" on
+   *  the Christmas shelf, "box" everywhere else. Said in admin rather than
+   *  guessed from the name, because a page that calls a hamper a box reads
+   *  as somebody else's shop. */
+  item_word: string;
   /** The small word on this shelf's card: "This term", "Matchday", "New".
    *  Empty means the card says whatever its date says, or nothing. */
   tag: string;
@@ -199,6 +204,7 @@ const toOccasion = (row: Record<string, unknown>): Occasion => ({
       : "collection",
   custom_hint: (row.custom_hint as string) ?? "",
   when_word: (row.when_word as string) || "it starts",
+  item_word: ((row.item_word as string) ?? "").trim() || "box",
   tag: ((row.tag as string) ?? "").trim(),
   batch_id: (row.batch_id as string) ?? null,
   closes_at: (row.closes_at as string) ?? null,

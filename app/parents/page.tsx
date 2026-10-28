@@ -515,7 +515,6 @@ export default async function ParentsPage() {
         <CurateBox
           shelf="the parents page"
           hint=""
-          hostels={blocks}
           whatsapp={settings.whatsapp_number}
         />
       </section>

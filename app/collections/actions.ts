@@ -262,23 +262,34 @@ export async function curateABox(
 ): Promise<CurateState> {
   const said = (name: string) => String(form.get(name) ?? "");
   const shelf = said("shelf").trim();
+  // What this shelf calls one of its things, so the list in admin says
+  // "a hamper to curate" rather than leaving whoever answers to work it
+  // out from the shelf's name.
+  const thing = said("thing").trim().toLowerCase() || "box";
 
+  /*
+   * Three fields, because three is all this asks for now.
+   *
+   * It used to take a budget, a block or an address, and a note, which is a
+   * page of questions in front of somebody who has not been quoted a price
+   * yet. None of it was needed to answer them: this goes straight on to
+   * WhatsApp, where the day, the place and the money are settled anyway.
+   * What cannot be settled later is what they want and how to reach them.
+   */
   const result = await askFor({
     wanted: said("wanted"),
-    budget: said("budget"),
+    budget: "",
     name: said("name"),
     phone: said("phone"),
-    hostel: said("hostel"),
-    note: [shelf === "" ? "" : `Curating their own box, from ${shelf}.`, said("note").trim()]
-      .filter(Boolean)
-      .join(" "),
+    hostel: "",
+    note: shelf === "" ? `Wants a customised ${thing}.` : `Wants a customised ${thing}, from ${shelf}.`,
   });
 
   if (!result.ok) return { error: result.error, done: false };
 
   try {
     await tellAdmin({
-      title: `A box to curate · ${said("budget").trim() || "no budget said"}`,
+      title: `A ${thing} to curate${shelf === "" ? "" : ` · ${shelf}`}`,
       body: `${said("name").trim() || "Someone"} wants ${said("wanted").trim()}.`,
       url: "/admin/requests",
     });
