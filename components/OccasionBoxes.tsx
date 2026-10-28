@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { orderBox, type BoxOrderState } from "@/app/collections/actions";
 import type { BoxView, WhenOption } from "@/lib/box-view";
+import Thumb from "./Thumb";
 import { naira } from "@/lib/money";
 import { waLink } from "@/lib/whatsapp";
 import { OPENED, TRAP } from "@/lib/guard";
@@ -189,17 +190,39 @@ export default function OccasionBoxes({
 
           One price each, delivery in it, and the price moves with the car
           rather than pretending it does not. */}
-      <ul className="space-y-4">
+      {/*
+          A shelf, laid out like the shop.
+
+          These were full-width boards, one under another: a column of
+          contents on the left and a price panel on the right, each as tall
+          as a phone screen. Four of them was four screens of scrolling
+          before anybody had seen what the fourth one was, and nothing could
+          be compared with anything else.
+
+          Every shop selling hampers lays them out as cards you can see at
+          once, and so does the rest of this shop: the kitchens, the kinds,
+          the most-bought row. The contents stay in full, because what is in
+          it is the only question anybody has, and the price stays big.
+      */}
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {meals.map((one, at) => {
           const on = one.id === picked;
           return (
           <li key={one.id}>
             <article
-              className={`flex flex-wrap overflow-hidden rounded-2xl border-2 transition ${
-                on ? "border-ink shadow-card" : "border-ink"
+              className={`flex h-full flex-col overflow-hidden rounded-2xl border-2 border-ink bg-paper transition ${
+                on ? "shadow-card" : ""
               }`}
             >
-              <div className="flex min-w-0 flex-[999_1_320px] flex-col gap-4 bg-paper p-5 sm:p-6">
+              {/* Only a real photograph. A drawn fallback on a hamper is a
+                  promise nobody can check. */}
+              {one.imageUrl !== "" && (
+                <span className="block aspect-square border-b-2 border-ink">
+                  <Thumb src={one.imageUrl} name={one.name} rounded="rounded-none" />
+                </span>
+              )}
+
+              <div className="flex flex-1 flex-col gap-3 p-5">
                 <div className="flex flex-wrap items-center gap-2.5">
                   <span className="font-display text-2xl font-black leading-none text-brand">
                     {String(at + 1).padStart(2, "0")}
@@ -209,15 +232,22 @@ export default function OccasionBoxes({
                   )}
                 </div>
 
-                <h3 className="font-display text-[32px] font-extrabold uppercase leading-[0.9] sm:text-[40px]">
+                <h3 className="font-display text-[28px] font-extrabold uppercase leading-[0.9]">
                   {one.name}
                 </h3>
 
-                {/* A list, in columns, with a tick against each line.
-                    Twenty things separated by dots is a paragraph, and
-                    nobody reads a paragraph to find out whether the milk is
-                    in it. */}
-                <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                <div className="flex flex-col">
+                  <span className="ticket text-muted">Delivery in it</span>
+                  <span className="font-display text-[40px] font-black leading-none">
+                    {naira(priceOf(one))}
+                  </span>
+                </div>
+
+                {/* What is in it, with a tick against each line. Twenty
+                    things separated by dots is a paragraph, and nobody
+                    reads a paragraph to find out whether the milk is in
+                    it. */}
+                <ul className="flex flex-col gap-1.5">
                   {one.lines.map((line) => (
                     <li
                       key={line.id}
@@ -240,16 +270,8 @@ export default function OccasionBoxes({
                     </li>
                   ))}
                 </ul>
-              </div>
 
-              <div className="flex flex-[1_1_200px] flex-col justify-between gap-4 border-ink bg-[#f9f7f3] p-5 sm:border-l-2 sm:border-dashed sm:border-line sm:p-6">
-                <div className="flex flex-col">
-                  <span className="ticket text-muted">Delivery in it</span>
-                  <span className="font-display text-[40px] font-black leading-none sm:text-[48px]">
-                    {naira(priceOf(one))}
-                  </span>
-                </div>
-                <div className="flex flex-col items-start gap-2.5">
+                <div className="mt-auto flex flex-col items-start gap-2.5 pt-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -260,7 +282,7 @@ export default function OccasionBoxes({
                       setPicked(one.id);
                     }}
                     aria-pressed={on}
-                    className={`flex min-h-11 items-center gap-1.5 rounded-full border-2 border-ink px-5 font-bold transition ${
+                    className={`flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border-2 border-ink px-5 font-bold transition ${
                       on ? "bg-ink text-shell" : "bg-brand text-white shadow-press"
                     }`}
                   >
@@ -272,18 +294,6 @@ export default function OccasionBoxes({
                     )}
                     {on ? "Picked" : "Add box"}
                   </button>
-                  {/*
-                      One conversation, not twenty radio buttons.
-
-                      A hamper is sold by agreeing what goes in it, and that
-                      is a thing people do in words: take out the fish, put
-                      in more milk, my aunt does not drink. The swap list
-                      could only ever offer three alternatives per line that
-                      the shop had thought of in advance, and it put a price
-                      against each one, which is how a gift starts reading
-                      like a receipt. Nobody else selling these prices them
-                      line by line.
-                  */}
                   {chatAbout(one.name) !== "" && (
                     <a
                       href={chatAbout(one.name)}
