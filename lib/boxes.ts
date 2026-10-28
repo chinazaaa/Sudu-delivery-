@@ -45,6 +45,18 @@ export type BoxLine = {
 export type Box = {
   id: string;
   occasion_id: string;
+  /**
+   * The readable address this box answers at, under /hampers.
+   *
+   * A shelf used to be the only page: six hampers at one address, which is
+   * one thing for a search engine to match and one link to send somebody
+   * who wants the third one down. A box with a slug has a page of its own,
+   * with its own title, its own picture and its own price in the markup.
+   *
+   * Empty on a box that has none, which is every box on a shelf that sells
+   * dinner. Those are picked in place, as they always were.
+   */
+  slug: string;
   name: string;
   blurb: string;
   serves: string;
@@ -199,6 +211,7 @@ const ids = (raw: unknown): string[] =>
 const toBox = (row: Record<string, unknown>): Box => ({
   id: row.id as string,
   occasion_id: row.occasion_id as string,
+  slug: ((row.slug as string) ?? "").trim(),
   name: (row.name as string) ?? "",
   blurb: (row.blurb as string) ?? "",
   serves: (row.serves as string) ?? "",
@@ -316,6 +329,42 @@ export async function boxesOf(occasionId: string): Promise<Box[]> {
     .order("sort_order", { ascending: true });
   if (error) return [];
   return (data ?? []).map((row) => toBox(row as Record<string, unknown>));
+}
+
+/**
+ * One box by its readable address, with the shelf it stands on.
+ *
+ * Both together, because a box on its own cannot be sold: the day it can
+ * come, the words on the page and the shelf it belongs to all live on the
+ * occasion. A box whose shelf has been switched off is not found, the same
+ * as a box switched off itself: a page quoting a price for something the
+ * shop has withdrawn is worse than a page that is not there.
+ */
+export async function boxBySlug(
+  slug: string
+): Promise<{ box: Box; occasion: Occasion } | null> {
+  const wanted = slug.trim().toLowerCase();
+  if (wanted === "") return null;
+
+  const { data, error } = await db()
+    .from("boxes")
+    .select("*")
+    .eq("slug", wanted)
+    .eq("active", true)
+    .maybeSingle();
+  if (error || !data) return null;
+
+  const box = toBox(data as Record<string, unknown>);
+  const { data: shelf } = await db()
+    .from("occasions")
+    .select("*")
+    .eq("id", box.occasion_id)
+    .maybeSingle();
+  if (!shelf) return null;
+
+  const occasion = toOccasion(shelf as Record<string, unknown>);
+  if (!occasion.active) return null;
+  return { box, occasion };
 }
 
 export async function boxById(id: string): Promise<Box | null> {

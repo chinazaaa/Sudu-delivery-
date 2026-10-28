@@ -196,6 +196,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         () => [] as { slug: string; kind?: string }[]
       );
 
+    // Every box given an address of its own: the hampers. A shelf is one
+    // page with six things on it, and a search for "Christmas hamper under
+    // fifty thousand" has nothing to match on it. These are the pages that
+    // can be matched, so they are the pages worth listing.
+    const hampers = await db()
+      .from("boxes")
+      .select("slug, active")
+      .eq("active", true)
+      .not("slug", "is", null)
+      .order("slug")
+      .overrideTypes<{ slug: string; active: boolean }[]>()
+      .then(
+        (answer) => answer.data ?? [],
+        () => [] as { slug: string }[]
+      );
+
     // The skincare shelf has no page per product: it is one page with
     // filters on it. What it does have is a page per brand and per shelf,
     // and "CeraVe, delivered in Lagos" is a thing people actually search
@@ -258,6 +274,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           url: `${site}/collections/${one.slug}`,
           changeFrequency: "weekly" as const,
           priority: 0.7,
+        })),
+      ...hampers
+        .filter((one) => one.slug)
+        .map((one) => ({
+          url: `${site}/hampers/${one.slug}`,
+          changeFrequency: "weekly" as const,
+          priority: 0.8,
         })),
       ...food.map((one) => ({
         // The name, not the id: the id is a second address for the same page,

@@ -289,7 +289,9 @@ export default async function ChristmasHampersPage() {
               {shown.map((one) => (
                 <li key={one.id}>
                   <Link
-                    href={`/collections/${SHELF}`}
+                    /* Its own page where it has one: that is the page a
+                       search can land on and the link somebody sends. */
+                    href={one.slug === "" ? `/collections/${SHELF}` : `/hampers/${one.slug}`}
                     className="flex h-full flex-col overflow-hidden rounded-2xl border-2 border-ink bg-paper transition active:translate-x-0.5 active:translate-y-0.5"
                   >
                     {/* A hamper is bought on the look of it. Only where
@@ -320,11 +322,12 @@ export default async function ChristmasHampersPage() {
                         anybody has about a hamper, and a search engine
                         reading this page has no other way to know. */}
                     <span className="text-[15px] leading-relaxed text-ink/75">
-                      {one.lines
-                        .map((line) =>
-                          line.qty > 1 ? `${line.name} ×${line.qty}` : line.name
-                        )
-                        .join(", ")}
+                      {(one.contents.length > 0
+                        ? one.contents
+                        : one.lines.map((line) =>
+                            line.qty > 1 ? `${line.name} ×${line.qty}` : line.name
+                          )
+                      ).join(", ")}
                       .
                     </span>
                     <span className="ticket mt-auto pt-1 text-brand-dark">

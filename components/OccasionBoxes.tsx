@@ -42,6 +42,7 @@ export default function OccasionBoxes({
   note,
   shut,
   seasonal = false,
+  only = false,
   whatsapp = "",
 }: {
   slug: string;
@@ -80,6 +81,10 @@ export default function OccasionBoxes({
    *  wants a hamper again every month, so the standing order is left off
    *  rather than sitting there as a question with one sensible answer. */
   seasonal?: boolean;
+  /** One box, on a page of its own: no shelf of tiles above it, and it is
+   *  chosen the moment the page opens because choosing it is why somebody
+   *  is here. */
+  only?: boolean;
   /** Where "Customise" goes. Empty leaves the button off rather than
    *  sending anybody to a dead link. */
   whatsapp?: string;
@@ -92,7 +97,7 @@ export default function OccasionBoxes({
   const meals = boxes.filter((one) => !one.isExtra);
   const extras = boxes.filter((one) => one.isExtra);
 
-  const [picked, setPicked] = useState("");
+  const [picked, setPicked] = useState(only ? (boxes[0]?.id ?? "") : "");
   const [swaps, setSwaps] = useState<Record<string, number>>({});
   const [going, setGoing] = useState(when[0]?.key ?? "");
   const [day, setDay] = useState(when[0]?.date ?? "");
@@ -219,6 +224,8 @@ export default function OccasionBoxes({
           the most-bought row. The contents stay in full, because what is in
           it is the only question anybody has, and the price stays big.
       */}
+      {!only && (
+      <>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {meals.map((one) => {
           const on = one.id === picked;
@@ -236,13 +243,14 @@ export default function OccasionBoxes({
                   square picture, a name and a price, and it is the same
                   square whether or not there is a photograph yet.
               */}
-              <button
-                type="button"
-                onClick={() => setPicked(on ? "" : one.id)}
-                aria-pressed={on}
-                className={`flex h-full w-full flex-col overflow-hidden rounded-2xl border-2 bg-paper text-left transition ${
-                  on ? "border-brand shadow-card" : "border-ink"
-                }`}
+              {/* A page of its own where it has one: a hamper is a thing
+                  somebody searches for, sends to their sister and comes
+                  back to, and none of that works at a shelf's address.
+                  Everything else is still picked in place. */}
+              <Tile
+                href={one.slug === "" ? "" : `/hampers/${one.slug}`}
+                onPick={() => setPicked(on ? "" : one.id)}
+                on={on}
               >
                 <span className="block aspect-square border-b-2 border-ink">
                   <Thumb src={one.imageUrl} name={one.name} rounded="" />
@@ -283,7 +291,7 @@ export default function OccasionBoxes({
                     </span>
                   </span>
                 </span>
-              </button>
+              </Tile>
             </li>
           );
         })}
@@ -305,6 +313,9 @@ export default function OccasionBoxes({
           </a>
           .
         </p>
+      )}
+
+      </>
       )}
 
       {box && !shut && (
@@ -818,3 +829,41 @@ const swapped = (
   const pick = swaps[line.id];
   return pick !== undefined && pick >= 0 ? line.swaps[pick] ?? null : null;
 };
+
+/**
+ * One tile on a shelf: a link where the box has a page, a button where it
+ * does not.
+ *
+ * The same square either way. A box with an address of its own has to be a
+ * real link, so it can be opened in another tab, copied, sent to somebody
+ * and followed by a search engine; a box without one still has to pick
+ * itself in place, which a link cannot do.
+ */
+function Tile({
+  href,
+  onPick,
+  on,
+  children,
+}: {
+  href: string;
+  onPick: () => void;
+  on: boolean;
+  children: React.ReactNode;
+}) {
+  const look = `flex h-full w-full flex-col overflow-hidden rounded-2xl border-2 bg-paper text-left transition ${
+    on ? "border-brand shadow-card" : "border-ink"
+  }`;
+
+  if (href !== "") {
+    return (
+      <Link href={href} className={look}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onPick} aria-pressed={on} className={look}>
+      {children}
+    </button>
+  );
+}

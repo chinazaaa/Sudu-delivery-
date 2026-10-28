@@ -172,8 +172,25 @@ export async function saveBox(_prev: SaveState, form: FormData): Promise<SaveSta
       return { done: "", error: "A box with nothing in it is not a box." };
     }
 
+    /*
+     * The address it answers at, where its shelf sells things people search
+     * for by name. A hamper is looked up, sent to somebody and come back
+     * to, and none of that works at a shelf's address.
+     *
+     * Kept once it exists. A box renamed from "The Family Hamper" to "The
+     * Family Christmas Hamper" keeps its address, because every link
+     * already sent says the old one and a page that stops answering is a
+     * search result that stops working.
+     */
+    const slug = await addressFor(
+      String(form.get("id") ?? ""),
+      occasionId,
+      name
+    );
+
     const fields = {
       occasion_id: occasionId,
+      slug,
       name,
       blurb: String(form.get("blurb") ?? "").trim(),
       custom_hint: String(form.get("custom_hint") ?? "").trim().slice(0, 120),
@@ -323,4 +340,54 @@ async function packageProduct(
     .single();
   if (error || !data) return null;
   return (data as { id: string }).id;
+}
+
+/**
+ * The web address a box answers at, where its shelf gives its things pages
+ * of their own.
+ *
+ * A shelf says so by having a word for what it sells that is not "box":
+ * "hamper" today. Dinner keeps no addresses, because nobody searches for
+ * the pizza box, they search for pizza, and a thin page per box would be
+ * ten thin pages competing with the shelf that is worth having.
+ */
+async function addressFor(
+  id: string,
+  occasionId: string,
+  name: string
+): Promise<string | null> {
+  if (id) {
+    const { data } = await db().from("boxes").select("slug").eq("id", id).maybeSingle();
+    const had = ((data as { slug?: string } | null)?.slug ?? "").trim();
+    if (had !== "") return had;
+  }
+
+  const { data: shelf } = await db()
+    .from("occasions")
+    .select("item_word")
+    .eq("id", occasionId)
+    .maybeSingle();
+  const word = String((shelf as { item_word?: string } | null)?.item_word ?? "box").trim();
+  if (word === "" || word === "box") return null;
+
+  const stem =
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 60) || "hamper";
+
+  // Taken, by something else: a second shelf can easily hold another "the
+  // family hamper", and two rows cannot share one address.
+  for (let at = 0; at < 20; at += 1) {
+    const tryThis = at === 0 ? stem : `${stem}-${at + 1}`;
+    const { data } = await db()
+      .from("boxes")
+      .select("id")
+      .eq("slug", tryThis)
+      .maybeSingle();
+    const taken = (data as { id?: string } | null)?.id;
+    if (!taken || taken === id) return tryThis;
+  }
+  return null;
 }

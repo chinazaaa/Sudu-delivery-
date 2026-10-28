@@ -45,6 +45,9 @@ export type BoxLineView = {
 
 export type BoxView = {
   id: string;
+  /** Its own address under /hampers, where it has one. Empty means it is
+   *  picked in place on the shelf, as every box used to be. */
+  slug: string;
   name: string;
   blurb: string;
   serves: string;
@@ -197,6 +200,7 @@ function one(
 
   return {
     id: box.id,
+    slug: box.slug,
     name: box.name,
     blurb: box.blurb,
     serves: box.serves,
