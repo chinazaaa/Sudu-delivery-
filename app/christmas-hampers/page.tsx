@@ -52,10 +52,30 @@ export default async function ChristmasHampersPage() {
   // cannot be bought is worse than one that says to message us.
   const boxes = shelf?.active ? await boxesOf(shelf.id) : [];
 
-  // Where we go, in the shop's own words, so this cannot promise a town
-  // that was taken off the list in admin.
-  const areas = parseAreas(settings.delivery_areas).map((one) => one.name);
-  const beyond = areas.length > 0 ? `, ${areas.join(", ")}` : "";
+  /*
+   * The towns this page is actually for.
+   *
+   * Not the delivery areas from settings: that list is the fare table for a
+   * food run, which is why it reads Ajah, Lekki, Ikoyi. Those are the places
+   * where hampers are already sold by people who have sold them for years,
+   * and leading with them is picking the one fight on this road worth
+   * losing. The corridor is where nobody is selling and where the car
+   * already goes every day.
+   *
+   * A box is not priced off that table anyway. It carries its own fee and
+   * now takes any Lagos address, so the honest answer about range is Lagos.
+   */
+  const NEARBY = [
+    "Sangotedo",
+    "Awoyaya",
+    "Lakowe",
+    "Bogije",
+    "Abijo",
+    "Pan-Atlantic University",
+  ];
+  // Kept only so the delivery question can still name the food fares where
+  // somebody asks about ordinary runs rather than hampers.
+  const fareAreas = parseAreas(settings.delivery_areas).map((one) => one.name);
 
   /*
    * The way most of these will actually be sold.
@@ -76,10 +96,10 @@ export default async function ChristmasHampersPage() {
       q: "Where can I buy a Christmas hamper in Ibeju-Lekki?",
       a:
         "Sudu makes them up and delivers them around Ibeju-Lekki: Sangotedo, " +
-        "Awoyaya, Lakowe, Pan-Atlantic University and the estates between " +
-        "them. Most hamper sellers in Lagos are on the island and either " +
-        "will not come this far or charge the trip on top. We are already " +
-        "here every day.",
+        "Awoyaya, Lakowe, Bogije, Abijo, Pan-Atlantic University and the " +
+        "estates between them. Most hamper sellers in Lagos are on the " +
+        "island and either will not come this far or put the trip on the " +
+        "bill. We are already here every day.",
     },
     {
       q: "How much is a Christmas hamper?",
@@ -128,11 +148,10 @@ export default async function ChristmasHampersPage() {
     {
       q: "Do you deliver hampers outside Ibeju-Lekki?",
       a:
-        areas.length > 0
-          ? `Yes. Beyond Sangotedo we go to ${areas.join(", ")}, and the fee ` +
-            "changes with the distance rather than with what is in the box."
-          : "Yes, beyond Sangotedo as well. Ask us where you are and we will " +
-            "tell you what the trip costs.",
+        "Yes, anywhere in Lagos. A hamper is put together and then carried, " +
+        "so it does not have to go on a food run: put the address in at the " +
+        "checkout instead of a hostel block. Outside Lagos we do not " +
+        "deliver, because somebody in Abuja can buy a hamper in Abuja.",
     },
   ];
 
@@ -149,9 +168,8 @@ export default async function ChristmasHampersPage() {
         provider: { "@type": "Organization", name: "Sudu", url: SITE },
         areaServed: [
           { "@type": "Place", name: "Ibeju-Lekki, Lagos" },
-          { "@type": "Place", name: "Sangotedo, Lagos" },
-          { "@type": "Place", name: "Pan-Atlantic University, Ibeju-Lekki, Lagos" },
-          ...areas.map((name) => ({ "@type": "Place", name: `${name}, Lagos` })),
+          ...NEARBY.map((name) => ({ "@type": "Place", name: `${name}, Lagos` })),
+          { "@type": "Place", name: "Lagos, Nigeria" },
         ],
         description: BLURB,
       },
@@ -167,7 +185,7 @@ export default async function ChristmasHampersPage() {
       />
 
       <PageHead
-        ticket={`Christmas hampers · Ibeju-Lekki${beyond}`}
+        ticket="Christmas hampers · Sangotedo, Awoyaya, Lakowe, PAU"
         title="Christmas hampers, made up here"
         lead="Food hampers and treat hampers, made up after you order. Take out anything you do not want, put in anything you do, and the price is worked out from what is in it."
         tone="ink"
@@ -262,11 +280,16 @@ export default async function ChristmasHampersPage() {
         <Section title="Where these go">
           <p>
             Sangotedo and Pan-Atlantic University are the home ground, and the
-            car goes out to the towns around them: Awoyaya, Lakowe, Bogije and
-            the estates along the Lekki-Epe expressway
-            {areas.length > 0 ? `, as well as ${areas.join(", ")}` : ""}. A
-            hamper is carried to the door and handed over, not left with
-            somebody at a gate.
+            car is out around them every day: Awoyaya, Lakowe, Bogije, Abijo
+            and the estates along the Lekki-Epe expressway. Most hamper
+            sellers in Lagos are on the island and either will not come this
+            far or put the trip on the bill.
+          </p>
+          <p>
+            Beyond that we go anywhere in Lagos. A hamper is put together and
+            then carried, so it does not have to travel on a food run: give
+            an address at the checkout instead of a hostel block. It is
+            handed over at the door rather than left with somebody at a gate.
           </p>
         </Section>
 

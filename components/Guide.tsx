@@ -49,22 +49,41 @@ export function Reason({
 export type Ask = { q: string; a: string };
 
 /**
- * The questions, on the page in plain words.
+ * The questions, on the page in plain words, folded up.
  *
  * Always rendered as well as marked up. Markup that says something the page
  * does not is the thing that gets a site ignored, so there is one list and
  * both readers get it.
+ *
+ * Folded because the two readers want opposite things. A search engine and
+ * an assistant want every answer in full, and those answers are the part of
+ * these pages that actually gets quoted back. A person wants to find their
+ * own question, and eight answers laid out flat is a wall they scroll past
+ * on the way to the thing they came for.
+ *
+ * A details element gives both. The words are all in the page, in the
+ * markup and in the FAQ graph beside it; what changes is that somebody
+ * holding a phone sees eight short lines and opens the one they care about.
+ * The first is open, so the section does not read as a row of shut doors.
  */
 export function Asked({ asked }: { asked: Ask[] }) {
   return (
-    <dl className="space-y-4">
-      {asked.map((one) => (
-        <div key={one.q}>
-          <dt className="font-bold">{one.q}</dt>
-          <dd className="text-muted">{one.a}</dd>
-        </div>
+    <div className="divide-y-2 divide-black/10 border-y-2 border-black/10">
+      {asked.map((one, at) => (
+        <details key={one.q} open={at === 0} className="group py-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-bold">
+            {one.q}
+            <span
+              aria-hidden
+              className="shrink-0 text-xl leading-none text-muted transition group-open:rotate-45"
+            >
+              +
+            </span>
+          </summary>
+          <p className="pt-2 text-muted">{one.a}</p>
+        </details>
       ))}
-    </dl>
+    </div>
   );
 }
 
@@ -120,6 +139,9 @@ const PAGES: { href: string; said: string }[] = [
   { href: "/pau-buy-a-laptop", said: "Buy a laptop as a PAU student" },
   { href: "/pau-laundry", said: "Laundry collected from your block" },
   { href: "/christmas-hampers", said: "Christmas hampers in Ibeju-Lekki" },
+  // The page that answers "is this shop real", which is the question
+  // somebody asks an assistant before they ask it for dinner.
+  { href: "/about", said: "Who Sudu is" },
 ];
 
 export function AlsoSee({ not }: { not: string }) {

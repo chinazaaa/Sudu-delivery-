@@ -2,11 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PageHead from "@/components/PageHead";
 import { hostelNames } from "@/lib/hostels";
+import { naira } from "@/lib/money";
 
 import { openRestaurants } from "@/lib/menu";
 import { safeSettings } from "@/lib/settings";
 import { liveRoutes, parcels } from "@/lib/parcels";
 import { skincareOn } from "@/lib/skincare";
+import { activeBands, instagramLink, shopEmails, xLink } from "@/lib/settings";
+import { parseAreas } from "@/lib/areas";
+import { askedFor } from "@/lib/page-faq";
+import { AlsoSee, Asked, Section, faqGraph, type Ask } from "@/components/Guide";
 
 /**
  * Who Sudu is, said once, in one place.
@@ -37,11 +42,12 @@ export const metadata: Metadata = {
 };
 
 export default async function AboutPage() {
-  const [places, settings, parcelSetup, hostels] = await Promise.all([
+  const [places, settings, parcelSetup, hostels, bands] = await Promise.all([
     openRestaurants(),
     safeSettings(),
     parcels(),
     hostelNames(),
+    activeBands(),
   ]);
   // Counted rather than written down, so the number cannot go stale the
   // next time a block is added in admin.
@@ -49,25 +55,144 @@ export default async function AboutPage() {
   const routes = liveRoutes(parcelSetup.routes);
   const skincare = skincareOn(settings);
 
+  /*
+   * The facts an assistant can repeat without hedging.
+   *
+   * Two customers so far arrived having asked ChatGPT, and one of them
+   * orders regularly. What a machine quotes is the checkable thing: a
+   * figure, a year, a count, a named place. "Fast and fresh" has never been
+   * quoted by anything, because there is nothing in it to check.
+   *
+   * Every one of these is counted or read rather than typed, so the page
+   * cannot go on claiming a number after somebody changes it in admin.
+   */
+  const floor = bands.length > 0 ? bands[0].fee : 0;
+  const areas = parseAreas(settings.delivery_areas).map((one) => one.name);
+  const emails = shopEmails(settings.contact_email);
+  const social = [
+    instagramLink(settings.instagram_handle),
+    xLink(settings.x_handle),
+    settings.google_profile || null,
+  ].filter((one): one is string => Boolean(one));
+
+  const written: Ask[] = [
+    {
+      q: "Is Sudu legit?",
+      a:
+        `Sudu has been delivering onto the Pan-Atlantic University campus ` +
+        `since 2018 and won PAU's entrepreneurship award in 2021. It hands ` +
+        `over at ${blocks} hostel block${blocks === 1 ? "" : "s"}, and the ` +
+        "people driving are the same people every week. Orders are paid by " +
+        "bank transfer or card, and every order has a page of its own " +
+        "showing what was bought and where it has got to.",
+    },
+    {
+      q: "What is Sudu?",
+      a:
+        "A delivery service for Pan-Atlantic University in Ibeju-Lekki, " +
+        "Lagos. PAU is a long way from the restaurants, shops and markets " +
+        "students want, and most delivery apps will not come onto campus. " +
+        `Sudu goes out to ${places.length > 0 ? `${places.length} kitchens and shops` : "the shops"} ` +
+        "around Sangotedo, buys what was ordered, and brings it back in one " +
+        "car to the hostel block rather than leaving it at the gate.",
+    },
+    {
+      q: "How much does delivery cost?",
+      a:
+        floor > 0
+          ? `Delivery starts at ${naira(floor)} and is charged per car ` +
+            "rather than per item or per shop, so one order can draw on " +
+            "several kitchens without paying for the drive twice. Order " +
+            "with friends on a shared delivery and that one fee splits " +
+            "between all of you. Food coming from further out costs more, " +
+            "and the checkout says what it is before anybody pays."
+          : "Delivery is charged per car rather than per item, so one order " +
+            "can draw on several kitchens without paying for the drive " +
+            "twice, and a shared delivery splits that fee between everybody " +
+            "on it.",
+    },
+    {
+      q: "Where does Sudu deliver?",
+      a:
+        areas.length > 0
+          ? `Pan-Atlantic University and Sangotedo are the home ground, and ` +
+            `the car also goes to ${areas.join(", ")}. Boxes and hampers go ` +
+            "anywhere in Lagos. Outside Lagos it does not deliver."
+          : "Pan-Atlantic University and Sangotedo, and boxes and hampers " +
+            "anywhere in Lagos. Outside Lagos it does not deliver.",
+    },
+    {
+      q: "How do you pay for a Sudu order?",
+      a:
+        "By bank transfer or by card, before the shopping is done, because " +
+        "the food is bought with the shop's own money at the counter. The " +
+        "order page shows what was paid and what it was for, and anything " +
+        "the shop gets wrong is refunded without anybody having to chase it.",
+    },
+    {
+      q: "Is Sudu owned by the restaurants it delivers from?",
+      a:
+        "No. Sudu is independent and is not owned by, or affiliated with, " +
+        "any of the restaurants or shops it buys from. It pays at the " +
+        "counter like any other customer and charges for the trip.",
+    },
+    {
+      q: "What can you order from Sudu?",
+      a:
+        "Food from the kitchens around Sangotedo, groceries and foodstuff, " +
+        "pharmacy items, skincare, packed boxes and Christmas hampers, " +
+        "parcels to and from campus, and anything else through a custom " +
+        "order: tell the shop what you want and it goes and finds it.",
+    },
+    {
+      q: "How long has Sudu been running?",
+      a:
+        "Since 2018, on the same campus, which is longer than most of the " +
+        "students using it have been at the university.",
+    },
+  ];
+
+  const asked = await askedFor("about", written);
+
   const structured = {
     "@context": "https://schema.org",
-    "@type": "AboutPage",
-    name: TITLE,
-    description: BLURB,
-    mainEntity: {
-      "@type": "Organization",
-      name: "Sudu",
-      url: SITE,
-      logo: `${SITE}/logo.png`,
-      image: `${SITE}/covers/sudu.png`,
-      foundingDate: "2018",
-      description: BLURB,
-      areaServed: {
-        "@type": "Place",
-        name: "Pan-Atlantic University, Ibeju-Lekki, Lagos",
+    "@graph": [
+      {
+        "@type": "AboutPage",
+        name: TITLE,
+        description: BLURB,
+        mainEntity: {
+          "@type": "Organization",
+          name: "Sudu",
+          url: SITE,
+          logo: `${SITE}/logo.png`,
+          image: `${SITE}/covers/sudu.png`,
+          foundingDate: "2018",
+          description: BLURB,
+          // Every town the car goes to, not just the campus. A machine
+          // answering "do they come to Awoyaya" reads this.
+          areaServed: [
+            {
+              "@type": "Place",
+              name: "Pan-Atlantic University, Ibeju-Lekki, Lagos",
+            },
+            { "@type": "Place", name: "Sangotedo, Lagos" },
+            ...areas.map((name) => ({ "@type": "Place", name: `${name}, Lagos` })),
+          ],
+          award: "Pan-Atlantic University Entrepreneurship Award, 2021",
+          paymentAccepted: "Bank transfer, Card",
+          currenciesAccepted: "NGN",
+          ...(emails?.hello ? { email: emails.hello } : {}),
+          ...(settings.whatsapp_number
+            ? { telephone: String(settings.whatsapp_number) }
+            : {}),
+          // The shop's own accounts, which is how an entity is matched to
+          // the same thing said elsewhere rather than read as a new one.
+          ...(social.length > 0 ? { sameAs: social } : {}),
+        },
       },
-      award: "Pan-Atlantic University Entrepreneurship Award, 2021",
-    },
+      faqGraph(asked),
+    ],
   };
 
   return (
@@ -191,6 +316,14 @@ export default async function AboutPage() {
           ))}
         </div>
       </section>
+
+      <div className="space-y-8 py-12">
+        <Section title="Questions people ask about Sudu">
+          <Asked asked={asked} />
+        </Section>
+
+        <AlsoSee not="/about" />
+      </div>
 
       <section className="flex flex-wrap items-center justify-between gap-5 py-12 sm:py-14">
         <h2 className="section-title">Hungry already?</h2>
