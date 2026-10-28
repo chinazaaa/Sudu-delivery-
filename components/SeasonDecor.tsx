@@ -14,8 +14,18 @@
  * things moving. Drift like this is the common trigger for motion
  * sickness, and the CSS honours that setting rather than overriding it.
  */
+/** What drifts past, per season. A season with nothing here draws no
+ *  layer at all, which is how an unrecognised one behaves. */
+const FLOATERS: Record<string, string[]> = {
+  halloween: ["🎃", "🦇", "👻", "🎃", "🕸️", "🦇", "👻", "🎃"],
+  /* Tree, gift, star, snowflake, bell. No Santa: the shop runs a Secret
+     Santa and a drifting Santa next to it reads as a button. */
+  christmas: ["🎄", "🎁", "⭐", "❄️", "🔔", "🎄", "🎁", "❄️"],
+};
+
 export default function SeasonDecor({ season }: { season: string }) {
-  if (season !== "halloween") return null;
+  const art = FLOATERS[season];
+  if (!art) return null;
 
   // Spread by hand rather than at random: a random layout reshuffles on
   // every render and puts two pumpkins on top of each other often enough
@@ -23,16 +33,17 @@ export default function SeasonDecor({ season }: { season: string }) {
   // Sizes are deliberately large. At twenty-four pixels and a third
   // opacity the whole layer read as dust on the screen rather than as
   // decoration, so these are the size of a thumb.
-  const floaters = [
-    { art: "🎃", left: "3%", delay: "0s", drift: "24s", size: "54px" },
-    { art: "🦇", left: "17%", delay: "-6s", drift: "19s", size: "40px" },
-    { art: "👻", left: "31%", delay: "-11s", drift: "27s", size: "48px" },
-    { art: "🎃", left: "45%", delay: "-3s", drift: "21s", size: "38px" },
-    { art: "🕸️", left: "57%", delay: "-20s", drift: "26s", size: "44px" },
-    { art: "🦇", left: "70%", delay: "-14s", drift: "23s", size: "46px" },
-    { art: "👻", left: "82%", delay: "-8s", drift: "20s", size: "40px" },
-    { art: "🎃", left: "93%", delay: "-17s", drift: "18s", size: "52px" },
+  const where = [
+    { left: "3%", delay: "0s", drift: "24s", size: "54px" },
+    { left: "17%", delay: "-6s", drift: "19s", size: "40px" },
+    { left: "31%", delay: "-11s", drift: "27s", size: "48px" },
+    { left: "45%", delay: "-3s", drift: "21s", size: "38px" },
+    { left: "57%", delay: "-20s", drift: "26s", size: "44px" },
+    { left: "70%", delay: "-14s", drift: "23s", size: "46px" },
+    { left: "82%", delay: "-8s", drift: "20s", size: "40px" },
+    { left: "93%", delay: "-17s", drift: "18s", size: "52px" },
   ];
+  const floaters = where.map((one, at) => ({ ...one, art: art[at % art.length] }));
 
   return (
     <div aria-hidden className="season-decor">

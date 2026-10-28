@@ -1758,10 +1758,14 @@ export default async function SettingsAdmin() {
               >
                 <option value="">Nothing, the ordinary shop</option>
                 <option value="halloween">Halloween</option>
+                <option value="christmas">Christmas</option>
               </select>
               <p className="hint">
                 Worth taking off the morning after. A shop still wearing
-                pumpkins in November reads as one nobody is looking after.
+                pumpkins in November reads as one nobody is looking after,
+                and the same is true of a tree in January. The Christmas
+                hamper shelf switches the floating decorations off on its own
+                pages either way, since it is already dressed.
               </p>
               <SaveButton look="btn-admin-go">Save</SaveButton>
             </div>

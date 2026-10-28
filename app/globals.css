@@ -1516,6 +1516,39 @@ body:has([data-actionbar]) .sudubot .teaser {
  * instead of near-black, and the highlight goes acid green. The site reads
  * as dressed up without any of it resting on a contrast nobody checked.
  */
+/*
+ * A season, worn over the ordinary shop.
+ *
+ * Everything below hangs off one attribute on the root, set from a single
+ * setting, so taking it off is clearing a box rather than finding every
+ * orange thing on the site in November.
+ *
+ * Five colours and nothing else. A season names them and the rules under
+ * them are written once, season-agnostic, so a second season is five
+ * values rather than forty selectors. An unrecognised one falls back to
+ * the ordinary palette below, so a typo in admin dresses the shop as
+ * itself rather than as nothing at all.
+ *
+ * What this deliberately does not do is repaint the page dark. The
+ * palette is built as solid colours, and a shop that turns its paper
+ * black has to re-prove every piece of text on it against the new ground:
+ * twenty cards, every hairline, every disabled button. That is a redesign,
+ * not a season, and it is the kind that ships a page somebody cannot read
+ * on a phone in sunlight.
+ *
+ * So the ground stays and the loud parts change.
+ */
+[data-season] {
+  --season-orange: #e5321d;
+  --season-deep: #b8230f;
+  --season-dark: #15110e;
+  --season-glow: #ffd23f;
+  --season-tint: #fff6d6;
+}
+
+/* The brand red moves to a pumpkin orange it is already next door to, the
+   ink blocks go aubergine instead of near-black, and the highlight goes
+   acid green. */
 [data-season="halloween"] {
   --season-orange: #f26419;
   --season-deep: #c2410c;
@@ -1524,35 +1557,54 @@ body:has([data-actionbar]) .sudubot .teaser {
   --season-tint: #fdeddd;
 }
 
+/*
+ * Christmas: red, green and gold, which is the one palette everybody
+ * already reads as Christmas without a word of explanation.
+ *
+ * The red goes deeper and less orange than the ordinary brand, so the
+ * change is visible rather than a shade nobody notices. The ink blocks,
+ * which are the biggest areas of colour on the site, go forest green: that
+ * is what carries it, and it is dark enough that every white word already
+ * checked against near-black still passes. The highlight goes gold, which
+ * the ordinary volt yellow is already most of the way towards.
+ */
+[data-season="christmas"] {
+  --season-orange: #c1121f;
+  --season-deep: #8d0c17;
+  --season-dark: #10361f;
+  --season-glow: #f2c14e;
+  --season-tint: #fdeaea;
+}
+
 /* The loud colour, wherever it is painted on. */
-[data-season="halloween"] .bg-brand {
+[data-season] .bg-brand {
   background-color: var(--season-orange);
 }
-[data-season="halloween"] .text-brand {
+[data-season] .text-brand {
   color: var(--season-orange);
 }
-[data-season="halloween"] .text-brand-dark {
+[data-season] .text-brand-dark {
   color: var(--season-deep);
 }
-[data-season="halloween"] .border-brand {
+[data-season] .border-brand {
   border-color: var(--season-orange);
 }
-[data-season="halloween"] .bg-brand-tint {
+[data-season] .bg-brand-tint {
   background-color: var(--season-tint);
 }
 
 /* The dark blocks: the hero ticket, the numbered band, the group board. */
-[data-season="halloween"] .bg-ink {
+[data-season] .bg-ink {
   background-color: var(--season-dark);
 }
-[data-season="halloween"] .text-volt {
+[data-season] .text-volt {
   color: var(--season-glow);
 }
 
 /* The stripes behind the hero ticket, drawn as a repeating gradient in the
    brand red: the one place the colour is written into a style attribute
    rather than a class, so it needs saying again here. */
-[data-season="halloween"] [style*="#e5321d"] {
+[data-season] [style*="#e5321d"] {
   background-image: repeating-linear-gradient(
     -60deg,
     var(--season-orange) 0 7px,
@@ -1568,24 +1620,24 @@ body:has([data-actionbar]) .sudubot .teaser {
  * it. These are every component in this file that paints itself brand or
  * ink; without them the page turns orange around a row of red buttons.
  */
-[data-season="halloween"] .btn-primary,
-[data-season="halloween"] .btn-admin-go {
+[data-season] .btn-primary,
+[data-season] .btn-admin-go {
   background-color: var(--season-orange);
 }
-[data-season="halloween"] .btn-primary:hover,
-[data-season="halloween"] .btn-admin-go:hover {
+[data-season] .btn-primary:hover,
+[data-season] .btn-admin-go:hover {
   background-color: var(--season-deep);
 }
-[data-season="halloween"] .btn-admin-brand {
+[data-season] .btn-admin-brand {
   border-color: var(--season-deep);
   color: var(--season-deep);
 }
-[data-season="halloween"] .chip-on,
-[data-season="halloween"] .pill-admin-on {
+[data-season] .chip-on,
+[data-season] .pill-admin-on {
   background-color: var(--season-dark);
   border-color: var(--season-dark);
 }
-[data-season="halloween"] .btn-quiet:hover {
+[data-season] .btn-quiet:hover {
   background-color: var(--season-dark);
 }
 
@@ -1598,16 +1650,16 @@ body:has([data-actionbar]) .sudubot .teaser {
  * into the class itself, on the hero blocks and the group board. Those
  * are the ones still wearing the ordinary brand.
  */
-[data-season="halloween"] .shadow-\[8px_8px_0_\#e5321d\] {
+[data-season] .shadow-\[8px_8px_0_\#e5321d\] {
   box-shadow: 8px 8px 0 var(--season-orange);
 }
-[data-season="halloween"] .shadow-\[6px_6px_0_\#e5321d\] {
+[data-season] .shadow-\[6px_6px_0_\#e5321d\] {
   box-shadow: 6px 6px 0 var(--season-orange);
 }
-[data-season="halloween"] .shadow-\[5px_5px_0_\#e5321d\] {
+[data-season] .shadow-\[5px_5px_0_\#e5321d\] {
   box-shadow: 5px 5px 0 var(--season-orange);
 }
-[data-season="halloween"] .shadow-\[10px_10px_0_\#15110e\] {
+[data-season] .shadow-\[10px_10px_0_\#15110e\] {
   box-shadow: 10px 10px 0 var(--season-dark);
 }
 
