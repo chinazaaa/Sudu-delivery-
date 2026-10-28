@@ -10,10 +10,27 @@ import ActionButton from "@/components/ActionButton";
 
 export const dynamic = "force-dynamic";
 
+/*
+ * Named for the search, not just for the page.
+ *
+ * "Secret Santa" on its own is a phrase the whole internet is competing
+ * for and a title that says nothing about who this one is for. Nobody at
+ * PAU is beaten to "secret santa at PAU", and that is the search a student
+ * organising their class group actually makes in November.
+ */
 export const metadata: Metadata = {
-  title: "Secret Santa",
+  title: "Secret Santa at PAU: run your group's draw, we deliver the gifts",
   description:
-    "Run your group's Secret Santa here. Everyone pays once, adds a wishlist, and we source and deliver every gift on the day.",
+    "Run your hostel, class or office Secret Santa at Pan-Atlantic University. " +
+    "Everyone joins with a link, adds a wishlist and pays once. We buy every " +
+    "gift and deliver them all on the day, to PAU, Sangotedo and Ibeju-Lekki.",
+  alternates: { canonical: "/santa" },
+  openGraph: {
+    title: "Secret Santa at PAU",
+    description:
+      "One link for the group, a wishlist each, and every gift bought and " +
+      "delivered on the day.",
+  },
 };
 
 /**

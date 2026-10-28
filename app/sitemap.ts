@@ -102,6 +102,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${site}/terms`, changeFrequency: "monthly" as const, priority: 0.3 },
     // A card provider or a store asks for this one by address.
     { url: `${site}/return-policy`, changeFrequency: "monthly" as const, priority: 0.3 },
+    /* Secret Santa itself, which was never listed.
+     *
+     * The whole thing is built: a room, a draw, a wishlist, a pick. Only
+     * its terms page was in this list, so Google has been told about the
+     * small print of a feature it has never been told exists. In the one
+     * season anybody searches for it. */
+    { url: `${site}/santa`, changeFrequency: "weekly" as const, priority: 0.9 },
     // Its own arrangement and its own page: money held for weeks against a
     // gift nobody has chosen yet is not answered by the food terms.
     { url: `${site}/santa/terms`, changeFrequency: "monthly" as const, priority: 0.3 },
