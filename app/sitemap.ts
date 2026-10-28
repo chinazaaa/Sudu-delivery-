@@ -78,6 +78,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${site}/pau-phone-and-laptop-repair`, changeFrequency: "monthly" as const, priority: 0.8 },
     { url: `${site}/pau-buy-a-laptop`, changeFrequency: "monthly" as const, priority: 0.8 },
     { url: `${site}/pau-laundry`, changeFrequency: "monthly" as const, priority: 0.8 },
+    /* Up in October for a thing that sells in December. The part of this
+       that cannot be hurried is the waiting: a page put up in the week it
+       matters is a page nothing has had time to find. */
+    {
+      url: `${site}/christmas-hampers`,
+      changeFrequency: "weekly" as const,
+      priority: 0.9,
+    },
     {
       url: `${site}/send-a-gift-to-pau`,
       changeFrequency: "monthly" as const,

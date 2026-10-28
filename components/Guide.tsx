@@ -119,6 +119,7 @@ const PAGES: { href: string; said: string }[] = [
   { href: "/pau-phone-and-laptop-repair", said: "Fix a phone or laptop at PAU" },
   { href: "/pau-buy-a-laptop", said: "Buy a laptop as a PAU student" },
   { href: "/pau-laundry", said: "Laundry collected from your block" },
+  { href: "/christmas-hampers", said: "Christmas hampers in Ibeju-Lekki" },
 ];
 
 export function AlsoSee({ not }: { not: string }) {
