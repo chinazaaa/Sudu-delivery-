@@ -93,6 +93,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: 0.9,
     },
+    /* Up months early on purpose, same as the hampers were. The part of
+       this that cannot be hurried is the waiting, and each of these stands
+       on its own with nothing packed behind it until there is. */
+    {
+      url: `${site}/valentines-gifts`,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    },
+    {
+      url: `${site}/mothers-day-gifts`,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    },
+    {
+      url: `${site}/easter-gifts`,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    },
     {
       url: `${site}/send-a-gift-to-pau`,
       changeFrequency: "monthly" as const,

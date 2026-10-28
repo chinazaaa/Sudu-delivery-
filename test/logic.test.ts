@@ -1,3 +1,4 @@
+import { easterSunday, motheringSunday, mothersDayMay, nextOf, valentines } from "../lib/feasts";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -7198,4 +7199,25 @@ test("a shelf page says which shelf it is, and only a real one", () => {
   const searched = seo({ q: "cerave" });
   assert.equal(searched.noindex, true);
   assert.equal(searched.canonical, "/skincare");
+});
+
+test("easter lands where the almanac says", () => {
+  // Three years from three different centuries' rules, so a transcription
+  // slip in the computus shows up rather than hiding in one of them.
+  assert.equal(easterSunday(2026), "2026-04-05");
+  assert.equal(easterSunday(2027), "2027-03-28");
+  assert.equal(easterSunday(2030), "2030-04-21");
+});
+
+test("mothering sunday is three weeks before easter", () => {
+  assert.equal(motheringSunday(2027), "2027-03-07");
+  assert.equal(mothersDayMay(2027), "2027-05-09");
+});
+
+test("a feast page is about the next one, not the one that has been", () => {
+  // The day itself still counts: somebody ordering on the morning of the
+  // 14th wants that day, not next year's.
+  assert.equal(nextOf(valentines, "2027-02-14"), "2027-02-14");
+  assert.equal(nextOf(valentines, "2027-02-15"), "2028-02-14");
+  assert.equal(nextOf(valentines, "2026-10-28"), "2027-02-14");
 });
