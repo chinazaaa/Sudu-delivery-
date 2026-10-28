@@ -93,6 +93,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: 0.9,
     },
+    /* Not a season at all: two thousand students and a birthday a day,
+       which makes it the one of these that pays every week of the year. */
+    {
+      url: `${site}/birthday-at-pau`,
+      changeFrequency: "weekly" as const,
+      priority: 0.9,
+    },
     /* Up months early on purpose, same as the hampers were. The part of
        this that cannot be hurried is the waiting, and each of these stands
        on its own with nothing packed behind it until there is. */

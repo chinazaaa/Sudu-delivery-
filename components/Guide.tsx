@@ -139,6 +139,7 @@ const PAGES: { href: string; said: string }[] = [
   { href: "/pau-buy-a-laptop", said: "Buy a laptop as a PAU student" },
   { href: "/pau-laundry", said: "Laundry collected from your block" },
   { href: "/corporate-christmas-hampers", said: "Christmas hampers for staff and clients" },
+  { href: "/birthday-at-pau", said: "Birthday gifts and cake at PAU" },
   { href: "/valentines-gifts", said: "Valentine's gifts delivered to PAU" },
   { href: "/mothers-day-gifts", said: "Mother's Day gifts delivered in Lagos" },
   { href: "/easter-gifts", said: "Easter hampers delivered in Lagos" },
