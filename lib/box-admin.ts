@@ -37,20 +37,44 @@ export async function foodCatalogue(): Promise<PickerRestaurant[]> {
   );
   if (food.length === 0) return [];
 
-  const { data: items } = await db()
-    .from("menu_items")
-    .select("id, restaurant_id, name, price_food, available")
-    .in("restaurant_id", food.map((one: any) => one.id))
-    .eq("available", true)
-    .order("name", { ascending: true });
+  /*
+   * Every item, rather than the first thousand of them.
+   *
+   * The database answers with at most a thousand rows and says nothing
+   * about the rest. There are eighteen hundred pickable items, ordered by
+   * name, so everything from the back half of the alphabet was missing from
+   * this picker: not merely unpickable, but silently absent, so a box
+   * holding one of them opened with the select showing its first option
+   * instead. Saving that form then wrote Domino's rice over whatever the
+   * box actually held, without a word.
+   *
+   * Ordered by id as well as by name, because rows that tie have no order
+   * of their own and pages taken out of a partial order can repeat one row
+   * and lose another.
+   */
+  const items: any[] = [];
+  for (let at = 0; ; at += 1000) {
+    const { data: page, error } = await db()
+      .from("menu_items")
+      .select("id, restaurant_id, name, price_food, available")
+      .in("restaurant_id", food.map((one: any) => one.id))
+      .eq("available", true)
+      .order("name", { ascending: true })
+      .order("id", { ascending: true })
+      .range(at, at + 999);
+    if (error) break;
+    const batch = (page ?? []) as any[];
+    items.push(...batch);
+    if (batch.length < 1000) break;
+  }
 
-  const ids = (items ?? []).map((one: any) => one.id as string);
+  const ids = items.map((one: any) => one.id as string);
   const groups = await groupsFor(ids);
 
   return food.map((place: any) => ({
     id: place.id as string,
     name: place.name as string,
-    items: (items ?? [])
+    items: items
       .filter((one: any) => one.restaurant_id === place.id)
       .map((one: any) => ({
         id: one.id as string,
