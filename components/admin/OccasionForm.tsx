@@ -23,6 +23,7 @@ export default function OccasionForm({
     blurb: string;
     when_word: string;
     item_word?: string;
+    price_holds_until?: string | null;
     tag: string;
     happens_at: string | null;
     closes_at: string | null;
@@ -91,6 +92,24 @@ export default function OccasionForm({
           birthday, a match or a games night is an occasion. Collections sit
           at /collections. Both kinds share the one public page now; the
           kind only decides where it sits in admin.
+        </p>
+      </div>
+
+      {/* A promise about price, and the one reason to buy now that costs
+          nothing. Blank says nothing, which is right until it is meant. */}
+      <div>
+        <label className="label">Hold today&apos;s prices until</label>
+        <input
+          type="date"
+          name="price_holds_until"
+          defaultValue={(occasion?.price_holds_until ?? "").slice(0, 10)}
+          className="field"
+        />
+        <p className="mt-1 text-xs text-muted">
+          The shelf then says today&apos;s price holds until that day, and
+          counts down to it. Only set it if you will really put the prices up
+          afterwards: rice and oil climb through December, which is what
+          makes it true. Blank says nothing.
         </p>
       </div>
 

@@ -19,6 +19,7 @@ import { deliveryIn, returnsPolicy } from "@/lib/offer-shipping";
 import OccasionBoxes from "@/components/OccasionBoxes";
 import NoSeasonDecor from "@/components/NoSeasonDecor";
 import Thumb from "@/components/Thumb";
+import PriceHolds from "@/components/PriceHolds";
 import HelpLine from "@/components/HelpLine";
 
 export const dynamic = "force-dynamic";
@@ -189,6 +190,8 @@ export default async function HamperPage({
       </header>
 
       <div className="space-y-5 py-8">
+        <PriceHolds until={occasion.price_holds_until} today={lagosToday()} />
+
         {view.imageUrl !== "" && (
           <div className="overflow-hidden rounded-2xl border-2 border-ink bg-paper">
             <span className="block aspect-square sm:aspect-[4/3]">

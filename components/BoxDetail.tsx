@@ -18,6 +18,7 @@ import HelpLine from "@/components/HelpLine";
 import AskParents from "@/components/AskParents";
 import CurateBox from "@/components/CurateBox";
 import NoSeasonDecor from "@/components/NoSeasonDecor";
+import PriceHolds from "@/components/PriceHolds";
 
 /**
  * One collection or occasion, and the boxes packed for it.
@@ -160,6 +161,9 @@ export default async function BoxDetail({
 
       <div className="flex flex-col gap-8 py-8 lg:flex-row lg:items-start lg:gap-8 lg:py-10">
         <div className="min-w-0 flex-1 space-y-4">
+      {/* Said once at the top of the shelf, where somebody is deciding
+          whether to buy now or think about it next month. */}
+      <PriceHolds until={occasion.price_holds_until} today={lagosToday()} />
       {views.length === 0 ? (
         <p className="card text-sm text-muted">
           Nothing is packed for this one yet.{" "}

@@ -131,6 +131,18 @@ export type Occasion = {
    * was.
    */
   starts_at: string | null;
+  /**
+   * The last day today's prices are promised on this shelf.
+   *
+   * A hamper is bought in November and eaten in December, and rice, oil and
+   * milk climb the whole way between. "Today's price holds until the 30th"
+   * is the one reason to buy now that costs the shop nothing and is true.
+   *
+   * Null says nothing at all, which is the right default: the sentence is a
+   * promise, and the shop has to mean it. The prices must really rise
+   * afterwards or it should never have been said.
+   */
+  price_holds_until: string | null;
   /** Which of the two shelves it is on. */
   kind: Shelf;
   /** The example in the "want it changed?" box. One example cannot serve a
@@ -240,6 +252,7 @@ const toOccasion = (row: Record<string, unknown>): Occasion => ({
   image_url: (row.image_url as string) ?? "",
   happens_at: (row.happens_at as string) ?? null,
   starts_at: (row.starts_at as string) ?? null,
+  price_holds_until: ((row.price_holds_until as string) ?? null) || null,
   /* A database that has not had the migration run yet has no column here,
      and a clock of its own is the next best evidence of which it is. */
   kind: row.kind === "occasion" || row.kind === "collection"

@@ -64,6 +64,12 @@ export async function saveOccasion(
       when_word: String(form.get("when_word") ?? "").trim() || "it starts",
       item_word:
         String(form.get("item_word") ?? "").trim().slice(0, 24) || "box",
+      // A date or nothing. The empty string is not a date and the column
+      // would refuse it, which would read in admin as the save breaking.
+      price_holds_until:
+        /^\d{4}-\d{2}-\d{2}$/.test(String(form.get("price_holds_until") ?? ""))
+          ? String(form.get("price_holds_until"))
+          : null,
       tag: String(form.get("tag") ?? "").trim().slice(0, 24),
       happens_at: happensAt,
       closes_at: closesAt,
