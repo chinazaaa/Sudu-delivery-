@@ -3,6 +3,7 @@ import Link from "next/link";
 import { askedFor } from "@/lib/page-faq";
 
 import PageHead from "@/components/PageHead";
+import Thumb from "@/components/Thumb";
 import { AlsoSee, Asked, Reason, Section, faqGraph, type Ask } from "@/components/Guide";
 import { boxesOf, occasionBySlug } from "@/lib/boxes";
 import { boxViews, type BoxView } from "@/lib/box-view";
@@ -269,8 +270,23 @@ export default async function ChristmasHampersPage() {
                 <li key={one.id}>
                   <Link
                     href={`/collections/${SHELF}`}
-                    className="flex h-full flex-col gap-2 rounded-2xl border-2 border-ink bg-paper p-5 transition active:translate-x-0.5 active:translate-y-0.5"
+                    className="flex h-full flex-col overflow-hidden rounded-2xl border-2 border-ink bg-paper transition active:translate-x-0.5 active:translate-y-0.5"
                   >
+                    {/* A hamper is bought on the look of it. Only where
+                        there is a real photograph: the drawn fallback is
+                        right on a dish nobody has shot yet and wrong on a
+                        box whose whole promise is that this is what turns
+                        up. */}
+                    {one.imageUrl !== "" && (
+                      <span className="block aspect-square border-b-2 border-ink">
+                        <Thumb
+                          src={one.imageUrl}
+                          name={one.name}
+                          rounded="rounded-none"
+                        />
+                      </span>
+                    )}
+                    <span className="flex flex-1 flex-col gap-2 p-5">
                     <span className="font-display text-[26px] font-extrabold uppercase leading-none">
                       {one.name}
                     </span>
@@ -293,6 +309,7 @@ export default async function ChristmasHampersPage() {
                     </span>
                     <span className="ticket mt-auto pt-1 text-brand-dark">
                       Swap anything in it
+                    </span>
                     </span>
                   </Link>
                 </li>
