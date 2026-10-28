@@ -243,33 +243,16 @@ export default function OccasionBoxes({
                   </span>
                 </div>
 
-                {/* What is in it, with a tick against each line. Twenty
-                    things separated by dots is a paragraph, and nobody
-                    reads a paragraph to find out whether the milk is in
-                    it. */}
-                <ul className="flex flex-col gap-1.5">
-                  {one.lines.map((line) => (
-                    <li
-                      key={line.id}
-                      className="flex items-start gap-2 text-[15px] leading-snug"
-                    >
-                      <span
-                        aria-hidden
-                        className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-brand text-white"
-                      >
-                        <svg viewBox="0 0 24 24" className="size-3" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M5 12l5 5 9-10" />
-                        </svg>
-                      </span>
-                      <span className="min-w-0">
-                        {line.qty > 1 && (
-                          <span className="font-semibold">{line.qty} × </span>
-                        )}
-                        {line.name}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                {/* How much is in it, not what. A card's job on a shelf
+                    is to be taken in at a glance and compared with the one
+                    beside it; thirty-eight ticked lines on each of five
+                    cards is the full-width board again in a narrower
+                    column. What is in it is listed in full the moment one
+                    is picked, which is when somebody is actually asking. */}
+                <p className="text-[15px] text-ink/70">
+                  {one.lines.length} thing{one.lines.length === 1 ? "" : "s"} in it
+                  {one.blurb !== "" && <span className="block pt-1">{one.blurb}</span>}
+                </p>
 
                 <div className="mt-auto flex flex-col items-start gap-2.5 pt-2">
                   <button
