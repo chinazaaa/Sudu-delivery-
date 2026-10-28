@@ -265,7 +265,11 @@ export default function OccasionBoxes({
                     column. What is in it is listed in full the moment one
                     is picked, which is when somebody is actually asking. */}
                 <p className="text-[15px] text-ink/70">
-                  {one.lines.length} thing{one.lines.length === 1 ? "" : "s"} in it
+                  {/* A package says what it says it holds; everything else
+                      counts its lines, which is the same question asked of
+                      the only answer each one has. */}
+                  {one.contents.length || one.lines.length} thing
+                  {(one.contents.length || one.lines.length) === 1 ? "" : "s"} in it
                   {one.blurb !== "" && <span className="block pt-1">{one.blurb}</span>}
                 </p>
 
@@ -329,6 +333,19 @@ export default function OccasionBoxes({
 
           <section className="card space-y-3">
             <h2 className="font-bold">What is in it</h2>
+            {/* A package is written out rather than totted up: it is sold at
+                one price, and what is in it is the shop's description of it
+                rather than a receipt. */}
+            {box.contents.length > 0 ? (
+              <ul className="space-y-1.5 text-sm">
+                {box.contents.map((one) => (
+                  <li key={one} className="flex gap-2">
+                    <span aria-hidden className="text-brand">·</span>
+                    <span>{one}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
             <ul className="space-y-3">
               {box.lines.map((line) => (
                 <li key={line.id}>
@@ -349,6 +366,7 @@ export default function OccasionBoxes({
                 </li>
               ))}
             </ul>
+            )}
           </section>
 
           <section className="card space-y-3">

@@ -51,6 +51,9 @@ export type BoxView = {
   imageUrl: string;
   isExtra: boolean;
   lines: BoxLineView[];
+  /** What is in it, written out, where it is sold as one package. Empty on
+   *  every other box, which lists its lines instead. */
+  contents: string[];
   /** What the food comes to as the shop packed it. A swap moves it by its
    *  own delta, which the page can do without asking the server again. */
   food: number;
@@ -200,6 +203,7 @@ function one(
     imageUrl: box.image_url,
     isExtra: box.is_extra,
     lines,
+    contents: box.contents,
     food: lines.reduce((sum, line) => sum + line.total, 0),
     runFee: box.run_fee,
     carFee: box.car_fee,

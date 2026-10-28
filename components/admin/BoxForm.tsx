@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { saveBox, type SaveState } from "@/app/admin/occasions/actions";
 import BoxLines from "./BoxLines";
@@ -32,6 +32,9 @@ export default function BoxForm({
     sort_order: number;
     image_url: string;
     lines: BoxLine[];
+    package_price: number | null;
+    contents: string[];
+    package_item_id?: string | null;
   };
   occasionId: string;
   catalogue: PickerRestaurant[];
@@ -44,6 +47,11 @@ export default function BoxForm({
   // Unique on the page, because every box on a shelf draws one of these
   // forms and a label pointing at a field in somebody else's box is worse
   // than no label at all.
+  /* Priced off the menu, or sold as one package at a price somebody typed.
+     A hamper is the second: the shops sell one at a price they chose, and
+     what is in it is a description rather than a receipt. */
+  const [asPackage, setAsPackage] = useState(box?.package_price != null);
+
   const photoId = `box_photo_${box?.id ?? "new"}`;
   const picture = box?.image_url ?? "";
 
@@ -52,6 +60,11 @@ export default function BoxForm({
       {box && <input type="hidden" name="id" value={box.id} />}
       <input type="hidden" name="occasion_id" value={occasionId} />
       <input type="hidden" name="image_url" value={box?.image_url ?? ""} />
+      <input
+        type="hidden"
+        name="package_item_id"
+        value={box?.package_item_id ?? ""}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
@@ -113,10 +126,66 @@ export default function BoxForm({
         </div>
       </div>
 
-      <div>
-        <p className="label">What is in it</p>
-        <BoxLines catalogue={catalogue} start={box?.lines ?? []} />
-      </div>
+      {/* Which of the two kinds of box this is. */}
+      <label className="flex items-start gap-2 rounded-xl bg-black/[0.03] p-3 text-sm">
+        <input
+          type="checkbox"
+          name="as_package"
+          checked={asPackage}
+          onChange={(event) => setAsPackage(event.target.checked)}
+          className="mt-0.5"
+        />
+        <span>
+          <span className="block font-semibold">
+            Sell it as one package, at a price I set
+          </span>
+          <span className="block text-xs text-muted">
+            For a hamper. You write what is in it and what it costs, and
+            neither moves when a tin of milk does. Leave it off and the box is
+            priced off the menu, which is right for a pizza and a bucket of
+            chicken.
+          </span>
+        </span>
+      </label>
+
+      {asPackage ? (
+        <>
+          <div>
+            <label className="label">What is in it</label>
+            <textarea
+              name="contents"
+              rows={8}
+              defaultValue={(box?.contents ?? []).join("\n")}
+              placeholder={"10kg Mama Gold rice\n5 litres groundnut oil\nPeak milk 400g\nA bottle of Chamdor"}
+              className="field"
+            />
+            <p className="mt-1 text-xs text-muted">
+              One thing per line, in your own words. This is what the shelf
+              shows and what the driver's sheet says.
+            </p>
+          </div>
+
+          <div>
+            <label className="label">Price on the shelf</label>
+            <input
+              name="package_price"
+              inputMode="numeric"
+              defaultValue={box?.package_price ?? ""}
+              placeholder="50000"
+              className="field"
+            />
+            <p className="mt-1 text-xs text-muted">
+              The whole price somebody pays, delivery already in it. It is the
+              figure on the card, exactly as typed.
+            </p>
+          </div>
+        </>
+      ) : (
+        <div>
+          <p className="label">What is in it</p>
+          <BoxLines catalogue={catalogue} start={box?.lines ?? []} />
+        </div>
+      )}
 
       <div>
         <label className="label">Delivery</label>

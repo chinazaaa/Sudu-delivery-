@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { allBoxes, allOccasions, boxPrices, foodCatalogue } from "@/lib/box-admin";
-import { readLines } from "@/lib/boxes";
+import { readContents, readLines } from "@/lib/boxes";
 import { openBatches } from "@/lib/batches";
 import { runDateLabel, whenLabel } from "@/lib/time";
 import { SLOT_LABEL } from "@/lib/config";
@@ -113,7 +113,8 @@ export default async function AdminOccasionsPage() {
                           run and is not offered a car of its own. */}
                       <span className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs font-normal">
                         <span className="text-muted">
-                          Food {naira(prices.get(box.id)?.food ?? 0)}
+                          {box.package_price == null ? "Food" : "Package"}{" "}
+                          {naira(prices.get(box.id)?.food ?? 0)}
                         </span>
                         <span className="text-muted">
                           + delivery {naira(box.run_fee)}
@@ -134,7 +135,11 @@ export default async function AdminOccasionsPage() {
                     </summary>
                     <div className="mt-3">
                       <BoxForm
-                        box={{ ...box, lines: readLines(box.lines) }}
+                        box={{
+                          ...box,
+                          lines: readLines(box.lines),
+                          contents: readContents(box.contents),
+                        }}
                         occasionId={row.id}
                         catalogue={catalogue}
                       />

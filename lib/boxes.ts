@@ -56,6 +56,23 @@ export type Box = {
   /** Rides the same car as a box rather than being one: pudding, not dinner. */
   is_extra: boolean;
   lines: BoxLine[];
+  /**
+   * Sold as one package, at this price, delivery already in it.
+   *
+   * A hamper is not a shopping list with a total under it. The shops sell
+   * one at a price they chose, and the contents are a description rather
+   * than a receipt: fifty thousand naira of hamper, and what is in it reads
+   * the way the shop wants it to read. Pricing a hamper off thirty-eight
+   * ticked menu lines meant the price moved every time a tin of milk did,
+   * and changing what it says meant finding thirty-eight products.
+   *
+   * Null is every other box, priced off the menu exactly as before. A
+   * package still carries one hidden line so that an order has something
+   * in it; nobody sees that line.
+   */
+  package_price: number | null;
+  /** What is in a package, one per line, in the shop's own words. */
+  contents: string[];
   active: boolean;
   sort_order: number;
   /** What to put in the "want it changed?" box, for this box. Empty means
@@ -168,6 +185,14 @@ export function readLines(raw: unknown): BoxLine[] {
   });
 }
 
+/** What is in a package, as the lines somebody typed. Blank lines dropped,
+ *  because a stray return is not an item. */
+export const readContents = (raw: unknown): string[] =>
+  String(raw ?? "")
+    .split("\n")
+    .map((one) => one.trim())
+    .filter((one) => one !== "");
+
 const ids = (raw: unknown): string[] =>
   Array.isArray(raw) ? raw.filter((one): one is string => typeof one === "string") : [];
 
@@ -180,6 +205,11 @@ const toBox = (row: Record<string, unknown>): Box => ({
   image_url: (row.image_url as string) ?? "",
   run_fee: Number(row.run_fee ?? 0),
   car_fee: Number(row.car_fee ?? 0),
+  package_price:
+    row.package_price === null || row.package_price === undefined
+      ? null
+      : Number(row.package_price),
+  contents: readContents(row.contents),
   is_extra: Boolean(row.is_extra),
   lines: readLines(row.lines),
   active: row.active !== false,

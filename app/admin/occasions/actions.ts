@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/supabase";
 import { isSignedIn } from "@/lib/admin-auth";
 import { fileFrom, uploadImage } from "@/lib/uploads";
-import { readLines } from "@/lib/boxes";
+import { readContents, readLines } from "@/lib/boxes";
 import { lagosInstant } from "@/lib/time";
 
 export type SaveState = { done: string; error: string };
@@ -102,17 +102,74 @@ export async function saveBox(_prev: SaveState, form: FormData): Promise<SaveSta
     const name = String(form.get("name") ?? "").trim();
     if (name === "") return { done: "", error: "It needs a name." };
 
-    // Read back through the same reader the shop uses, so anything the
-    // builder sends that the shop would not understand is dropped here
-    // rather than sitting in the database waiting to empty a box.
-    const lines = readLines(parse(String(form.get("lines") ?? "[]")));
-    if (lines.length === 0) {
-      return { done: "", error: "A box with nothing in it is not a box." };
-    }
-
     const occasionId = String(form.get("occasion_id") ?? "");
     if (occasionId === "") {
       return { done: "", error: "Pick which occasion it belongs to." };
+    }
+
+    const runFee = number(form.get("run_fee"), 4000);
+
+    /*
+     * Two ways to price a box, and the form says which.
+     *
+     * Off the menu is the original and still right for dinner: a box
+     * holding a pizza and a bucket of chicken should cost whatever a pizza
+     * and a bucket of chicken cost today, and should get dearer by itself
+     * when Domino's puts its prices up.
+     *
+     * A package is the other kind. A hamper is not a shopping list with a
+     * total under it: the shops sell one at a price they chose, and what is
+     * in it is a description rather than a receipt. Pricing one off
+     * thirty-eight ticked menu lines moved its price every time a tin of
+     * milk did, and changing a word of it meant finding thirty-eight
+     * products.
+     */
+    const asPackage = form.get("as_package") === "on";
+    const contents = readContents(form.get("contents"));
+    const packagePrice = number(form.get("package_price"), 0);
+
+    // Read back through the same reader the shop uses, so anything the
+    // builder sends that the shop would not understand is dropped here
+    // rather than sitting in the database waiting to empty a box.
+    let lines = readLines(parse(String(form.get("lines") ?? "[]")));
+    let packageItemId = String(form.get("package_item_id") ?? "") || null;
+
+    if (asPackage) {
+      if (packagePrice <= runFee) {
+        return {
+          done: "",
+          error: `A package has to come to more than its own delivery. Put the whole price somebody pays, which is more than ${runFee}.`,
+        };
+      }
+      if (contents.length === 0) {
+        return { done: "", error: "Say what is in it, one thing per line." };
+      }
+
+      /*
+       * The one hidden line a package carries.
+       *
+       * An order is made of products: the driver's sheet, the receipt and
+       * every figure in the books are built on them. A package has no
+       * products, so it gets one of its own, in a counter that is switched
+       * off and therefore appears on no menu and in no picker. Its price is
+       * the package price with the delivery taken out, so the shelf adds
+       * the delivery back and arrives at exactly the figure typed here.
+       */
+      const made = await packageProduct(
+        packageItemId,
+        name,
+        contents,
+        packagePrice - runFee
+      );
+      if (!made) {
+        return { done: "", error: "Could not save the package price. Try again." };
+      }
+      packageItemId = made;
+      lines = readLines([
+        { id: "package", menu_item_id: made, qty: 1, option_ids: [], swaps: [] },
+      ]);
+    } else if (lines.length === 0) {
+      return { done: "", error: "A box with nothing in it is not a box." };
     }
 
     const fields = {
@@ -124,7 +181,10 @@ export async function saveBox(_prev: SaveState, form: FormData): Promise<SaveSta
       // One delivery price, because a box only ever goes on a run. The
       // column stays for the orders that recorded a car before that, and
       // the shop no longer has a figure to fill in.
-      run_fee: number(form.get("run_fee"), 4000),
+      run_fee: runFee,
+      package_price: asPackage ? packagePrice : null,
+      contents: asPackage ? contents.join("\n") : "",
+      package_item_id: packageItemId,
       is_extra: form.get("is_extra") === "on",
       active: form.get("active") === "on",
       sort_order: number(form.get("sort_order"), 100),
@@ -216,4 +276,51 @@ async function picture(form: FormData, folder: string): Promise<string> {
   if (uploaded) return uploaded;
   if (form.get("remove_photo") === "on") return "";
   return String(form.get("image_url") ?? "").trim();
+}
+
+/**
+ * The hidden product behind a package box, made or brought up to date.
+ *
+ * It lives in a counter that is switched off, so it is on no menu, in no
+ * picker and in no search: the only thing that points at it is the one line
+ * of its own box. Its description is what is in the package, so a driver's
+ * sheet and a receipt both read properly without anybody having entered
+ * thirty-eight products.
+ */
+async function packageProduct(
+  existing: string | null,
+  name: string,
+  contents: string[],
+  price: number
+): Promise<string | null> {
+  const { data: counter } = await db()
+    .from("restaurants")
+    .select("id")
+    .eq("kind", "package")
+    .maybeSingle();
+  const shop = (counter as { id?: string } | null)?.id;
+  if (!shop) return null;
+
+  const fields = {
+    restaurant_id: shop,
+    name,
+    price_food: price,
+    available: true,
+    description: contents.join(", ").slice(0, 2000),
+  };
+
+  if (existing) {
+    const { error } = await db().from("menu_items").update(fields).eq("id", existing);
+    // Gone from under us, which is possible if somebody deleted it by hand.
+    // Making another is better than refusing to save the box.
+    if (!error) return existing;
+  }
+
+  const { data, error } = await db()
+    .from("menu_items")
+    .insert(fields)
+    .select("id")
+    .single();
+  if (error || !data) return null;
+  return (data as { id: string }).id;
 }
