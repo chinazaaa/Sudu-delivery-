@@ -171,7 +171,9 @@ export default async function BoxDetail({
           /* A thing with a whistle picks a real car. Everything else picks a
              date, because a care package is found, bought and packed before
              anybody drives it anywhere. */
-          timed={isTimed(occasion)}
+          /* A shelf with a season of its own picks a plain date inside it,
+             not one of this week's runs. See Occasion.starts_at. */
+          timed={isTimed(occasion) && occasion.starts_at === null}
           hint={occasion.custom_hint}
           monies={moniesOn(settings).map((code) => ({
             code,
@@ -180,8 +182,22 @@ export default async function BoxDetail({
             rate: rateFor(settings, code),
           }))}
           today={lagosToday()}
-          soonest={soonestStandard()}
-          latest={furthest()}
+          /* Inside the shelf's own season where it has one: a hamper
+             ordered in October is wanted in December, and the picker was
+             offering tomorrow because tomorrow is what the runs know
+             about. Never sooner than the shop can pack either way. */
+          soonest={
+            occasion.starts_at
+              ? (occasion.starts_at.slice(0, 10) > soonestStandard()
+                  ? occasion.starts_at.slice(0, 10)
+                  : soonestStandard())
+              : soonestStandard()
+          }
+          latest={
+            occasion.starts_at && occasion.happens_at
+              ? occasion.happens_at.slice(0, 10)
+              : furthest()
+          }
           hostels={hostels}
           promoters={promoters.map((one) => ({ code: one.code, name: one.name }))}
           sentBy={sentBy}

@@ -85,6 +85,21 @@ export type Occasion = {
   /** Set means a time everybody shares, like a kick-off. Null means they
    *  pick a day from whatever is going. */
   happens_at: string | null;
+  /**
+   * The first day this shelf will deliver on, where it has a season rather
+   * than a deadline.
+   *
+   * A Christmas hamper is bought in November and wanted in December, and
+   * the picker was offering the runs going out this week because those are
+   * the ones that exist. A shelf with a start offers a plain date between
+   * that day and `happens_at` instead: no runs, no windows, because a
+   * hamper is found, packed and then carried, and which car it rides in is
+   * the shop's business rather than the buyer's.
+   *
+   * Null on everything else, which keeps every other shelf exactly as it
+   * was.
+   */
+  starts_at: string | null;
   /** Which of the two shelves it is on. */
   kind: Shelf;
   /** The example in the "want it changed?" box. One example cannot serve a
@@ -174,6 +189,7 @@ const toOccasion = (row: Record<string, unknown>): Occasion => ({
   blurb: (row.blurb as string) ?? "",
   image_url: (row.image_url as string) ?? "",
   happens_at: (row.happens_at as string) ?? null,
+  starts_at: (row.starts_at as string) ?? null,
   /* A database that has not had the migration run yet has no column here,
      and a clock of its own is the next best evidence of which it is. */
   kind: row.kind === "occasion" || row.kind === "collection"
