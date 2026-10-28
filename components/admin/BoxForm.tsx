@@ -4,6 +4,7 @@ import { useActionState } from "react";
 
 import { saveBox, type SaveState } from "@/app/admin/occasions/actions";
 import BoxLines from "./BoxLines";
+import PhotoField from "./PhotoField";
 import type { PickerRestaurant } from "@/lib/box-admin";
 import type { BoxLine } from "@/lib/boxes";
 
@@ -40,6 +41,12 @@ export default function BoxForm({
     error: "",
   });
 
+  // Unique on the page, because every box on a shelf draws one of these
+  // forms and a label pointing at a field in somebody else's box is worse
+  // than no label at all.
+  const photoId = `box_photo_${box?.id ?? "new"}`;
+  const picture = box?.image_url ?? "";
+
   return (
     <form action={act} className="space-y-3">
       {box && <input type="hidden" name="id" value={box.id} />}
@@ -65,6 +72,45 @@ export default function BoxForm({
       <div>
         <label className="label">One line under the name</label>
         <input name="blurb" defaultValue={box?.blurb} className="field" />
+      </div>
+
+      {/*
+          The picture.
+
+          Both of these forms already carried the image through as a hidden
+          field and the save already accepted one, but there was nowhere to
+          choose a file: the box went up with no picture and no way to add
+          one. A hamper is bought on its photograph more than on its list.
+      */}
+      <div>
+        <label className="label" htmlFor={photoId}>Picture</label>
+        <div className="flex items-start gap-3">
+          {picture ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={picture}
+              alt=""
+              className="size-20 shrink-0 rounded-xl object-cover"
+            />
+          ) : (
+            <span className="grid size-20 shrink-0 place-items-center rounded-xl bg-black/5 text-center text-[11px] leading-tight text-muted">
+              No picture
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <PhotoField id={photoId} name="photo" />
+            <p className="mt-1 text-xs text-muted">
+              Straight off the phone is fine. It is shrunk here before it
+              goes up. Leave it empty to keep the one that is there.
+            </p>
+            {picture !== "" && (
+              <label className="mt-1.5 flex items-center gap-2 text-xs">
+                <input type="checkbox" name="remove_photo" />
+                Take the picture off
+              </label>
+            )}
+          </div>
+        </div>
       </div>
 
       <div>

@@ -70,9 +70,7 @@ export async function saveOccasion(
       batch_id: String(form.get("batch_id") ?? "") || null,
       active: form.get("active") === "on",
       sort_order: number(form.get("sort_order"), 100),
-      image_url:
-        (await uploadImage(fileFrom(form, "photo"), "occasions")) ??
-        String(form.get("image_url") ?? "").trim(),
+      image_url: await picture(form, "occasions"),
     };
 
     const id = String(form.get("id") ?? "");
@@ -131,9 +129,7 @@ export async function saveBox(_prev: SaveState, form: FormData): Promise<SaveSta
       active: form.get("active") === "on",
       sort_order: number(form.get("sort_order"), 100),
       lines,
-      image_url:
-        (await uploadImage(fileFrom(form, "photo"), "boxes")) ??
-        String(form.get("image_url") ?? "").trim(),
+      image_url: await picture(form, "boxes"),
     };
 
     const id = String(form.get("id") ?? "");
@@ -205,4 +201,19 @@ function slugify(raw: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
+}
+
+/**
+ * The picture this is saved with: a new one where one was chosen, nothing
+ * where it was taken off, and otherwise whatever was there already.
+ *
+ * The forms carry the current one through as a hidden field, so a save that
+ * changes a price does not quietly drop the photograph. That left no way to
+ * remove one, which is now a tick rather than an admin going into storage.
+ */
+async function picture(form: FormData, folder: string): Promise<string> {
+  const uploaded = await uploadImage(fileFrom(form, "photo"), folder);
+  if (uploaded) return uploaded;
+  if (form.get("remove_photo") === "on") return "";
+  return String(form.get("image_url") ?? "").trim();
 }

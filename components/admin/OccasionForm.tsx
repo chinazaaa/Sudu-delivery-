@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { saveOccasion, type SaveState } from "@/app/admin/occasions/actions";
+import PhotoField from "./PhotoField";
 
 /**
  * Adding or changing an occasion.
@@ -34,6 +35,8 @@ export default function OccasionForm({
   };
   runs: { id: string; label: string }[];
 }) {
+  const photoId = `occasion_photo_${occasion?.id ?? "new"}`;
+  const picture = occasion?.image_url ?? "";
   const [state, act, busy] = useActionState<SaveState, FormData>(saveOccasion, {
     done: "",
     error: "",
@@ -122,6 +125,45 @@ export default function OccasionForm({
           The greyed-out example in the box where they ask for changes. Blank
           gives them a plain one.
         </p>
+      </div>
+
+      {/*
+          The picture.
+
+          Both of these forms already carried the image through as a hidden
+          field and the save already accepted one, but there was nowhere to
+          choose a file: the box went up with no picture and no way to add
+          one. A hamper is bought on its photograph more than on its list.
+      */}
+      <div>
+        <label className="label" htmlFor={photoId}>Picture</label>
+        <div className="flex items-start gap-3">
+          {picture ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={picture}
+              alt=""
+              className="size-20 shrink-0 rounded-xl object-cover"
+            />
+          ) : (
+            <span className="grid size-20 shrink-0 place-items-center rounded-xl bg-black/5 text-center text-[11px] leading-tight text-muted">
+              No picture
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <PhotoField id={photoId} name="photo" />
+            <p className="mt-1 text-xs text-muted">
+              Straight off the phone is fine. It is shrunk here before it
+              goes up. Leave it empty to keep the one that is there.
+            </p>
+            {picture !== "" && (
+              <label className="mt-1.5 flex items-center gap-2 text-xs">
+                <input type="checkbox" name="remove_photo" />
+                Take the picture off
+              </label>
+            )}
+          </div>
+        </div>
       </div>
 
       <div>
