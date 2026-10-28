@@ -138,6 +138,7 @@ const PAGES: { href: string; said: string }[] = [
   { href: "/pau-phone-and-laptop-repair", said: "Fix a phone or laptop at PAU" },
   { href: "/pau-buy-a-laptop", said: "Buy a laptop as a PAU student" },
   { href: "/pau-laundry", said: "Laundry collected from your block" },
+  { href: "/corporate-christmas-hampers", said: "Christmas hampers for staff and clients" },
   { href: "/christmas-hampers", said: "Christmas hampers in Ibeju-Lekki" },
   // The page that answers "is this shop real", which is the question
   // somebody asks an assistant before they ask it for dinner.

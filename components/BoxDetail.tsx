@@ -1,4 +1,4 @@
-import { notFound, permanentRedirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 import Link from "next/link";
 
 import { boxesOf, isTimed, occasionBySlug, type Shelf } from "@/lib/boxes";
@@ -65,6 +65,23 @@ export default async function BoxDetail({
 }) {
   const occasion = await occasionBySlug(slug);
   if (!occasion || !occasion.active) notFound();
+
+  /*
+   * A day that has been.
+   *
+   * The home page and the shelf list already drop a timed occasion the
+   * moment its day passes, which is the whole reason they are timed. Its
+   * own address did not: Halloween stayed open at /collections/halloween
+   * into November, showing boxes nothing could deliver, for anybody holding
+   * a link somebody sent them in October.
+   *
+   * Sent up to the shelf list rather than refused, because the person
+   * following that link still wants a box, and a temporary redirect because
+   * the shelf comes back next year at the same address.
+   */
+  if (occasion.happens_at && new Date(occasion.happens_at).getTime() < Date.now()) {
+    redirect(base);
+  }
   // One address for both kinds now, so there is nothing to send anybody to.
   if (kind !== "all" && occasion.kind !== kind) {
     permanentRedirect(`${elsewhere}/${occasion.slug}`);

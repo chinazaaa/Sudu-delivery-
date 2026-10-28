@@ -86,6 +86,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: 0.9,
     },
+    // The same season, written for the other customer: an office manager
+    // buying thirty at once, which is a different search entirely.
+    {
+      url: `${site}/corporate-christmas-hampers`,
+      changeFrequency: "weekly" as const,
+      priority: 0.9,
+    },
     {
       url: `${site}/send-a-gift-to-pau`,
       changeFrequency: "monthly" as const,
@@ -187,13 +194,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // listed: they were reachable only by tapping through the front page.
     const packed = await db()
       .from("occasions")
-      .select("slug, kind, active")
+      .select("slug, kind, active, happens_at")
       .eq("active", true)
       .order("slug")
-      .overrideTypes<{ slug: string; kind?: string; active: boolean }[]>()
+      .overrideTypes<
+        { slug: string; kind?: string; active: boolean; happens_at?: string | null }[]
+      >()
       .then(
         (answer) => answer.data ?? [],
-        () => [] as { slug: string; kind?: string }[]
+        () => [] as { slug: string; kind?: string; happens_at?: string | null }[]
+      )
+      // A shelf whose day has been is gone from the shop, so it has no
+      // business in the list of addresses worth crawling.
+      .then((rows) =>
+        rows.filter(
+          (one) => !one.happens_at || new Date(one.happens_at).getTime() > Date.now()
+        )
       );
 
     // Every box given an address of its own: the hampers. A shelf is one
