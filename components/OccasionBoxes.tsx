@@ -219,100 +219,93 @@ export default function OccasionBoxes({
           the most-bought row. The contents stay in full, because what is in
           it is the only question anybody has, and the price stays big.
       */}
-      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {meals.map((one, at) => {
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {meals.map((one) => {
           const on = one.id === picked;
+          const howMany = one.contents.length || one.lines.length;
           return (
-          <li key={one.id}>
-            <article
-              className={`flex h-full flex-col overflow-hidden rounded-2xl border-2 border-ink bg-paper transition ${
-                on ? "shadow-card" : ""
-              }`}
-            >
-              {/* Only a real photograph. A drawn fallback on a hamper is a
-                  promise nobody can check. */}
-              {one.imageUrl !== "" && (
+            <li key={one.id}>
+              {/*
+                  One tile, the same shape as every other tile in the shop.
+
+                  These were full-width boards, and then full-width cards: a
+                  photograph the height of a phone screen on the ones that
+                  had a photograph, and a short stub of text on the ones that
+                  did not. Scrolling past them, no two were the same size,
+                  which is what made the shelf unreadable. A tile is a
+                  square picture, a name and a price, and it is the same
+                  square whether or not there is a photograph yet.
+              */}
+              <button
+                type="button"
+                onClick={() => setPicked(on ? "" : one.id)}
+                aria-pressed={on}
+                className={`flex h-full w-full flex-col overflow-hidden rounded-2xl border-2 bg-paper text-left transition ${
+                  on ? "border-brand shadow-card" : "border-ink"
+                }`}
+              >
                 <span className="block aspect-square border-b-2 border-ink">
-                  <Thumb src={one.imageUrl} name={one.name} rounded="rounded-none" />
+                  <Thumb src={one.imageUrl} name={one.name} rounded="" />
                 </span>
-              )}
 
-              <div className="flex flex-1 flex-col gap-3 p-5">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="font-display text-2xl font-black leading-none text-brand">
-                    {String(at + 1).padStart(2, "0")}
-                  </span>
+                <span className="flex flex-1 flex-col gap-1.5 p-3">
                   {one.serves !== "" && (
-                    <span className="ticket bg-shell px-2 py-1">{one.serves}</span>
+                    <span className="ticket block text-brand-dark">{one.serves}</span>
                   )}
-                </div>
-
-                <h3 className="font-display text-[28px] font-extrabold uppercase leading-[0.9]">
-                  {one.name}
-                </h3>
-
-                <div className="flex flex-col">
-                  <span className="ticket text-muted">Delivery in it</span>
-                  <span className="font-display text-[40px] font-black leading-none">
-                    {naira(priceOf(one))}
+                  <span className="line-clamp-2 text-[15px] font-semibold leading-snug">
+                    {one.name}
                   </span>
-                </div>
+                  <span className="block text-xs text-muted">
+                    {howMany} thing{howMany === 1 ? "" : "s"} in it · delivery in
+                    the price
+                  </span>
 
-                {/* How much is in it, not what. A card's job on a shelf
-                    is to be taken in at a glance and compared with the one
-                    beside it; thirty-eight ticked lines on each of five
-                    cards is the full-width board again in a narrower
-                    column. What is in it is listed in full the moment one
-                    is picked, which is when somebody is actually asking. */}
-                <p className="text-[15px] text-ink/70">
-                  {/* A package says what it says it holds; everything else
-                      counts its lines, which is the same question asked of
-                      the only answer each one has. */}
-                  {one.contents.length || one.lines.length} thing
-                  {(one.contents.length || one.lines.length) === 1 ? "" : "s"} in it
-                  {one.blurb !== "" && <span className="block pt-1">{one.blurb}</span>}
-                </p>
-
-                <div className="mt-auto flex flex-col items-start gap-2.5 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (on) {
-                        setPicked("");
-                        return;
-                      }
-                      setPicked(one.id);
-                    }}
-                    aria-pressed={on}
-                    className={`flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border-2 border-ink px-5 font-bold transition ${
-                      on ? "bg-ink text-shell" : "bg-brand text-white shadow-press"
-                    }`}
-                  >
-                    {!on && (
-                      <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" aria-hidden>
-                        <path d="M12 5v14" />
-                        <path d="M5 12h14" />
-                      </svg>
-                    )}
-                    {on ? "Picked" : "Add box"}
-                  </button>
-                  {chatAbout(one.name) !== "" && (
-                    <a
-                      href={chatAbout(one.name)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold underline-offset-4 hover:underline"
+                  <span className="mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 pt-1.5">
+                    <span className="font-display text-2xl font-extrabold leading-none">
+                      {naira(priceOf(one))}
+                    </span>
+                    <span
+                      aria-hidden
+                      className={`ml-auto grid size-11 shrink-0 place-items-center rounded-full border-2 border-ink shadow-press ${
+                        on ? "bg-ink text-white" : "bg-brand text-white"
+                      }`}
                     >
-                      Customise it
-                    </a>
-                  )}
-                </div>
-              </div>
-            </article>
-          </li>
+                      {on ? (
+                        <svg viewBox="0 0 24 24" className="size-[18px]" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 12.5 9 17.5 20 6.5" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" className="size-[18px]" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
+                          <path d="M12 5v14" />
+                          <path d="M5 12h14" />
+                        </svg>
+                      )}
+                    </span>
+                  </span>
+                </span>
+              </button>
+            </li>
           );
         })}
       </ul>
+
+      {/* One of these for the shelf rather than one per tile. Nothing on a
+          shelf is quite what somebody had in mind, and the answer to that
+          is the same conversation whichever tile they were looking at. */}
+      {chatAbout(meals[0]?.name ?? "") !== "" && (
+        <p className="text-sm text-ink/75">
+          Want one made up differently?{" "}
+          <a
+            href={chatAbout(box?.name ?? meals[0]?.name ?? "")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-brand underline-offset-4 hover:underline"
+          >
+            Tell us what to put in it
+          </a>
+          .
+        </p>
+      )}
 
       {box && !shut && (
         <form ref={rest} action={act} className="scroll-mt-24 space-y-4">

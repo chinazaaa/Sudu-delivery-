@@ -1702,3 +1702,16 @@ body:has([data-actionbar]) .sudubot .teaser {
     display: none;
   }
 }
+
+/*
+ * A page that dresses itself.
+ *
+ * The season's decoration is drawn once, over the whole shop, which is
+ * right for a shop having one season at a time. A Christmas shelf opened
+ * in October is the exception: it is already dressed for its own occasion,
+ * and Halloween bats drifting over a hamper read as a page nobody looked
+ * at. The shelf asks for the layer to be left off while it is open.
+ */
+.no-season-decor .season-decor {
+  display: none;
+}

@@ -17,6 +17,7 @@ import OccasionBoxes from "@/components/OccasionBoxes";
 import HelpLine from "@/components/HelpLine";
 import AskParents from "@/components/AskParents";
 import CurateBox from "@/components/CurateBox";
+import NoSeasonDecor from "@/components/NoSeasonDecor";
 
 /**
  * One collection or occasion, and the boxes packed for it.
@@ -152,6 +153,10 @@ export default async function BoxDetail({
           </div>
         </div>
       </header>
+
+      {/* A shelf with a season of its own is already dressed: the shop's
+          own season has no business floating over it. */}
+      {occasion.starts_at !== null && <NoSeasonDecor />}
 
       <div className="flex flex-col gap-8 py-8 lg:flex-row lg:items-start lg:gap-8 lg:py-10">
         <div className="min-w-0 flex-1 space-y-4">
