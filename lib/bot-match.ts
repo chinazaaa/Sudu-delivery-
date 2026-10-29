@@ -1468,3 +1468,44 @@ export function asksForQty(said: string): Amount | null {
 
   return null;
 }
+
+/**
+ * Somebody saying it cannot wait.
+ *
+ * Not a question the chat can answer, and not one it should guess at:
+ * whether a bag can be got across campus in the next hour depends on where
+ * the car is this minute, which a person knows and no screen does. So the
+ * words are spotted and the conversation is handed over, rather than
+ * answered with the timetable they have already read.
+ *
+ * Whole words and set phrases only. "now" on its own is in half the
+ * sentences anybody types, and a chat that bailed out to WhatsApp every
+ * time somebody wrote "what do you have now" would be worse than useless.
+ */
+const URGENT = [
+  "urgent",
+  "urgently",
+  "emergency",
+  "asap",
+  "a s a p",
+  "right now",
+  "now now",
+  "immediately",
+  "straight away",
+  "cannot wait",
+  "can't wait",
+  "cant wait",
+  "in a hurry",
+  "sharp sharp",
+  "very fast",
+  "as fast as possible",
+  "as soon as possible",
+  "need it now",
+  "want it now",
+  "need it fast",
+];
+
+export function soundsUrgent(said: string): boolean {
+  const text = ` ${String(said ?? "").toLowerCase().replace(/[^a-z' ]+/g, " ").replace(/\s+/g, " ")} `;
+  return URGENT.some((word) => text.includes(` ${word} `));
+}

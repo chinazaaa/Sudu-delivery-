@@ -52,6 +52,7 @@ import { ESTIMATE_NOTE, nextArrival, runArrival } from "@/lib/arrival";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
 import { countdown, runDateLabel } from "@/lib/time";
+import { waLink } from "@/lib/whatsapp";
 import {
   dayAfter,
   dayOfChoice,
@@ -139,8 +140,13 @@ export default function Checkout({
   sentByName = "",
   monies = [],
   iceItemId = "",
+  whatsapp = "",
 }: {
   batches: BatchView[];
+  /** The shop's number, for the one case this page cannot serve: somebody
+   *  who needs it sooner than anything on offer. Empty leaves the line off
+   *  rather than sending anybody to a dead link. */
+  whatsapp?: string;
   /** The bag of ice block the shop puts in and takes out itself. Named
    *  here only so the cart listing does not print a counter on it. */
   iceItemId?: string;
@@ -942,6 +948,15 @@ export default function Checkout({
    * 4:30pm today". One sentence either way, and the line under it says
    * plainly that a time is an estimate.
    */
+  /* The message already written, so nobody has to explain themselves twice.
+     What they are ordering is on the page in front of them and in the cart
+     we can see; what the shop needs is the hurry and the block. */
+  const urgentChat = waLink(
+    whatsapp,
+    "Hi Sudu, I need an order sooner than the site can do it. Here is what " +
+      "I want, which block I am in and when I need it:"
+  );
+
   const onARun = deliverAt === "";
   /*
    * Which day a car of its own lands on, in words.
@@ -1390,6 +1405,36 @@ export default function Checkout({
             box below it was the thing being changed. */}
         {arriving !== "" && (
           <p className="text-sm text-muted">Get it {arriving}.</p>
+        )}
+
+        {/*
+            The one thing this page cannot do.
+            
+            Everything above is the shop's timetable, and somebody who needs
+            it in forty minutes is outside it: there is no option to pick,
+            because whether it can be done at all depends on where the car
+            is this minute, which only a person knows. Saying so here, with
+            the message already written, is better than letting them read
+            the list twice and close the tab.
+
+            Quiet on purpose. It sits under the day as a line rather than
+            beside the order button as a way out, because most people do not
+            need it and a loud escape hatch on a checkout is an invitation
+            to leave the checkout.
+        */}
+        {urgentChat && (
+          <p className="text-sm text-muted">
+            Need it sooner than that?{" "}
+            <a
+              href={urgentChat}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-brand underline-offset-4 hover:underline"
+            >
+              Message us
+            </a>{" "}
+            and we will say what we can do.
+          </p>
         )}
       </div>
     );

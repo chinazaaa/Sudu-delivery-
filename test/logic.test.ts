@@ -1,3 +1,4 @@
+import { soundsUrgent } from "../lib/bot-match";
 import { otherWorthSaying } from "../lib/arrival";
 import { windowStart, worthACar } from "../lib/pick-a-day";
 import { easterSunday, motheringSunday, mothersDayMay, nextOf, valentines } from "../lib/feasts";
@@ -7272,4 +7273,17 @@ test("the other way is only offered when it is worth taking", () => {
   // Nothing to offer, or the same thing twice.
   assert.equal(otherWorthSaying(run, null), null);
   assert.equal(otherWorthSaying(run, { ...carMuchEarlier, said: run.said }), null);
+});
+
+test("the chat hears somebody saying it cannot wait", () => {
+  assert.equal(soundsUrgent("I need it urgently please"), true);
+  assert.equal(soundsUrgent("this is an emergency"), true);
+  assert.equal(soundsUrgent("can you bring it asap"), true);
+  assert.equal(soundsUrgent("I need it right now"), true);
+  assert.equal(soundsUrgent("It cannot wait, she travels tonight"), true);
+  // And does not hear it where nobody said it. "now" on its own is in half
+  // the sentences anybody types.
+  assert.equal(soundsUrgent("what do you have now"), false);
+  assert.equal(soundsUrgent("how much is jollof"), false);
+  assert.equal(soundsUrgent("is the shop open"), false);
 });

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { naira } from "@/lib/money";
 import { pickFaq } from "@/lib/faq-match";
+import { soundsUrgent } from "@/lib/bot-match";
 import { dayAsked, sayWhen } from "@/lib/bot-days";
 import { lagosToday } from "@/lib/time";
 import { readBudget, toSpend, allIn, type Budget } from "@/lib/budget";
@@ -926,6 +927,45 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
        */
       sureOnly = false
     ): boolean => {
+      /*
+       * It cannot wait, which is not a question with a written answer.
+       *
+       * Whether a bag can be got across campus in the next hour depends on
+       * where the car is this minute. A person knows that and no screen
+       * does, so the chat says so and hands over rather than reciting the
+       * timetable they have already read. Before the written answers,
+       * because "I need it urgently" matches "Can I get it today?" and
+       * that answer is the timetable.
+       */
+      if (soundsUrgent(said)) {
+        bot(
+          "If it really cannot wait, message us. Whether we can get it to " +
+            "you in the next hour depends on where the car is right now, " +
+            "and a person can tell you that in a minute.",
+          520
+        );
+        setAsk({
+          of: "buttons",
+          buttons: [
+            {
+              said: "Message us now",
+              look: "green",
+              href: handOver("I need something urgently."),
+            },
+            {
+              said: "Carry on here",
+              look: "alt",
+              go: () => {
+                me("Carry on here");
+                if (after) after();
+                else askOrderRef.current?.(true);
+              },
+            },
+          ],
+        });
+        return true;
+      }
+
       const all = startRef.current?.faqs ?? [];
       if (all.length === 0) return false;
 
@@ -992,7 +1032,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
       return false;
     },
-    [bot, me]
+    [bot, me, handOver]
   );
 
   const askAQuestion = useCallback(
@@ -4352,7 +4392,13 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     });
 
     if (earlier.length === 0) {
-      bot(`The <b>${keep?.said ?? "next"}</b> run is the soonest we can reach you.`, 480);
+      bot(
+        `The <b>${keep?.said ?? "next"}</b> run is the soonest we can promise. ` +
+          `A car of its own would not get there much before it, so it is not ` +
+          `worth the extra. If it really cannot wait, say so on WhatsApp and ` +
+          `we will tell you what is possible.`,
+        480
+      );
       setAsk({
         of: "buttons",
         buttons: [
@@ -4364,6 +4410,11 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
               held.current.car = null;
               onward();
             },
+          },
+          {
+            said: "Urgent? Message us",
+            look: "green",
+            href: handOver("I need it urgently, sooner than that."),
           },
         ],
       });
@@ -4682,10 +4733,15 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     // Only offer it where there is genuinely something earlier. Asking
     // "do you need it sooner" and then answering "no, you cannot" is a
     // question that should not have been put.
+    /* The same two hours askSooner uses. Offering the button on an hour's
+       difference walked somebody into a screen that then told them the run
+       they already had was the soonest, which is a question that should not
+       have been put. */
     const by = new Date(first.startsAt).getTime();
+    const saved = CAR_MUST_SAVE_HOURS * 60 * 60 * 1000;
     const sooner = (lists?.cars ?? []).some((car) => {
       const at = new Date(car.at).getTime();
-      return Number.isFinite(at) && at < by;
+      return Number.isFinite(at) && at <= by - saved;
     });
     setAsk({
       of: "buttons",
@@ -4699,9 +4755,27 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                 go: () => { me("I need it sooner"); askSooner(onward); },
               },
             ]
-          : []),
+          : [
+              /*
+               * Nothing the shop sells is sooner, which is not the same as
+               * nothing being possible.
+               *
+               * Whether a bag can be got across campus in the next hour
+               * depends on where the car is this minute, which no screen
+               * knows and a person does. So the chat stops pretending to
+               * decide it and hands over, with everything already said
+               * carried into the message.
+               */
+              {
+                said: "Urgent? Message us",
+                look: "green" as const,
+                href: handOver("I need it urgently, sooner than that."),
+              },
+            ]),
       ],
-      hint: sooner ? undefined : "That is already the soonest we can reach you.",
+      hint: sooner
+        ? undefined
+        : "That is the soonest we can promise. If it cannot wait, say so on WhatsApp and we will tell you what is possible.",
     });
   }, [askOrder, askSooner, bot, handOver, me, say]);
 
