@@ -334,6 +334,22 @@ export default function Checkout({
    */
   const firstDay = soonestDay(dayChoices);
 
+  /*
+   * A day with two ways of arriving on it.
+   *
+   * The day control is only drawn where there is more than one day to
+   * choose, which was right while a day had one answer. A day with a run
+   * and a car on it has two, and the commonest cart in the shop is exactly
+   * that: everything going today, a run at six, and a car that could be
+   * there at one. With only today on offer the control was not drawn at
+   * all, so the choice existed and could not be reached.
+   */
+  const twoWaysOnADay = dayChoices.some(
+    (day) =>
+      openable.some((run) => run.runDate === day.date) &&
+      carWindows.some((car) => car.date === day.date)
+  );
+
   // The runs that only fail because somebody is closed that day, and what
   // is closed on the soonest of them. Said in their words: "DO Bowls is
   // closed on Saturdays."
@@ -1184,6 +1200,25 @@ export default function Checkout({
     const farDay =
       chosen !== null && !named.includes(chosen.date) ? chosen.date : "";
 
+    /*
+     * Both ways of getting it there on the day that is picked.
+     *
+     * Only where the shop would really offer both, and never to somebody
+     * adding to an order, joining a friend or in a group: their car was
+     * settled when they were invited and is not theirs to change.
+     */
+    const onDay = chosen?.date ?? "";
+    const bothWays = {
+      run:
+        onDay === "" || !offersSameDay
+          ? null
+          : openable.find((one) => one.runDate === onDay) ?? null,
+      cars:
+        onDay === "" || !offersSameDay
+          ? []
+          : carWindows.filter((one) => one.date === onDay),
+    };
+
     const goTo = (date: string) => {
       if (date === "") return;
       const day = dayChoices.find((one) => one.date === date);
@@ -1277,6 +1312,64 @@ export default function Checkout({
             {dayProblem !== "" && (
               <p className="text-sm text-brand-dark">{dayProblem}</p>
             )}
+          </div>
+        )}
+
+        {/*
+            How it comes, on a day where there are two answers.
+
+            The day list holds one entry per day, and where a run is going
+            that day the run is the entry: the car would be dearer, and the
+            reasoning went that it would be no sooner either. That second
+            half is simply not true. Tonight's run is between five and
+            seven; a car of its own can be at the block at one o'clock, and
+            somebody who wants their lunch at lunchtime had no way to say
+            so and no sign that there was anything to say.
+
+            So where a day has both, the day stays one line and this asks
+            the second question underneath it. It only ever appears on a
+            day that really has both, which is why it is not another
+            permanent dropdown on a page that is already long.
+        */}
+        {bothWays.run !== null && bothWays.cars.length > 0 && (
+          <div className="space-y-1.5">
+            <label className="label" htmlFor="when-how">
+              How it comes
+            </label>
+            <select
+              id="when-how"
+              className="field"
+              value={deliverAt === "" ? "run" : `car:${deliverAt}`}
+              onChange={(event) => {
+                const picked = event.target.value;
+                setAgreedWhen(false);
+                if (picked === "run") {
+                  if (bothWays.run) setBatchId(bothWays.run.id);
+                  setDeliverAt("");
+                  return;
+                }
+                // The car rides on that day's run as far as the books are
+                // concerned, so the order sits with the rest of the day's
+                // work rather than on whichever run the page happened to
+                // be showing before.
+                if (bothWays.run) setBatchId(bothWays.run.id);
+                setDeliverAt(picked.slice(4));
+              }}
+            >
+              <option value="run">
+                On the run · {bothWays.run.deliveryWindow || bothWays.run.label}
+              </option>
+              {bothWays.cars.map((car) => (
+                <option key={car.at} value={`car:${car.at}`}>
+                  A car of its own · {car.window || car.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted">
+              The run is the cheap way and comes in the window above. A car of
+              its own goes when you say and costs more; the total below
+              follows whichever you pick.
+            </p>
           </div>
         )}
 
@@ -1484,7 +1577,7 @@ export default function Checkout({
             for somebody adding to an order, joining a friend or in a
             group, whose day was settled when they were invited. */}
         {!noRunThere &&
-          dayChoices.length > 1 &&
+          (dayChoices.length > 1 || twoWaysOnADay) &&
           adding === null &&
           joining === null &&
           party === "" &&
