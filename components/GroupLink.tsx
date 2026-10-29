@@ -4,7 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { naira } from "@/lib/money";
 import type { Slot } from "@/lib/same-day";
-import { ESTIMATE_NOTE, nextArrival, type ArrivalRun } from "@/lib/arrival";
+import {
+  ESTIMATE_NOTE,
+  nextArrival,
+  otherWorthSaying,
+  type ArrivalRun,
+} from "@/lib/arrival";
 
 const KEY = "sudu_group_v2";
 const JOINED = "sudu_group_joined_v2";
@@ -144,7 +149,10 @@ export default function GroupLink({
   // runs and once with only cars. A group of people who want dinner tonight
   // should not have to give up on a group because the next run is Saturday.
   const other = decided
-    ? (decided.onARun ? nextArrival([], slots, today) : nextArrival(runs, [], today))
+    ? otherWorthSaying(
+        decided,
+        decided.onARun ? nextArrival([], slots, today) : nextArrival(runs, [], today)
+      )
     : null;
   const [takeOther, setTakeOther] = useState(false);
   const swap = other !== null && other.said !== decided?.said;

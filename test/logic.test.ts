@@ -1,3 +1,4 @@
+import { otherWorthSaying } from "../lib/arrival";
 import { windowStart, worthACar } from "../lib/pick-a-day";
 import { easterSunday, motheringSunday, mothersDayMay, nextOf, valentines } from "../lib/feasts";
 import assert from "node:assert/strict";
@@ -7243,4 +7244,32 @@ test("a window says when it starts", () => {
   assert.equal(windowStart("Between 4:30pm and 6pm"), 16.5);
   assert.equal(windowStart("between 9am and 11am"), 9);
   assert.equal(windowStart("sometime"), null);
+});
+
+test("the other way is only offered when it is worth taking", () => {
+  const run = {
+    runId: "r1",
+    at: "",
+    when: "Between 5pm and 7pm, today",
+    said: "between 5pm and 7pm today",
+    onARun: true,
+  };
+  const carJustEarlier = {
+    runId: "",
+    at: "x",
+    when: "Between 4pm and 7pm, today",
+    said: "between 4pm and 7pm today",
+    onARun: false,
+  };
+  const carMuchEarlier = { ...carJustEarlier, when: "Between 12pm and 3pm, today" };
+
+  // An hour, for a dearer trip: not worth saying.
+  assert.equal(otherWorthSaying(run, carJustEarlier), null);
+  // Lunch at lunchtime against an evening run: say it.
+  assert.equal(otherWorthSaying(run, carMuchEarlier), carMuchEarlier);
+  // The cheaper way is always worth saying, whatever the hours.
+  assert.equal(otherWorthSaying(carJustEarlier, run), run);
+  // Nothing to offer, or the same thing twice.
+  assert.equal(otherWorthSaying(run, null), null);
+  assert.equal(otherWorthSaying(run, { ...carMuchEarlier, said: run.said }), null);
 });

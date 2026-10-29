@@ -22,7 +22,7 @@ import { toBatchView } from "@/lib/view";
 import { bandTable } from "@/lib/fees";
 import { collectedFrom, everywhere, parseAreas } from "@/lib/areas";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
-import { nextArrival, runArrival } from "@/lib/arrival";
+import { nextArrival, otherWorthSaying, runArrival } from "@/lib/arrival";
 import { dropLabel, nextDrop, skincareOn, skincareShop } from "@/lib/skincare";
 import {
   nextDrop as nextPharmacyDrop,
@@ -394,12 +394,13 @@ export default async function HomePage() {
       alsoArriving={
         (() => {
           if (!decided) return null;
-          const other = decided.onARun
-            ? nextArrival([], slots, lagosToday())
-            : nextArrival(runViews, [], lagosToday());
-          return other && other.said !== decided.said
-            ? { said: other.said, sooner: decided.onARun }
-            : null;
+          const other = otherWorthSaying(
+            decided,
+            decided.onARun
+              ? nextArrival([], slots, lagosToday())
+              : nextArrival(runViews, [], lagosToday())
+          );
+          return other ? { said: other.said, sooner: decided.onARun } : null;
         })()
       }
       buckets={buckets}

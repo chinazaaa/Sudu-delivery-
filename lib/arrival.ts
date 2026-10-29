@@ -1,4 +1,5 @@
 import { type Slot } from "./same-day";
+import { worthACar } from "./pick-a-day";
 import { runDateLabel } from "./time";
 
 /**
@@ -157,4 +158,28 @@ export function runArrival(run: {
     said: `${run.deliveryWindow.charAt(0).toLowerCase()}${run.deliveryWindow.slice(1)} ${day}`,
     flashFee: run.flashFee ?? null,
   };
+}
+
+/**
+ * The other way of getting it here, where it is worth saying at all.
+ *
+ * Two kinds of person open the shop: one wants it tonight and one wants it
+ * cheap, so whichever way the headline went, the other one gets a line
+ * underneath. That is right when the other way is a run, which is always
+ * worth offering because it is the cheaper one.
+ *
+ * It is not right when the other way is a car. A car costs more and the
+ * only thing it buys is arriving sooner, so "in a hurry? we can be there
+ * between four and seven" under a run between five and seven is the shop
+ * selling an hour, maybe, for a bigger fee. The checkout stopped doing
+ * that; the strip on the front page and the group card were still doing it.
+ */
+export function otherWorthSaying(
+  decided: Arrival,
+  other: Arrival | null
+): Arrival | null {
+  if (!other || other.said === decided.said) return null;
+  // The headline is a car, so the other way is the cheaper run. Always.
+  if (!decided.onARun) return other;
+  return worthACar(decided.when, other.when) ? other : null;
 }
