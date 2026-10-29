@@ -17,6 +17,7 @@ import {
   lagosToday,
   naira,
   nextArrival,
+  otherWorthSaying,
   type Item,
   type OrderView,
   type Shop,
@@ -246,7 +247,10 @@ export default function Home() {
       ? nextArrival([], slots, lagosToday())
       : nextArrival(runs, [], lagosToday())
     : null;
-  const also = other && other.said !== decided?.said ? other : null;
+  // And only where it is worth taking. A car an hour before the run is a
+  // dearer trip for an hour that may not happen; the same two hours the
+  // website and the chat use.
+  const also = decided ? otherWorthSaying(decided, other) : null;
   return (
     <View style={{ flex: 1 }}>
       <ScrollView

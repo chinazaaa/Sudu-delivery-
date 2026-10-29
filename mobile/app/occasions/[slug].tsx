@@ -16,6 +16,7 @@ import { api, BASE, naira, type BoxView, type WhenOption } from "@/lib/api";
 import { me as stored } from "@/lib/store";
 import { F, T } from "@/lib/theme";
 import { Display } from "@/components/ui";
+import Thumb from "@/components/Thumb";
 
 /**
  * One occasion and the boxes packed for it.
@@ -301,6 +302,31 @@ export default function OccasionScreen() {
             padding: 16,
           }}
         >
+          {/*
+              The photograph, which is most of why anybody picks one hamper
+              over another.
+              
+              The card listed the name, the price and the contents and left
+              the picture out entirely, so a shelf that looks finished on the
+              website was a wall of text here. Only a real photograph: a
+              drawn fallback on a hamper is a promise nobody can check, and
+              the shelf reads better with none than with a coloured square
+              pretending to be one.
+          */}
+          {one.imageUrl !== "" && (
+            <View
+              style={{
+                borderRadius: T.radius,
+                overflow: "hidden",
+                borderWidth: 2,
+                borderColor: T.line,
+                marginBottom: 12,
+              }}
+            >
+              <Thumb src={one.imageUrl} name={one.name} ratio={4 / 3} />
+            </View>
+          )}
+
           <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
             <Text style={{ fontSize: 17, fontFamily: F.bodyBold, color: T.ink, flex: 1 }}>
               {one.name}
@@ -571,7 +597,12 @@ export default function OccasionScreen() {
             )}
           </Card>
 
-          {/* One tap, and what it needs only appears once it is on. */}
+          {/* One tap, and what it needs only appears once it is on.
+
+              Off a seasonal shelf altogether: nobody wants a Christmas
+              hamper again every month, and a question with one sensible
+              answer is a question not worth asking. */}
+          {!data.occasion.seasonal && (
           <Card>
             <Pressable
               onPress={() => setAgain(!again)}
@@ -641,12 +672,25 @@ export default function OccasionScreen() {
               </>
             )}
           </Card>
+          )}
 
           <Card>
             <Heading>Where it goes</Heading>
             <Field label="Your name" value={name} onChange={setName} />
             <Field label="Your number" value={phone} onChange={setPhone} keyboard="phone-pad" />
-            <Field label="Which block it goes to" value={hostel} onChange={setHostel} />
+            {/* A hamper is carried rather than driven hot, so it can go to a
+                house in Awoyaya as easily as to a block. The field has
+                always taken either; only the label said otherwise, which
+                is enough to stop somebody who is not a student. */}
+            <Field
+              label={
+                data.occasion.seasonal
+                  ? "Where it goes: a block at PAU, or an address in Lagos"
+                  : "Which block it goes to"
+              }
+              value={hostel}
+              onChange={setHostel}
+            />
 
             <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
               {(

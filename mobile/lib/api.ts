@@ -873,6 +873,16 @@ export const api = {
         image?: string;
         /** The example in the changes box, in this shelf's own words. */
         hint?: string;
+        /** A shelf with a season of its own: Christmas, not foodstuff.
+         *  Nobody wants a hamper again every month, so the standing order
+         *  is left off rather than sitting there as a question with one
+         *  sensible answer. */
+        seasonal?: boolean;
+        /** The last day today's prices are promised, where the shelf
+         *  promises them. */
+        priceHoldsUntil?: string | null;
+        /** What one of these is called, singular: "hamper", "box". */
+        itemWord?: string;
       };
       boxes: BoxView[];
       when: WhenOption[];
@@ -1717,4 +1727,45 @@ export function feeRidingAlong(args: {
 }): number {
   if (args.steps === null || args.stepCount <= 0) return args.otherFee;
   return Math.max(args.otherFee, feeByStep(args.stepCount, args.steps));
+}
+
+/**
+ * The first clock time in a window, as hours since midnight.
+ *
+ * The shop writes both a run's window and a car's in one form, "between
+ * 4pm and 7pm", so the start is the first time in the string. Unreadable
+ * comes back null and the caller decides: guessing a time here would move
+ * money. The same function as the website's lib/pick-a-day.
+ */
+export function windowStart(said: string): number | null {
+  const found = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i.exec(said ?? "");
+  if (!found) return null;
+  const hour = Number(found[1]) % 12;
+  const minutes = Number(found[2] ?? 0);
+  return hour + (found[3].toLowerCase() === "pm" ? 12 : 0) + minutes / 60;
+}
+
+/**
+ * The other way of getting it here, where it is worth saying at all.
+ *
+ * A run is always worth offering, because it is the cheaper one. A car is
+ * not: it costs more and the only thing it buys is arriving sooner, so
+ * "in a hurry? we can be there between 4pm and 7pm" under a headline
+ * reading between 5pm and 7pm is the shop selling an hour, maybe, for a
+ * bigger fee. Two hours, the same as the website and the chat.
+ */
+type Arriving = { said: string; onARun: boolean };
+
+export function otherWorthSaying<T extends Arriving>(
+  decided: Arriving,
+  other: T | null
+): T | null {
+  if (!other || other.said === decided.said) return null;
+  if (!decided.onARun) return other;
+  // Read off what is actually said, because that is the only window the
+  // app is given: "between 5pm and 7pm today".
+  const run = windowStart(decided.said);
+  const car = windowStart(other.said);
+  if (run === null || car === null) return other;
+  return run - car >= 2 ? other : null;
 }

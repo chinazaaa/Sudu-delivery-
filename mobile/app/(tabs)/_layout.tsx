@@ -1,7 +1,7 @@
 import { Image, Pressable, Text, View } from "react-native";
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { cart, countItems, me, shelfOf, shelfCount, useStored } from "@/lib/store";
+import { cart, me, shelfOf, shelfCount, useStored } from "@/lib/store";
 import { F, T } from "@/lib/theme";
 
 /**
@@ -19,10 +19,23 @@ export default function TabsLayout() {
   const pharmacyShelf = shelfOf("pharmacy");
   const [shelfLines] = useStored(skincareShelf.read, []);
   const [drugLines] = useStored(pharmacyShelf.read, []);
-  // Both baskets. They are two orders and two days, but one badge: a
-  // skincare basket nobody can see from the menu is one nobody remembers
-  // they have.
-  const items = countItems(lines) + shelfCount(shelfLines) + shelfCount(drugLines);
+  /*
+   * Both baskets, counted as things rather than as car space.
+   *
+   * This used to add countItems, which is not a count at all: it is how
+   * much of the car a cart fills, for pricing, and it never returns less
+   * than one because a car still goes out for a bottle of water. So an
+   * empty cart wore a badge saying 1, and tapping it said the cart was
+   * empty. A badge that disagrees with the page it opens is worse than no
+   * badge.
+   *
+   * They are two orders and two days but one badge, because the bag is one
+   * bag to whoever is looking at it.
+   */
+  const items =
+    lines.reduce((sum, line) => sum + line.qty, 0) +
+    shelfCount(shelfLines) +
+    shelfCount(drugLines);
 
   return (
     <Tabs

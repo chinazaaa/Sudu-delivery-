@@ -8,6 +8,7 @@ import {
   lagosToday,
   naira,
   nextArrival,
+  otherWorthSaying,
   type GroupBoard,
 } from "@/lib/api";
 import { cart, countItems, me, party, pastParties, useStored, type Party } from "@/lib/store";
@@ -75,9 +76,10 @@ export default function Group() {
       ? nextArrival([], slots, lagosToday())
       : nextArrival(runs, [], lagosToday())
     : null;
-  const swap = other !== null && other.said !== decided?.said;
+  const worth = decided ? otherWorthSaying(decided, other) : null;
+  const swap = worth !== null;
   const [takeOther, setTakeOther] = useState(false);
-  const going = swap && takeOther ? other : decided;
+  const going = swap && takeOther ? worth : decided;
 
   useEffect(() => {
     if (going) setWhen(going.onARun ? `run:${going.runId}` : going.at);
