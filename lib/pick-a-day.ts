@@ -119,3 +119,45 @@ export function dayOfChoice(
   }
   return days.find((one) => one.runId === chosen.runId) ?? null;
 }
+
+/**
+ * The first clock time in a window, as hours since midnight.
+ *
+ * Both the runs and the car windows are written by the shop in one format,
+ * "between 4pm and 7pm", so the start is the first time in the string.
+ * Anything it cannot read comes back null and the caller decides, because
+ * guessing a time here would move money.
+ */
+export function windowStart(said: string): number | null {
+  const found = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i.exec(said ?? "");
+  if (!found) return null;
+  const hour = Number(found[1]) % 12;
+  const minutes = Number(found[2] ?? 0);
+  const pm = found[3].toLowerCase() === "pm";
+  return hour + (pm ? 12 : 0) + minutes / 60;
+}
+
+/**
+ * Whether a car of its own is worth offering against a run on the same day.
+ *
+ * A car costs more. The only thing it buys is arriving sooner, so it has to
+ * arrive properly sooner: a car between four and seven, beside a run between
+ * five and seven, is paying extra for an hour that may not even happen, and
+ * offering it is the shop talking somebody into the dearer thing for
+ * nothing. The old code hid every car on a day with a run, which was wrong
+ * the other way; this is the line between the two.
+ *
+ * Unreadable either side means offer it. A window the shop has written in
+ * some new way is not a reason to quietly take a choice away.
+ */
+export function worthACar(
+  runWindow: string,
+  carWindow: string,
+  /** The least it has to save to be worth the money, in hours. */
+  leastHours = 2
+): boolean {
+  const run = windowStart(runWindow);
+  const car = windowStart(carWindow);
+  if (run === null || car === null) return true;
+  return run - car >= leastHours;
+}

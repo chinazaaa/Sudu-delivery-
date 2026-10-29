@@ -1,3 +1,4 @@
+import { windowStart, worthACar } from "../lib/pick-a-day";
 import { easterSunday, motheringSunday, mothersDayMay, nextOf, valentines } from "../lib/feasts";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -7220,4 +7221,26 @@ test("a feast page is about the next one, not the one that has been", () => {
   assert.equal(nextOf(valentines, "2027-02-14"), "2027-02-14");
   assert.equal(nextOf(valentines, "2027-02-15"), "2028-02-14");
   assert.equal(nextOf(valentines, "2026-10-28"), "2027-02-14");
+});
+
+test("a car is only offered when it is properly sooner than the run", () => {
+  // The case that started this: an hour earlier, for more money.
+  assert.equal(worthACar("between 5pm and 7pm", "between 4pm and 7pm"), false);
+  // Lunchtime against an evening run, which is the whole point of a car.
+  assert.equal(worthACar("between 5pm and 7pm", "between 12pm and 3pm"), true);
+  assert.equal(worthACar("between 5pm and 7pm", "between 3pm and 5pm"), true);
+  // No sooner at all, or later.
+  assert.equal(worthACar("between 5pm and 7pm", "between 5pm and 7pm"), false);
+  assert.equal(worthACar("between 4pm and 6pm", "between 6pm and 8pm"), false);
+  // Written in some way this cannot read: offer it rather than silently
+  // taking the choice away.
+  assert.equal(worthACar("tonight", "between 12pm and 3pm"), true);
+  assert.equal(worthACar("between 5pm and 7pm", "ask us"), true);
+});
+
+test("a window says when it starts", () => {
+  assert.equal(windowStart("between 12pm and 3pm"), 12);
+  assert.equal(windowStart("Between 4:30pm and 6pm"), 16.5);
+  assert.equal(windowStart("between 9am and 11am"), 9);
+  assert.equal(windowStart("sometime"), null);
 });

@@ -58,6 +58,7 @@ import {
   daySaid,
   daysOnOffer,
   soonestDay,
+  worthACar,
 } from "@/lib/pick-a-day";
 import type { GroupMode } from "@/lib/types";
 import type { BatchView } from "@/lib/view";
@@ -344,11 +345,28 @@ export default function Checkout({
    * there at one. With only today on offer the control was not drawn at
    * all, so the choice existed and could not be reached.
    */
-  const twoWaysOnADay = dayChoices.some(
-    (day) =>
-      openable.some((run) => run.runDate === day.date) &&
-      carWindows.some((car) => car.date === day.date)
-  );
+  const waysOn = (date: string) => {
+    const run = openable.find((one) => one.runDate === date) ?? null;
+    return {
+      run,
+      cars:
+        run === null
+          ? []
+          : // A car has to be properly sooner to be worth its money. Four
+            // o'clock against a run at five is an hour, maybe, for a
+            // dearer trip: offering it is talking somebody into the
+            // expensive thing for nothing.
+            carWindows.filter(
+              (car) =>
+                car.date === date && worthACar(run.deliveryWindow, car.window)
+            ),
+    };
+  };
+
+  const twoWaysOnADay = dayChoices.some((day) => {
+    const ways = waysOn(day.date);
+    return ways.run !== null && ways.cars.length > 0;
+  });
 
   // The runs that only fail because somebody is closed that day, and what
   // is closed on the soonest of them. Said in their words: "DO Bowls is
@@ -1208,16 +1226,10 @@ export default function Checkout({
      * settled when they were invited and is not theirs to change.
      */
     const onDay = chosen?.date ?? "";
-    const bothWays = {
-      run:
-        onDay === "" || !offersSameDay
-          ? null
-          : openable.find((one) => one.runDate === onDay) ?? null,
-      cars:
-        onDay === "" || !offersSameDay
-          ? []
-          : carWindows.filter((one) => one.date === onDay),
-    };
+    const bothWays =
+      onDay === "" || !offersSameDay
+        ? { run: null, cars: [] as typeof carWindows }
+        : waysOn(onDay);
 
     const goTo = (date: string) => {
       if (date === "") return;
