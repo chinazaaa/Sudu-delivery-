@@ -135,8 +135,11 @@ export default async function HamperPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(card) }}
       />
 
-      {/* A shelf with a season of its own is already dressed. */}
-      {occasion.starts_at !== null && <NoSeasonDecor />}
+      {/* Its own season is welcome over it; somebody else's is not. See
+          BoxDetail, which answers the same question for the shelf. */}
+      {occasion.season !== "" &&
+        settings.season.trim().toLowerCase() !== "" &&
+        settings.season.trim().toLowerCase() !== occasion.season && <NoSeasonDecor />}
 
       <header className="bleed relative overflow-hidden bg-ink text-shell">
         <span

@@ -24,6 +24,7 @@ export default function OccasionForm({
     when_word: string;
     item_word?: string;
     price_holds_until?: string | null;
+    season?: string;
     tag: string;
     happens_at: string | null;
     closes_at: string | null;
@@ -92,6 +93,26 @@ export default function OccasionForm({
           birthday, a match or a games night is an occasion. Collections sit
           at /collections. Both kinds share the one public page now; the
           kind only decides where it sits in admin.
+        </p>
+      </div>
+
+      {/* Whether this shelf is dressed for one of the shop's seasons. */}
+      <div>
+        <label className="label">Its season</label>
+        <select
+          name="season"
+          defaultValue={occasion?.season ?? ""}
+          className="field"
+        >
+          <option value="">None</option>
+          <option value="halloween">Halloween</option>
+          <option value="christmas">Christmas</option>
+        </select>
+        <p className="mt-1 text-xs text-muted">
+          Only decides the floating decoration on this shelf&apos;s pages. It
+          keeps them while the shop is wearing the same season, and drops
+          them while the shop is wearing another one, so a Christmas hamper
+          is never under drifting bats.
         </p>
       </div>
 

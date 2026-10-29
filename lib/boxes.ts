@@ -143,6 +143,21 @@ export type Occasion = {
    * afterwards or it should never have been said.
    */
   price_holds_until: string | null;
+  /**
+   * Which of the shop's seasons this shelf belongs to, by the same name
+   * the season setting uses.
+   *
+   * It decides one thing: whether the floating decoration belongs on this
+   * shelf's pages. A Christmas hamper under drifting Halloween bats reads
+   * as a page nobody looked at, which is why the layer was taken off these
+   * pages at all; under its own trees and snowflakes it reads as the shop
+   * being dressed for the thing it is selling, which is the opposite.
+   *
+   * So the shelf keeps the decoration when the shop is wearing its season
+   * and drops it when the shop is wearing somebody else's. Blank is every
+   * other shelf, which never carries it.
+   */
+  season: string;
   /** Which of the two shelves it is on. */
   kind: Shelf;
   /** The example in the "want it changed?" box. One example cannot serve a
@@ -253,6 +268,7 @@ const toOccasion = (row: Record<string, unknown>): Occasion => ({
   happens_at: (row.happens_at as string) ?? null,
   starts_at: (row.starts_at as string) ?? null,
   price_holds_until: ((row.price_holds_until as string) ?? null) || null,
+  season: ((row.season as string) ?? "").trim().toLowerCase(),
   /* A database that has not had the migration run yet has no column here,
      and a clock of its own is the next best evidence of which it is. */
   kind: row.kind === "occasion" || row.kind === "collection"

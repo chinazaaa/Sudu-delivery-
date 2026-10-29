@@ -175,9 +175,12 @@ export default async function BoxDetail({
         </div>
       </header>
 
-      {/* A shelf with a season of its own is already dressed: the shop's
-          own season has no business floating over it. */}
-      {occasion.starts_at !== null && <NoSeasonDecor />}
+      {/* A shelf dressed for its own season keeps the shop's decoration
+          while the shop is wearing that season, and drops it while the shop
+          is wearing another one. Bats over a hamper read as a page nobody
+          looked at; trees over one read as a shop dressed for what it is
+          selling. */}
+      {wrongSeason(occasion.season, settings.season) && <NoSeasonDecor />}
 
       <div className="flex flex-col gap-8 py-8 lg:flex-row lg:items-start lg:gap-8 lg:py-10">
         <div className="min-w-0 flex-1 space-y-4">
@@ -284,4 +287,20 @@ export default async function BoxDetail({
       </div>
     </div>
   );
+}
+
+/**
+ * Whether the decoration drifting over the shop belongs on this shelf.
+ *
+ * Only a shelf with a season of its own asks: everything else takes
+ * whatever the shop is wearing, because a pumpkin over a care package is
+ * the shop being dressed up and not a mistake. A shelf that is itself an
+ * occasion is a different case, and the only wrong answer is somebody
+ * else's season on top of it.
+ */
+function wrongSeason(shelfSeason: string, shopSeason: string): boolean {
+  const mine = shelfSeason.trim().toLowerCase();
+  if (mine === "") return false;
+  const shop = shopSeason.trim().toLowerCase();
+  return shop !== "" && shop !== mine;
 }

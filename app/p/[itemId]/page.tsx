@@ -78,18 +78,22 @@ export default async function ProductPage({
   /*
    * The menu on its own first, and nothing else yet.
    *
-   * These three used to be awaited together, which read as the faster thing
-   * to do and was the reason the redirect below arrived too late to be one.
-   * A redirect can only set a status code while the response is still
-   * unsent, and waiting on the fee ladders and the settings before deciding
-   * meant the page had begun streaming by the time it was decided. Next
-   * cannot send a 301 into a response it has already started, so it fell
-   * back to a meta refresh at 200: the old address kept answering with a
-   * whole page, which is the duplicate this was meant to end.
+   * These three used to be awaited together, which read as the faster
+   * thing to do and meant the page had begun streaming before it had
+   * decided anything. A status code can only be set while the response is
+   * unsent: a redirect became a meta refresh at 200, and a dish that does
+   * not exist answered with a whole page and an OK, which is the soft 404
+   * Google reports and then holds against the rest of the site.
+   *
+   * The skeleton that used to sit beside this file did the same thing by
+   * itself, whatever the awaits did, because a loading file is a Suspense
+   * boundary and a boundary starts the response. It is gone. Next keeps
+   * the page you came from on screen while this one is fetched, which is a
+   * better wait than a grey outline of a dish anyway.
    *
    * The menu is the only one of the three the decision needs, and it is
    * cached under the "menu" tag, so asking for it by itself costs nothing
-   * on the ordinary path where no redirect happens.
+   * on the ordinary path where nothing is wrong.
    */
   const menu = await menuView();
 
