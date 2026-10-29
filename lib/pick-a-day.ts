@@ -150,11 +150,13 @@ export function windowStart(said: string): number | null {
  * Unreadable either side means offer it. A window the shop has written in
  * some new way is not a reason to quietly take a choice away.
  */
+export const CAR_MUST_SAVE_HOURS = 2;
+
 export function worthACar(
   runWindow: string,
   carWindow: string,
   /** The least it has to save to be worth the money, in hours. */
-  leastHours = 2
+  leastHours = CAR_MUST_SAVE_HOURS
 ): boolean {
   const run = windowStart(runWindow);
   const car = windowStart(carWindow);

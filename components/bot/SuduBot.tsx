@@ -38,6 +38,7 @@ import {
   them,
 } from "@/lib/occasions";
 import { isCorrection } from "@/lib/bot-brain";
+import { CAR_MUST_SAVE_HOURS } from "@/lib/pick-a-day";
 
 /**
  * Sudu Bot.
@@ -4331,10 +4332,23 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
      * question. Only what actually lands earlier is shown, with the run
      * they already have at the bottom so there is a way back.
      */
+    /*
+     * And properly sooner, not sooner by an hour.
+     *
+     * A car costs more and the only thing it buys is time, so an hour
+     * earlier than the run they already have is the bot talking somebody
+     * into the dearer trip for nothing. The same two hours the checkout
+     * and the front page use, so all three agree about what counts as a
+     * reason to pay for a car.
+     *
+     * Only on a day with a run on it. A day with no run is a car or
+     * nothing, and that is a different question answered elsewhere.
+     */
     const by = keep ? new Date(keep.startsAt).getTime() : Number.MAX_SAFE_INTEGER;
+    const saving = CAR_MUST_SAVE_HOURS * 60 * 60 * 1000;
     const earlier = cars.filter((car) => {
       const at = new Date(car.at).getTime();
-      return Number.isFinite(at) && at < by;
+      return Number.isFinite(at) && at <= by - saving;
     });
 
     if (earlier.length === 0) {
