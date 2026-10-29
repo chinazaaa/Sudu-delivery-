@@ -825,6 +825,8 @@ export const api = {
     q?: string;
     place?: string;
     category?: string;
+    /** One of the shop's own aisles, for the kinds no word finds. */
+    aisle?: string;
     sort?: string;
     page?: number;
   }) => {

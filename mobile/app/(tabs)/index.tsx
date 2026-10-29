@@ -32,6 +32,7 @@ import { F, T } from "@/lib/theme";
 import { tileAt } from "@/lib/tiles";
 import SeasonDecor from "@/components/SeasonDecor";
 import { Display, Stripes, Ticket } from "@/components/ui";
+import { KINDS, kindPath } from "@/lib/kinds";
 
 /**
  * The shop, and above it whatever is happening with the last order.
@@ -211,26 +212,7 @@ export default function Home() {
   // none, and then the app keeps the order both of them ship with.
   const doors = shop?.homeOrder ?? ["food", "shelves", "parcel", "skincare"];
 
-  /*
-   * The kinds of food the shop sells, commonest first.
-   *
-   * Counted across every kitchen's own categories rather than written down
-   * here, so the row cannot name a thing nobody sells any more. Eight is
-   * what fits before the row stops being a glance and becomes a list.
-   */
-  const kinds = useMemo(() => {
-    const tally = new Map<string, number>();
-    for (const place of shop?.menu ?? []) {
-      for (const one of place.categories) {
-        const name = one.name.trim();
-        if (name !== "") tally.set(name, (tally.get(name) ?? 0) + 1);
-      }
-    }
-    return [...tally.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .slice(0, 8)
-      .map(([name]) => name);
-  }, [shop]);
+
 
   const runs = (shop?.runs ?? []).filter((one) => !one.closed && !one.full);
   const slots = shop?.sameDay?.slots ?? [];
@@ -493,24 +475,30 @@ export default function Home() {
           The board puts this between the run and the kitchens, and the app
           had nothing in its place: somebody who wants chicken had to know
           which of thirteen kitchens sells it. The words are the shop's own
-          categories, counted across every menu, so the row says what the
-          shop actually has rather than a list somebody typed once.
+          kinds, the same nine the website offers and in the same order.
+          Counting the menu's own categories read like the better idea and
+          was not: the categories are a filing decision made per counter, so
+          the row filled with Drinks, Protein and Bread, which is a stock
+          list rather than an answer to what do you fancy, and the two
+          things people open the app for and cannot find by name, pizza and
+          ice cream, were missing from it.
         */}
-        {found === null && kinds.length > 0 && (
+        {found === null && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={{ marginHorizontal: -16 }}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
           >
-            {kinds.map((kind) => (
+            {KINDS.map((kind) => (
               <Pressable
-                key={kind}
-                onPress={() =>
-                  router.push(`/products?category=${encodeURIComponent(kind)}` as never)
-                }
+                key={kind.label}
+                onPress={() => router.push(kindPath(kind) as never)}
                 style={{
                   minHeight: 40,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
                   paddingHorizontal: 16,
                   justifyContent: "center",
                   borderRadius: 999,
@@ -518,8 +506,9 @@ export default function Home() {
                   borderColor: T.ink,
                 }}
               >
+                <Text style={{ fontSize: 16 }}>{kind.emoji}</Text>
                 <Text style={{ fontFamily: F.bodySemi, fontSize: 14, color: T.ink }}>
-                  {kind}
+                  {kind.label}
                 </Text>
               </Pressable>
             ))}

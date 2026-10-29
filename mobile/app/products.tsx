@@ -34,22 +34,38 @@ import { Display } from "@/components/ui";
 export default function ProductsScreen() {
   const router = useRouter();
 
-  const [typed, setTyped] = useState("");
-  const [query, setQuery] = useState("");
-  const [place, setPlace] = useState("");
   /*
-   * The kind of food the home screen was tapped for, if it was.
+   * What the home screen was tapped for, if it was.
    *
-   * The chips there send a category along, and this screen used to ignore
-   * it: a tap on Chicken opened the whole menu, which reads as a chip that
-   * does nothing. Only the first value, because a screen opened twice
-   * carries the parameter twice.
+   * The row of kinds sends a word, a category or an aisle, and the screen
+   * used to read only the category: a tap on Chicken or on Ice cream
+   * opened the whole menu, which reads as a chip that does nothing. Only
+   * the first value of each, because a screen opened twice carries its
+   * parameters twice.
    */
-  const asked = useLocalSearchParams<{ category?: string | string[] }>();
-  const wanted = Array.isArray(asked.category)
-    ? asked.category[0] ?? ""
-    : asked.category ?? "";
-  const [category, setCategory] = useState(wanted);
+  const asked = useLocalSearchParams<{
+    category?: string | string[];
+    q?: string | string[];
+    aisle?: string | string[];
+  }>();
+  const once = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? value[0] ?? "" : value ?? "";
+  const [category, setCategory] = useState(once(asked.category));
+  /*
+   * And by a word, or by one of the shop's aisles.
+   *
+   * The row of kinds narrows three ways, because no single one of them
+   * works for all of it: "chicken" is a word, small chops are a counter's
+   * category, and pizza and ice cream are aisles, since Cold Stone names
+   * every tub "... Ice Cream" and Scoop'd names them "Padi (1 Scoop)".
+   * The screen took only the category, so two of the nine chips opened the
+   * whole menu.
+   */
+  const aisle = once(asked.aisle);
+
+  const [typed, setTyped] = useState(once(asked.q));
+  const [query, setQuery] = useState(once(asked.q));
+  const [place, setPlace] = useState("");
   const [sort, setSort] = useState("");
   const [page, setPage] = useState(1);
 
@@ -63,7 +79,7 @@ export default function ProductsScreen() {
   useEffect(() => {
     setBusy(true);
     api
-      .products({ q: query, place, category, sort, page })
+      .products({ q: query, place, category, aisle, sort, page })
       .then((data) => {
         // Paging adds to the list rather than replacing it, because a phone
         // is scrolled and not paged. Anything else starts again.
@@ -75,7 +91,7 @@ export default function ProductsScreen() {
       })
       .catch((why) => setError(why instanceof Error ? why.message : "Could not load."))
       .finally(() => setBusy(false));
-  }, [query, place, category, sort, page]);
+  }, [query, place, category, aisle, sort, page]);
 
   const start = (change: () => void) => {
     change();

@@ -20,6 +20,11 @@ export async function GET(request: Request): Promise<NextResponse> {
         query: asked.get("q") ?? "",
         place,
         category: asked.get("category") ?? "",
+        // The app's own row of kinds narrows by aisle for the two that
+        // cannot be found by a word: pizza, and ice cream, whose tubs are
+        // named "Padi (1 Scoop)" at one counter and "... Ice Cream" at
+        // another. The website has narrowed this way all along.
+        aisle: asked.get("aisle") ?? "",
         sort: sort === "cheap" || sort === "dear" ? sort : "",
         page: Math.max(1, Number(asked.get("page") ?? 1) || 1),
       }),
