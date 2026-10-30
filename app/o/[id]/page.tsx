@@ -181,6 +181,22 @@ export default async function OrderPage({
     order.fee === band.fee;
   const shared = order.group_id !== null;
 
+  /*
+   * What this order came to less than it would have.
+   *
+   * Three things take money off and none of them was ever added up: a code
+   * off the total, an offer that prices delivery under the ladder, and a
+   * group that splits one fee between everybody in it. Each showed as its
+   * own line or as a fee that happened to be lower than the band above it,
+   * so the one number worth seeing after paying, what you are not paying,
+   * was never printed.
+   *
+   * Only where it is real: the ladder is the honest comparison for a
+   * delivery, and a parcel has no ladder to compare against.
+   */
+  const feeSaved = isParcel ? 0 : Math.max(0, band.fee - order.fee);
+  const saved = feeSaved + order.discount;
+
   // A run that is not going out says so before anything else. Cancelled, it
   // used to read "Paid and on the run", which is the one thing it is not.
   const cancelledRun = order.batch.status === "cancelled";
@@ -924,6 +940,14 @@ export default async function OrderPage({
           )}
           <Row label="Total" value={naira(order.total)} strong />
         </dl>
+
+        {/* Under the total, where the money is. One line, no arithmetic:
+            the lines above already show where each part came from. */}
+        {saved > 0 && (
+          <p className="soft border-mint bg-mint-tint px-3 py-2 text-sm font-bold text-mint">
+            You saved {naira(saved)} on this order.
+          </p>
+        )}
 
         {/* The whole ladder, for anyone wondering why four items cost more
             than three. Only when the ladder is what they were charged. */}
