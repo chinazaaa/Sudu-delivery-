@@ -1515,12 +1515,25 @@ export default function Checkout({
                 setDeliverAt(picked.slice(4));
               }}
             >
+              {/*
+                  The time goes on the option that is not picked.
+
+                  Both options carried their window, and the headline two
+                  inches above carries the window of whichever is picked:
+                  "On the run · between 4pm and 6:30pm" under BETWEEN 4PM
+                  AND 6:30PM, TOMORROW. The only time worth printing here
+                  is the one you cannot see yet, which is the other way's.
+               */}
               <option value="run">
-                On the run · {bothWays.run.deliveryWindow || bothWays.run.label}
+                On the run
+                {deliverAt === ""
+                  ? ""
+                  : ` · ${bothWays.run.deliveryWindow || bothWays.run.label}`}
               </option>
               {bothWays.cars.map((car) => (
                 <option key={car.at} value={`car:${car.at}`}>
-                  A car of its own · {car.window || car.label}
+                  A car of its own
+                  {deliverAt === car.at ? "" : ` · ${car.window || car.label}`}
                 </option>
               ))}
             </select>
