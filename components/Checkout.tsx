@@ -48,7 +48,7 @@ import {
   readGroup,
 } from "@/components/GroupLink";
 import { type Slot } from "@/lib/same-day";
-import { ESTIMATE_NOTE, nextArrival, runArrival } from "@/lib/arrival";
+import { nextArrival, runArrival } from "@/lib/arrival";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
 import { countdown, runDateLabel } from "@/lib/time";
@@ -1495,7 +1495,10 @@ export default function Checkout({
             </label>
             <select
               id="when-how"
-              className="field"
+              /* text-ink, because this sits on the dark card and a select
+                 with no colour of its own inherits the card's: a white box
+                 with white words in it. */
+              className="field text-ink"
               value={deliverAt === "" ? "run" : `car:${deliverAt}`}
               onChange={(event) => {
                 const picked = event.target.value;
@@ -1521,20 +1524,17 @@ export default function Checkout({
                 </option>
               ))}
             </select>
-            <p className="text-xs text-shell/60">
-              The run is the cheap way and comes in the window above. A car of
-              its own goes when you say and costs more; the total below
-              follows whichever you pick.
-            </p>
+            {/* The two options say what they are, and the total at the
+                bottom changes when you pick. A paragraph explaining a
+                dropdown is a paragraph nobody reads. */}
           </div>
         )}
 
         {/* Under the whole control, calendar and all. Between the dropdown
             and the date box it was describing the day above it while the
             box below it was the thing being changed. */}
-        {arriving !== "" && (
-          <p className="text-sm text-shell/70">Get it {arriving}.</p>
-        )}
+        {/* "Get it between 4pm and 6:30pm tomorrow" sat two inches under a
+            headline reading BETWEEN 4PM AND 6:30PM, TOMORROW. */}
 
         {/*
             The one thing this page cannot do.
@@ -1553,7 +1553,7 @@ export default function Checkout({
         */}
         {urgentChat && (
           <p className="text-sm text-shell/70">
-            Need it sooner than that, or want a day that is not here?{" "}
+            Need another day or time?{" "}
             <a
               href={urgentChat}
               target="_blank"
@@ -1561,8 +1561,7 @@ export default function Checkout({
               className="font-semibold text-volt underline-offset-4 hover:underline"
             >
               Message us
-            </a>{" "}
-            and we will say what we can do.
+            </a>
           </p>
         )}
       </div>
@@ -1877,7 +1876,6 @@ export default function Checkout({
         {/* An estimate, and said to be one. A time to the minute is a promise
             nobody can keep in Lagos traffic, and arriving at 4:15 for a four
             o'clock is fine unless somebody was told four o'clock exactly. */}
-          <p className="text-sm leading-[1.45] text-shell/70">{ESTIMATE_NOTE}</p>
         </div>
 
         {/* The offer of a car of its own used to live here, as a sentence:
