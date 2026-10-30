@@ -1229,7 +1229,7 @@ export default function Checkout() {
               }
               note={
                 picked
-                  ? "This time is yours alone, so there is nobody to share it with."
+                  ? ""
                   : farExtra > 0
                     ? `${secondStop > 0 ? `Your order comes from ${farNames}, which is two stops` : `${area.name} is further than Sangotedo`}, so every rung is ${naira(farExtra)} more.`
                     : "One fee for the whole order, however many kitchens are in it."

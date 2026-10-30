@@ -2645,7 +2645,11 @@ export default function Checkout({
                 ? { label: "Leaving within the hour", fee: urgentExtra }
                 : null
             }
-            note="A car of its own is one order, one driver, one trip, so there is nobody to share the petrol with. A run carries everybody at once, which is why it costs less."
+            /* No note at all. It was two sentences about drivers and
+               petrol, then one about sharing, explaining a price somebody
+               has already seen and chosen. The ladder above it is the
+               answer to "why this much". */
+            note=""
           />
         )}
         {/* "Pay 2,500 less: Wednesday is 4,000. Tap to move onto it" used

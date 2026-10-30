@@ -73,13 +73,15 @@ export default function FeeBands({
         )}
       </ul>
 
-      <p className="mt-2 text-muted">
-        {/* One sentence. The second half explained that the fee is for the
-            trip rather than the food, which is our reasoning about our own
-            costs: what somebody needs to know is that one order is one
-            fee, and the ladder above already shows what it costs. */}
-        {note ?? "One fee for the whole order, however many kitchens are in it."}
-      </p>
+      {/* One sentence where there is one worth saying, and nothing at all
+          where a caller passes an empty one: the ladder above is the
+          answer to "why this much", and a paragraph under it is the shop
+          explaining its own costs to somebody who has already chosen. */}
+      {(note ?? "One fee for the whole order, however many kitchens are in it.") !== "" && (
+        <p className="mt-2 text-muted">
+          {note ?? "One fee for the whole order, however many kitchens are in it."}
+        </p>
+      )}
 
       {children}
     </details>

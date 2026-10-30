@@ -126,7 +126,9 @@ export default function FeeWhy({
             )}
           </View>
 
-          <Text style={{ color: T.muted, fontSize: 13 }}>{note}</Text>
+          {note !== "" && (
+            <Text style={{ color: T.muted, fontSize: 13 }}>{note}</Text>
+          )}
         </View>
       )}
     </View>
