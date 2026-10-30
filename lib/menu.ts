@@ -281,6 +281,10 @@ export async function optionGroupsFor(
             id: o.id,
             name: o.name,
             priceDelta: o.price_delta,
+            /* What it adds at the till, for the admin screen. Nought is
+               nobody having said, and the run sheet works it out from the
+               markup instead. */
+            priceCost: Number((o as { price_cost?: number | null }).price_cost ?? 0),
             available: o.available,
             asItem: stood ? stands.get(stood) ?? null : null,
             asItemName: stood ? nameOf[stood] ?? "" : "",

@@ -83,6 +83,10 @@ export type OptionGroupView = {
     id: string;
     name: string;
     priceDelta: number;
+    /** What this choice adds at the counter, where somebody has read it
+     *  off a board. Nought means nobody has, and the run sheet takes the
+     *  shop's markup off what it sells for instead. */
+    priceCost?: number;
     available: boolean;
     /** The item on the menu this choice really is, with its own prices, so
      *  half a pizza is worth what that pizza is worth today. */

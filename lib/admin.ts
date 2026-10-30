@@ -306,19 +306,54 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
    * for the same food.
    */
   const itemIds = everyLine.map((line) => line.itemId);
-  const [atCounter, onMenu] = await Promise.all([
+  const [atCounter, onMenu, perChoice] = await Promise.all([
     counterCosts(itemIds),
     menuPrices(itemIds),
+    choiceCosts(itemIds),
   ]);
+
+  /*
+   * One of a thing, at the counter, with the size on it.
+   *
+   * The cost on an item is the cost of the ordinary one. A large pizza is
+   * a third as much again, and the sheet was printing the ordinary price
+   * for it: whoever is at the till reads nine thousand while the board
+   * says twelve, on every sized thing on every run.
+   *
+   * The choices are added in the same order of preference as everything
+   * else here: a figure somebody wrote down for that choice, and failing
+   * that the shop's markup taken off what the choice sells for, which is
+   * what the line is already doing for the thing itself.
+   *
+   * Only where the item's own cost is known. Where it is not, the whole
+   * line is worked backwards off the selling price, options and all, and
+   * adding them twice would be worse than not adding them at all.
+   */
+  const costOne = (
+    restaurant: string,
+    line: { unitPrice: number; itemId: string; picks?: Chosen[] }
+  ): number => {
+    const base = atCounter.get(line.itemId) ?? 0;
+    const markup = markups[restaurant] ?? DEFAULT_MARKUP;
+    if (base <= 0) return lineCost(line.unitPrice, 1, markup);
+
+    const said = perChoice.get(line.itemId) ?? new Map<string, number>();
+    const sells = onMenu.get(line.itemId) ?? 0;
+    // What the choices add to the price, as the menu stands today. The
+    // line's own unit price is what it cost the night it was ordered, and
+    // the item's menu price moves under it; the difference is the options.
+    const extras = sells > 0 ? Math.max(0, line.unitPrice - sells) : 0;
+
+    const written = (line.picks ?? []).reduce(
+      (sum, pick) => sum + (said.get(pick.name.trim().toLowerCase()) ?? 0),
+      0
+    );
+    return base + (written > 0 ? written : lineCost(extras, 1, markup));
+  };
   const shouldCost = (
     restaurant: string,
-    line: { qty: number; unitPrice: number; itemId: string }
-  ) => {
-    const said = atCounter.get(line.itemId) ?? 0;
-    return said > 0
-      ? said * line.qty
-      : lineCost(line.unitPrice, line.qty, markups[restaurant] ?? DEFAULT_MARKUP);
-  };
+    line: { qty: number; unitPrice: number; itemId: string; picks?: Chosen[] }
+  ) => costOne(restaurant, line) * line.qty;
 
   const reckoned = counterLines.reduce(
     (total, place) =>
@@ -356,10 +391,14 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
           paid: spentOn.has(line.key) ? (spentOn.get(line.key) as number) : null,
           recovered: gotBack.get(line.key) ?? 0,
           menuPrice: onMenu.get(line.itemId) ?? line.unitPrice,
-          // What the till will ask for, where somebody has written it
-          // down. Zero where nobody has, and then the sheet falls back to
-          // taking the markup off the selling price.
-          costPrice: atCounter.get(line.itemId) ?? 0,
+          // What the till will ask for one of these, the size on it
+          // included. Zero where nobody has written the item's own cost
+          // down, and then the sheet falls back to taking the markup off
+          // the selling price, which it has always done.
+          costPrice:
+            (atCounter.get(line.itemId) ?? 0) > 0
+              ? costOne(place.restaurant, line)
+              : 0,
         })),
       })
     ),
@@ -530,6 +569,70 @@ export async function counterCosts(ids: string[]): Promise<Map<string, number>> 
     return found;
   } catch {
     return new Map();
+  }
+}
+
+/**
+ * What each choice adds at the counter, by the words it is called.
+ *
+ * A pizza's cost is the cost of the ordinary one. Somebody orders a large,
+ * the sheet printed the ordinary one's price, and whoever is standing at
+ * the till reads nine thousand while the board says twelve. Every sized
+ * thing on every run, and the gap is not small: on a pizza the size is a
+ * third of the money.
+ *
+ * By name rather than by id, because that is all a sheet line carries: it
+ * keeps the words somebody chose, not the row they came from, so a choice
+ * renamed in admin stops matching and falls back to the sum, which is the
+ * behaviour it had before this existed.
+ *
+ * Nought means nobody has written this one down. The caller then takes the
+ * shop's markup off what the choice sells for, which is arithmetic rather
+ * than knowledge and still beats ignoring it.
+ */
+export async function choiceCosts(
+  itemIds: string[]
+): Promise<Map<string, Map<string, number>>> {
+  const wanted = [...new Set(itemIds.filter(Boolean))];
+  const found = new Map<string, Map<string, number>>();
+  if (wanted.length === 0) return found;
+
+  try {
+    const { data: groups, error } = await db()
+      .from("item_option_groups")
+      .select("id, menu_item_id")
+      .in("menu_item_id", wanted);
+    if (error || !groups || groups.length === 0) return found;
+
+    const itemOf = new Map(
+      (groups as { id: string; menu_item_id: string }[]).map((row) => [
+        row.id,
+        row.menu_item_id,
+      ])
+    );
+
+    const { data: options } = await db()
+      .from("item_options")
+      .select("group_id, name, price_cost")
+      .in("group_id", [...itemOf.keys()]);
+
+    for (const row of (options ?? []) as {
+      group_id: string;
+      name: string;
+      price_cost?: number | null;
+    }[]) {
+      const cost = Math.round(Number(row.price_cost ?? 0));
+      if (cost <= 0) continue;
+      const item = itemOf.get(row.group_id);
+      const said = String(row.name ?? "").trim();
+      if (!item || said === "") continue;
+      const mine = found.get(item) ?? new Map<string, number>();
+      mine.set(said.toLowerCase(), cost);
+      found.set(item, mine);
+    }
+    return found;
+  } catch {
+    return found;
   }
 }
 

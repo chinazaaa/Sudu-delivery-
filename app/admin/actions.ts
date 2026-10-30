@@ -4288,6 +4288,7 @@ export async function addOption(form: FormData): Promise<void> {
     group_id: String(form.get("group_id")),
     name,
     price_delta: Math.round(Number(form.get("price_delta") ?? 0)) || 0,
+    price_cost: Math.round(Number(form.get("price_cost") ?? 0)) || 0,
     sort_order: 100,
   });
   revalidatePath("/admin", "layout");
@@ -4302,6 +4303,10 @@ export async function updateOption(form: FormData): Promise<void> {
     .update({
       name: String(form.get("name") ?? "").trim() || undefined,
       price_delta: Math.round(Number(form.get("price_delta") ?? 0)) || 0,
+      // What this choice adds at the till, where somebody has read it off
+      // a board. Nought is nobody having said, and the run sheet then
+      // takes the markup off what the choice sells for.
+      price_cost: Math.round(Number(form.get("price_cost") ?? 0)) || 0,
       available: form.get("available") === "on",
     })
     .eq("id", String(form.get("option_id")));

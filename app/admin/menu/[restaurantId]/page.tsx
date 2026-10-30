@@ -941,10 +941,29 @@ export default async function RestaurantAdmin({
                                     inputMode="numeric"
                                     defaultValue={option.priceDelta}
                                     className="field py-1 text-sm"
-                                    aria-label="Extra cost"
+                                    aria-label="Extra on the menu"
                                   />
                                 )}
                               </div>
+                              {/* And what it really adds at the till.
+                                  A large pizza is a third as much again
+                                  and the sheet was printing the ordinary
+                                  one's cost for it, so somebody at the
+                                  counter read nine thousand while the
+                                  board said twelve. Blank still works it
+                                  out from the markup. */}
+                              {!option.asItemName && (
+                                <div className="w-28">
+                                  <input
+                                    name="price_cost"
+                                    inputMode="numeric"
+                                    defaultValue={option.priceCost || ""}
+                                    placeholder="cost +"
+                                    className="field py-1 text-sm"
+                                    aria-label="What it adds at the counter"
+                                  />
+                                </div>
+                              )}
                               <label className="flex items-center gap-1 pb-1 text-xs">
                                 <input type="checkbox" name="available" defaultChecked={option.available} />
                                 On
@@ -974,11 +993,20 @@ export default async function RestaurantAdmin({
                           <input name="name" required placeholder="Large" className="field py-1 text-sm" />
                         </div>
                         <div className="w-28">
-                          <label className="label">Extra cost</label>
+                          <label className="label">Extra on the menu</label>
                           <input
                             name="price_delta"
                             inputMode="numeric"
                             defaultValue={0}
+                            className="field py-1 text-sm"
+                          />
+                        </div>
+                        <div className="w-28">
+                          <label className="label">Extra at the till</label>
+                          <input
+                            name="price_cost"
+                            inputMode="numeric"
+                            placeholder="cost +"
                             className="field py-1 text-sm"
                           />
                         </div>
