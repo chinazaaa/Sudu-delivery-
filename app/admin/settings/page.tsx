@@ -120,6 +120,148 @@ export default async function SettingsAdmin() {
         ))}
       </nav>
 
+      {/*
+        Everything in the shop that is simply on or off, in one place.
+
+        These were scattered through the page in the card each one belongs
+        to, which is right for reading and wrong for doing: turning cars of
+        their own off on a morning the driver is ill meant Delivery fees,
+        then a scroll past four ladders and the opening hours. It is the
+        thing admin does most often and it was the furthest away.
+
+        So they are gathered at the top, each a tap, each saving on its own.
+        The card they came from still holds everything else about them, and
+        says so in the line underneath, because the switch is only ever the
+        first question: what it costs and when it runs are still there.
+      */}
+      <section id="switches" className="card mb-[18px]">
+        <h2 className="font-display text-[22px] font-extrabold uppercase leading-[1.05]">
+          On and off
+        </h2>
+        <p className="hint mt-1 leading-[1.5]">
+          What the shop is offering today. Each one saves by itself, and
+          nothing already ordered is affected.
+        </p>
+
+        <div className="mt-3.5 grid gap-2.5 sm:grid-cols-2">
+          {[
+            {
+              field: "same_day_on",
+              on: settings.same_day_on === "on",
+              name: "Cars of their own",
+              said: "Somebody picks a time instead of waiting for a run.",
+              more: "#fees",
+              moreSaid: "Times and prices",
+            },
+            {
+              field: "bot_on",
+              on: settings.bot_on === "on",
+              name: "The chat bot",
+              said: "Answers on the site and takes an order through it.",
+              more: "/admin/bot",
+              moreSaid: "What it knows",
+            },
+            {
+              field: "auto_paid",
+              on: settings.auto_paid === "on",
+              name: "Marking paid by itself",
+              said: "A transfer that matches an order marks it without you.",
+              more: "#fees",
+              moreSaid: "Money",
+            },
+            {
+              field: "abroad_on",
+              on: settings.abroad_on === "on",
+              name: "Paying from abroad",
+              said: "Pounds and dollars on the checkout, for parents.",
+              more: "#pay",
+              moreSaid: "Rates",
+            },
+            {
+              field: "parcel_on",
+              on: settings.parcel_on === "on",
+              name: "Parcels",
+              said: "Sending something across Lagos rather than food.",
+              more: "/admin/parcels",
+              moreSaid: "Routes",
+            },
+            {
+              field: "skincare_on",
+              on: settings.skincare_on === "on",
+              name: "Skincare",
+              said: "Its own basket, on its own day.",
+              more: "/admin/skincare",
+              moreSaid: "The drop",
+            },
+            {
+              field: "pharmacy_on",
+              on: settings.pharmacy_on === "on",
+              name: "Pharmacy",
+              said: "Its own basket, on its own day.",
+              more: "/admin/pharmacy",
+              moreSaid: "The drop",
+            },
+            {
+              field: "laundry_on",
+              on: settings.laundry_on === "on",
+              name: "Laundry",
+              said: "Picked up, washed and brought back.",
+              more: "/admin/laundry",
+              moreSaid: "Days and prices",
+            },
+          ].map((one) => (
+            <div
+              key={one.field}
+              className="soft flex min-w-0 items-start gap-3 p-3"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="text-[15px] font-bold leading-[1.25]">
+                    {one.name}
+                  </span>
+                  <span
+                    className={`tag shrink-0 ${
+                      one.on ? "bg-mint-tint text-mint" : "bg-wash text-muted"
+                    }`}
+                  >
+                    {one.on ? "On" : "Off"}
+                  </span>
+                </span>
+                <span className="hint mt-0.5 block leading-[1.45]">{one.said}</span>
+                <a
+                  href={one.more}
+                  className="mt-1 inline-block text-sm font-semibold underline underline-offset-4"
+                >
+                  {one.moreSaid}
+                </a>
+              </span>
+              {/* A form of its own, so one switch cannot carry whatever is
+                  half typed into the eighteen other cards on this page. */}
+              <form action={saveSettings} className="shrink-0">
+                <input type="hidden" name={one.field} value={one.on ? "" : "on"} />
+                <SaveButton look="btn-admin" className="min-h-[44px]">
+                  {one.on ? "Turn off" : "Turn on"}
+                </SaveButton>
+              </form>
+            </div>
+          ))}
+        </div>
+
+        {/* Why cars are shut on an evening the switch says they are on.
+            One driver cannot be on a run and out with a single order at
+            once, so it holds itself shut and opens again by itself. Said
+            here as well as in the card below, because this is now where
+            somebody looks first when the shop is quieter than they
+            expected. */}
+        {settings.same_day_on === "on" && driving && (
+          <p className="soft mt-2.5 px-3.5 py-2.5 text-sm">
+            Cars of their own are shut this evening even so: somebody is out
+            on the road with tonight&apos;s run. They come back by themselves
+            once it is marked handed out.
+          </p>
+        )}
+      </section>
+
       {/* The board's two columns, at its own widths: where the money arrives
           on the left at 1.35fr, and the two short cards about the site on the
           right at 1fr with their headings a size down, so the second column
