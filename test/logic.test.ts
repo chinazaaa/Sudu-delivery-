@@ -7334,7 +7334,7 @@ test("a run the cart cannot go on is let go of for the soonest day it can", () =
   // The car tonight, not tomorrow's run: today is the soonest day on
   // offer, and it is a car day, so the window is the answer and no run is
   // held at all.
-  const held = dayToHoldTo(days, { runId: "today-sangotedo", at: "" }, "tomorrow-ajah", true);
+  const held = dayToHoldTo(days, { runId: "today-sangotedo", at: "" }, undefined, "tomorrow-ajah", true);
   assert.deepEqual(held, { runId: "", at: "2026-10-30T15:00:00.000Z" });
 });
 
@@ -7347,7 +7347,7 @@ test("somebody who is never offered a car is put on a run instead", () => {
   // No car on offer: somebody joining a friend is on the run by definition,
   // so the window is never the answer for them.
   assert.deepEqual(
-    dayToHoldTo(days, { runId: "gone", at: "" }, "tomorrow", false),
+    dayToHoldTo(days, { runId: "gone", at: "" }, undefined, "tomorrow", false),
     { runId: "tomorrow", at: "" }
   );
 });
@@ -7358,11 +7358,11 @@ test("a day already on offer is left exactly as it is", () => {
     slots: [],
   });
 
-  assert.equal(dayToHoldTo(days, { runId: "tomorrow", at: "" }, "tomorrow", true), null);
+  assert.equal(dayToHoldTo(days, { runId: "tomorrow", at: "" }, undefined, "tomorrow", true), null);
 });
 
 test("nothing on offer at all changes nothing, rather than clearing the page", () => {
-  assert.equal(dayToHoldTo([], { runId: "whatever", at: "" }, "", true), null);
+  assert.equal(dayToHoldTo([], { runId: "whatever", at: "" }, undefined, "", true), null);
 });
 
 test("a car on a later day is not offered as the hurry", () => {
@@ -7390,5 +7390,27 @@ test("a car on a later day is not offered as the hurry", () => {
   assert.deepEqual(
     otherWorthSaying(tonight, { ...carTomorrow, date: "2026-10-30" }),
     { ...carTomorrow, date: "2026-10-30" }
+  );
+});
+
+test("a car picked on a day a run also goes is not taken for nothing", () => {
+  // The run wins its day on the list, so the car's instant is on no entry
+  // in it. Choosing that car through the second question under the day
+  // used to read as nothing chosen, and the page put them back on the run.
+  const days = daysOnOffer({
+    runs: [{ id: "tonight", runDate: "2026-10-30" }],
+    slots: [],
+  });
+  const carAt = "2026-10-30T12:00:00.000Z";
+  const dateOfAt = (at: string) => (at === carAt ? "2026-10-30" : "");
+
+  assert.equal(dayOfChoice(days, { runId: "tonight", at: carAt }), null);
+  assert.equal(
+    dayOfChoice(days, { runId: "tonight", at: carAt }, dateOfAt)?.date,
+    "2026-10-30"
+  );
+  assert.equal(
+    dayToHoldTo(days, { runId: "tonight", at: carAt }, dateOfAt, "tonight", true),
+    null
   );
 });

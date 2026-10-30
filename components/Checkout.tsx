@@ -1202,6 +1202,11 @@ export default function Checkout({
       ? dayToHoldTo(
           dayChoices,
           { runId: batchId, at: deliverAt },
+          // Which day a car window lands on, so a car picked on a day a
+          // run also goes is read as the real choice it is. Without this
+          // the page took it for nothing chosen and put them back on the
+          // run the moment they picked the car.
+          (at) => allSlots.find((one) => one.at === at)?.date ?? "",
           openable[0]?.id ?? "",
           offersSameDay
         )
@@ -1239,7 +1244,11 @@ export default function Checkout({
    * elements are this component's own and the box is left alone.
    */
   function dayPicker() {
-    const chosen = dayOfChoice(dayChoices, { runId: batchId, at: deliverAt });
+    const chosen = dayOfChoice(
+      dayChoices,
+      { runId: batchId, at: deliverAt },
+      (at) => allSlots.find((one) => one.at === at)?.date ?? ""
+    );
     const named = [today, dayAfter(today)];
     // Today and tomorrow are always on the list, on offer or not: a
     // dropdown that silently has no "Today" on it is a dropdown somebody

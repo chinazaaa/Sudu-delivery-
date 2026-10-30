@@ -112,10 +112,24 @@ export function soonestDay(days: DayOnOffer[]): DayOnOffer | null {
  *  run that has closed under somebody stops being selected. */
 export function dayOfChoice(
   days: DayOnOffer[],
-  chosen: { runId: string; at: string }
+  chosen: { runId: string; at: string },
+  /**
+   * The day a given car window falls on, where the caller can say.
+   *
+   * A day with a run on it is on this list as that run: the run wins its
+   * day outright, because it arrives the same evening for thousands less.
+   * Somebody can still choose a car on that day, through the second
+   * question under the day itself, and that car's instant is on no entry
+   * in the list. Without this it read as nothing being chosen at all, and
+   * the page put them straight back on the run.
+   */
+  dateOfAt?: (at: string) => string
 ): DayOnOffer | null {
   if (chosen.at !== "") {
-    return days.find((one) => one.at === chosen.at) ?? null;
+    const exact = days.find((one) => one.at === chosen.at);
+    if (exact) return exact;
+    const date = dateOfAt?.(chosen.at) ?? "";
+    return date === "" ? null : (days.find((one) => one.date === date) ?? null);
   }
   return days.find((one) => one.runId === chosen.runId) ?? null;
 }
@@ -183,6 +197,10 @@ export function worthACar(
 export function dayToHoldTo(
   days: DayOnOffer[],
   chosen: { runId: string; at: string },
+  /** The day a car window falls on, passed through to dayOfChoice: a car
+   *  chosen on a day a run also goes is a real choice and must not be
+   *  taken for nothing. */
+  dateOfAt: ((at: string) => string) | undefined,
   /** A run to hang the coupons and the offers off, where the soonest day
    *  is a car of its own and there is still a run to name. */
   anyRun: string,
@@ -191,7 +209,7 @@ export function dayToHoldTo(
    *  so they are moved to the run and never to the window. */
   carsOffered: boolean
 ): { runId: string; at: string } | null {
-  if (dayOfChoice(days, chosen) !== null) return null;
+  if (dayOfChoice(days, chosen, dateOfAt) !== null) return null;
   const first = soonestDay(days);
   if (first === null) return null;
   const at = carsOffered ? (first.at ?? "") : "";
