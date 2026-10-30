@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { COUNTERS, type Counter } from "./counter";
 import { counterOn, counterShop, nextDrop } from "./counter";
 import { dropLabel } from "./skincare";
@@ -110,7 +111,7 @@ async function doorFor(
   return { on: true, when: dropLabel(nextDrop(counter, settings).date) };
 }
 
-export async function appDoors(): Promise<AppDoors> {
+async function readDoorsNow(): Promise<AppDoors> {
   const settings = await safeSettings();
 
   const [skincare, pharmacy, parcelSetup, shelves] = await Promise.all([
@@ -140,3 +141,17 @@ export async function appDoors(): Promise<AppDoors> {
     shelves,
   };
 }
+
+/**
+ * The same answer for everybody, so it is worked out once a minute.
+ *
+ * This rides on the menu, which every launch of the app asks for, and
+ * none of it is about the person asking: which counters are open, what day
+ * their car goes, where parcels go and what is on the shelves are facts
+ * about the shop. Admin clears this the moment anything changes, so the
+ * minute only ever covers a stretch where nothing has.
+ */
+export const appDoors = unstable_cache(readDoorsNow, ["app-doors"], {
+  revalidate: 60,
+  tags: ["menu"],
+});

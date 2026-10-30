@@ -43,7 +43,16 @@ export default function Waiting({ children }: { children: React.ReactNode }) {
     };
 
     void ask();
-    const timer = setInterval(ask, AGAIN);
+    /*
+     * Only while somebody is looking at it.
+     *
+     * The clock does not stop in a background tab, so a board left open on
+     * a laptop asked all night for numbers nobody read. It waits for the
+     * page to come back instead, which it already does below.
+     */
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void ask();
+    }, AGAIN);
 
     // And again when the phone comes back, because a board left open in a
     // pocket all afternoon is showing this morning's numbers.
