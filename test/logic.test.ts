@@ -7287,3 +7287,33 @@ test("the chat hears somebody saying it cannot wait", () => {
   assert.equal(soundsUrgent("how much is jollof"), false);
   assert.equal(soundsUrgent("is the shop open"), false);
 });
+
+test("a stop carrying ice cream drops behind the ones that are not", () => {
+  const stops = [
+    { restaurant: "Burger King" },
+    { restaurant: "Cold Stone Creamery" },
+    { restaurant: "Domino's Pizza" },
+    { restaurant: "KFC" },
+  ];
+
+  // Nobody ordered a sundae: the arrangement stands, with the shop that
+  // melts by trade last.
+  assert.deepEqual(
+    sortStops(stops, ["KFC", "Burger King", "Cold Stone Creamery", "Domino's Pizza"], [
+      "Cold Stone Creamery",
+    ]).map((one) => one.restaurant),
+    ["KFC", "Burger King", "Domino's Pizza", "Cold Stone Creamery"]
+  );
+
+  // Somebody did: Burger King goes behind the rest and in front of the
+  // one that is ice cream for a living.
+  assert.deepEqual(
+    sortStops(
+      stops,
+      ["KFC", "Burger King", "Cold Stone Creamery", "Domino's Pizza"],
+      ["Cold Stone Creamery"],
+      ["Burger King"]
+    ).map((one) => one.restaurant),
+    ["KFC", "Domino's Pizza", "Burger King", "Cold Stone Creamery"]
+  );
+});

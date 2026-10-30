@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { itemsNeedingIce } from "./areas-server";
 import type { Chosen } from "./picks";
 import { WINDOW_DAYS } from "./other-money";
 import { feeFor } from "./fees";
@@ -76,6 +77,9 @@ export type CounterGroup = {
   /** What this counter sells melts, so it is the last stop and cannot be
    *  moved up the route. See `meltingStops`. */
   melts?: boolean;
+  /** It is not an ice cream shop, but it is carrying ice cream tonight, so
+   *  it drops behind the stops that are not. */
+  chills?: boolean;
 };
 
 export type HandoutOrder = Order & { lines: OrderLine[] };
@@ -288,10 +292,15 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   // Typed-in figures first, and only for the lines somebody has actually
   // typed: the rest stay at the menu price, so a half-finished reconcile
   // still leaves an honest number rather than a wrong one.
+  // What is travelling with a bag of ice tonight, so a counter that is not
+  // an ice cream shop still drops to the end on the runs where it is.
+  const onIce = await itemsNeedingIce().catch(() => new Set<string>());
+
   const counterLines = groupForCounter(
     lines.filter((l) => paidIds.has(l.order_id)),
     batch.stop_order ?? null,
-    goLast
+    goLast,
+    onIce
   );
   const everyLine = counterLines.flatMap((place) => place.lines);
   const reconciled = everyLine.filter((line) => spentOn.has(line.key));
@@ -382,7 +391,8 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
     counter: groupForCounter(
       lines.filter((l) => paidIds.has(l.order_id)),
       batch.stop_order ?? null,
-      goLast
+      goLast,
+      onIce
     ).map(
       (place) => ({
         ...place,
@@ -675,7 +685,11 @@ export function groupForCounter(
   stopOrder: string[] | null = null,
   /** Counters that have to be the last stops, by name, whatever the
    *  arrangement says. See `meltingStops`. */
-  goLast: string[] = []
+  goLast: string[] = [],
+  /** The dishes that travel with a bag of ice, by id. A stop holding one
+   *  of them tonight drops to the end of the route, behind everything
+   *  except the counters that melt by trade. */
+  needsIce: Set<string> = new Set()
 ): CounterGroup[] {
   const byRestaurant = new Map<string, Map<string, CounterLine>>();
 
@@ -723,10 +737,19 @@ export function groupForCounter(
       lines,
       expectedFoodTotal: lines.reduce((t, l) => t + l.qty * l.unitPrice, 0),
       melts: melts.has(restaurant),
+      // Not what this counter sells, but what it is handing over tonight.
+      chills:
+        !melts.has(restaurant) &&
+        lines.some((line) => needsIce.has(line.itemId) && line.qty > 0),
     };
   });
 
-  return sortStops(groups, stopOrder, goLast);
+  return sortStops(
+    groups,
+    stopOrder,
+    goLast,
+    groups.filter((one) => one.chills).map((one) => one.restaurant)
+  );
 }
 
 /**
@@ -746,20 +769,36 @@ export function sortStops<T extends { restaurant: string }>(
   stopOrder: string[] | null,
   /** Counters that melt, by name. They go last whatever the arrangement
    *  says, keeping their own order among themselves. */
-  goLast: string[] = []
+  goLast: string[] = [],
+  /** Counters carrying something that needs ice on this run. They go after
+   *  everything else and before the ones that melt by trade. */
+  chilled: string[] = []
 ): T[] {
   const place = new Map((stopOrder ?? []).map((name, index) => [name, index]));
   const last = place.size;
   const melts = new Set(goLast);
+  const chills = new Set(chilled);
+
+  /*
+   * Three tiers, driven by what is in the bag rather than by the sign over
+   * the door.
+   *
+   * A counter that melts by trade, which is Cold Stone, is last whatever
+   * anybody arranges: an arrangement that says otherwise was made before
+   * somebody added a tub to the run, and it is not a mistake you find out
+   * about until the bag is handed over.
+   *
+   * Before it, a counter that happens to be carrying ice cream tonight.
+   * Burger King sells soft serve and burgers, so it cannot be last on
+   * every run, only on the ones with a sundae in them. The tick on the
+   * dish decides, the same tick that puts the bag of ice in the cart.
+   */
+  const rank = (name: string) => (melts.has(name) ? 2 : chills.has(name) ? 1 : 0);
 
   return [...groups].sort((a, b) => {
-    // Nothing beats ice cream to the end of the list. An arrangement that
-    // says otherwise is an arrangement made before somebody added a tub to
-    // the run, and it is not the sort of mistake you get to find out about
-    // until the bag is handed over.
-    const meltsA = melts.has(a.restaurant);
-    const meltsB = melts.has(b.restaurant);
-    if (meltsA !== meltsB) return meltsA ? 1 : -1;
+    const mine = rank(a.restaurant);
+    const theirs = rank(b.restaurant);
+    if (mine !== theirs) return mine - theirs;
 
     const left = place.get(a.restaurant) ?? last;
     const right = place.get(b.restaurant) ?? last;
@@ -1099,7 +1138,8 @@ export async function tripSheet(at: string): Promise<TripSheet | null> {
     counter: groupForCounter(
       lines.filter((line) => paidIds.has(line.order_id)),
       null,
-      await meltingStops()
+      await meltingStops(),
+      await itemsNeedingIce().catch(() => new Set<string>())
     ),
     handout: paid.map(withLines),
     unpaid: orders.filter((o) => o.status === "pending").map(withLines),
@@ -1295,7 +1335,8 @@ export async function drivingToday(date?: string): Promise<DrivingToday | null> 
       // No one arrangement to read: these are several batches, and the
       // order they were arranged in belongs to each of them separately.
       null,
-      await meltingStops()
+      await meltingStops(),
+      await itemsNeedingIce().catch(() => new Set<string>())
     ),
     handout: paid.map(withLines),
     unpaid: orders.filter((o) => o.status === "pending").map(withLines),

@@ -1644,11 +1644,27 @@ export default function Checkout({
             The date above is the surprising part of this page whenever a
             far counter is in the cart, and the only sentence that makes
             sense of it was the third paragraph down in small grey type. */}
-        {far.length > 0 && !noRunThere && (
+        {/*
+            Only where the far counter is actually what sets the date.
+
+            It said "The Place is in Ajah, and we only go there on a run,
+            that is what sets the date above" over a picker reading today,
+            between four and seven, which is a car of its own going there
+            this afternoon. Both halves wrong at once: nothing was being
+            held up, and the thing it said we never do was the thing on the
+            screen above it.
+
+            So it waits for a date that is not today, which is the only
+            time the sentence explains anything, and it only claims a run
+            where a car genuinely cannot go for this cart.
+        */}
+        {far.length > 0 && !noRunThere && !comesToday && (
           <p className="soft border-2 border-brand bg-brand-wash px-3.5 py-2.5 text-[14.5px] text-brand-dark">
             <span className="font-semibold">
-              {farShopSaid} {farShops.length === 1 ? "is" : "are"} in {farNames},
-              and we only go there on a run.
+              {farShopSaid} {farShops.length === 1 ? "is" : "are"} in {farNames}
+              {sameDaySlots.length === 0
+                ? ", and we only go there on a run."
+                : "."}
             </span>{" "}
             That is what sets the date above.{" "}
             {farHoldsItUp && withoutFar ? (

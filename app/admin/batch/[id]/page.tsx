@@ -1422,6 +1422,12 @@ export default async function BatchPage({
                                 {group.melts === true && (
                                   <span className="tag">melts · last</span>
                                 )}
+                                {/* Not an ice cream shop, but carrying ice
+                                    cream tonight, so it drops behind the
+                                    stops that are not. */}
+                                {group.chills === true && (
+                                  <span className="tag">ice cream · near the end</span>
+                                )}
                               </span>
                               <span className="hint block">
                                 {here.length > 0 &&
