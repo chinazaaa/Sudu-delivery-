@@ -528,13 +528,24 @@ export default function Checkout() {
           {arriving}
         </Display>
 
-        {/* Which day, when there is more than one to pick from.
-
-            A row rather than a calendar: today and tomorrow are the two
-            anybody says in words, and past that a date is clearer than
-            counting days. Scrolls sideways because a fortnight of them
-            does not fit across a phone. */}
-        {dayChoices.length > 1 && (
+        {/*
+         * Which day, wherever there is a day at all.
+         *
+         * A row rather than a calendar: today and tomorrow are the two
+         * anybody says in words, and past that a date is clearer than
+         * counting days. Scrolls sideways because a fortnight of them does
+         * not fit across a phone.
+         *
+         * It used to want two days before it drew anything, on the
+         * reasoning that a choice with one answer is furniture. It is not:
+         * a cart only one run in the fortnight can carry shows no control
+         * at all, so the date in the headline reads as something that was
+         * decided for you with no say in it, and the first thing somebody
+         * does is look for the picker that is not there. One day is still
+         * worth drawing, because seeing it is the only day is itself the
+         * answer.
+         */}
+        {dayChoices.length > 0 && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}

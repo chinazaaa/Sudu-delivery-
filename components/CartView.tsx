@@ -41,7 +41,7 @@ import {
   useCart,
   usePeople,
 } from "@/lib/cart";
-import { feeFor, sameDayFee, type Band } from "@/lib/fees";
+import { bandIndex, feeFor, sameDayFee, type Band } from "@/lib/fees";
 import { nearMiss, pickOffer, type LiveOffer } from "@/lib/offers";
 import { DAY_NAMES, nextOpenDay, opensOn, weekdayOf } from "@/lib/open-days";
 import { naira } from "@/lib/money";
@@ -738,6 +738,40 @@ export default function CartView({
         )
       : 0;
 
+  /*
+   * How full the car is, and what else fits in the same fee.
+   *
+   * The app has drawn this at the top of its cart for a while and the
+   * website never had it: the one number people are deciding about sat at
+   * the bottom of the page under the food, as a line in a total. Here it
+   * is a meter, and it answers the question that actually changes what
+   * somebody buys, which is not "what does delivery cost" but "what else
+   * can I put in it for nothing".
+   *
+   * Only where the fee really is the container ladder. An offer prices
+   * delivery outright, shopping priced by what it comes to has no
+   * containers to count, and a car of its own is a different ladder: each
+   * of those leaves the meter out rather than drawing a number that is
+   * wrong.
+   */
+  const items = countItems(cart);
+  const onTheLadder =
+    !promotion && carFee === 0 && byValue.length === 0 && ladder.length > 0;
+  const rung = onTheLadder ? bandIndex(ladder, items) : -1;
+  const cap = rung >= 0 ? (ladder[rung]?.maxItems ?? null) : null;
+  const tier = cap === null ? "" : `up to ${cap} item${cap === 1 ? "" : "s"}`;
+  const room = cap === null ? null : cap - items;
+  const meterSaid =
+    room === null
+      ? promotion
+        ? promotion.offer.note || "Delivery is on offer for this cart."
+        : `Delivery on this cart is ${naira(alone)}.`
+      : room > 0
+        ? `${room} more item${room === 1 ? "" : "s"} ${
+            room === 1 ? "fits" : "fit"
+          } in ${naira(alone)}, from any kitchen.`
+        : `This car is full at ${naira(alone)}.`;
+
   const names = people.map((p) => p.name);
   const groups = groupNames(cart, people)
     .map((person) => ({
@@ -757,6 +791,34 @@ export default function CartView({
             See the group
           </Link>
         )}
+      </div>
+
+      {/* The meter, first, because the fee is the one number people are
+          deciding about and it is the only thing on this page that says
+          what another item would cost: nothing, usually. */}
+      <div className="rounded-2xl bg-ink px-4 py-3.5 text-shell">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="ticket text-volt">Fee for this car</span>
+          {tier !== "" && (
+            <span className="ticket text-shell/60">{tier}</span>
+          )}
+        </div>
+        {/* A bar per container, and only where there are few enough to
+            count at a glance. Fourteen little bars is a chart; four is a
+            glance. */}
+        {cap !== null && cap <= 14 && (
+          <div className="mt-2.5 flex gap-1">
+            {Array.from({ length: cap }, (_, at) => (
+              <span
+                key={at}
+                className={`h-2 flex-1 rounded-full ${
+                  at < items ? "bg-brand" : "bg-white/15"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+        <p className="mt-2.5 text-sm leading-[1.45] text-shell/90">{meterSaid}</p>
       </div>
 
       {missed && (

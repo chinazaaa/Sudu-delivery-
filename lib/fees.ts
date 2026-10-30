@@ -348,3 +348,20 @@ export function tripFee(
   }
   return feeFor(items, trip?.flash_fee ?? null, ladders.run);
 }
+
+/**
+ * Which rung an order of this many containers lands on, or -1 for none.
+ *
+ * For the meter at the top of the cart: how full the car is, and how much
+ * more fits before the fee goes up. The app has drawn this for a while and
+ * the website had nothing like it, so the one number people are actually
+ * deciding about was at the bottom of the page under the food.
+ */
+export function bandIndex(bands: Band[], items: number): number {
+  if (items <= 0) return -1;
+  const ladder = bands.length > 0 ? bands : [{ maxItems: null, fee: 4000 }];
+  const found = ladder.findIndex(
+    (step) => step.maxItems !== null && items <= step.maxItems
+  );
+  return found === -1 ? ladder.length - 1 : found;
+}
