@@ -1764,6 +1764,18 @@ export function otherWorthSaying<T extends Arriving>(
 ): T | null {
   if (!other || other.said === decided.said) return null;
   if (!decided.onARun) return other;
+  /*
+   * A car on a later day is not a hurry at all.
+   *
+   * The hours were compared and the days were not, so a car between two
+   * and five tomorrow read as sooner than a run between a quarter to seven
+   * and seven tonight, and was offered for more money under a headline
+   * promising the food this evening. Read off the day word, because the
+   * sentence is all the app is given.
+   */
+  const dayRank = (said: string) =>
+    / today\b/.test(said) ? 0 : / tomorrow\b/.test(said) ? 1 : 2;
+  if (dayRank(other.said) > dayRank(decided.said)) return null;
   // Read off what is actually said, because that is the only window the
   // app is given: "between 5pm and 7pm today".
   const run = windowStart(decided.said);

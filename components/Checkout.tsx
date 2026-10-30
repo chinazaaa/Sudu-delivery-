@@ -370,11 +370,6 @@ export default function Checkout({
     };
   };
 
-  const twoWaysOnADay = dayChoices.some((day) => {
-    const ways = waysOn(day.date);
-    return ways.run !== null && ways.cars.length > 0;
-  });
-
   // The runs that only fail because somebody is closed that day, and what
   // is closed on the soonest of them. Said in their words: "DO Bowls is
   // closed on Saturdays."
@@ -850,6 +845,10 @@ export default function Checkout({
    *  loud, because a date box that takes a tap and changes nothing reads as
    *  a broken page rather than as an answer. */
   const [dayProblem, setDayProblem] = useState("");
+  /** The day to offer instead, where the one somebody asked for cannot be
+   *  done. A date box that says no and stops is a dead end: the shop knows
+   *  which day does work and should say it, with a tap to take it. */
+  const [dayInstead, setDayInstead] = useState("");
   const shared = joining !== null || party !== "";
 
   // A promotion is the price rather than money off it, so it is settled
@@ -1248,8 +1247,20 @@ export default function Checkout({
       choice: dayChoices.find((one) => one.date === date) ?? null,
     }));
     const further = dayChoices.filter((one) => !named.includes(one.date));
-    // As far out as anything is going, which is the order horizon.
-    const furthest = dayChoices.at(-1)?.date ?? today;
+    /*
+     * As far out as the box will let somebody look.
+     *
+     * The last day on offer, which is how far the shop is going, or the
+     * last window it knows about where that is further: a cart only one
+     * run can carry has tomorrow as its last day on offer, and capping the
+     * calendar there means the one question worth asking, what about next
+     * week, cannot be asked at all. Past the list it answers rather than
+     * refusing, naming the day that does work.
+     */
+    const furthest = [
+      dayChoices.at(-1)?.date ?? today,
+      allSlots.at(-1)?.date ?? today,
+    ].sort()[1];
     /*
      * The day that is picked, when it is further out than tomorrow.
      *
@@ -1280,14 +1291,32 @@ export default function Checkout({
       if (date === "") return;
       const day = dayChoices.find((one) => one.date === date);
       if (!day) {
+        /*
+         * The soonest day that does work, by name.
+         *
+         * "Nothing is going that day. Try another." leaves somebody
+         * tapping through a calendar guessing, and on a cart that only one
+         * run in the fortnight can carry they can guess for a long time.
+         * The shop has the list in its hand, so it says the day.
+         */
+        const instead =
+          date < today
+            ? (dayChoices[0] ?? null)
+            : (dayChoices.find((one) => one.date > date) ?? null);
+        setDayInstead(instead?.date ?? "");
         setDayProblem(
           date < today
-            ? "That day has gone. Pick today or later."
-            : "Nothing is going that day. Try another."
+            ? instead
+              ? "That day has gone."
+              : "That day has gone, and nothing is going yet."
+            : instead
+              ? "Nothing goes that day."
+              : "Nothing goes that day, or any day after it. Message us and we will say what we can do."
         );
         return;
       }
       setDayProblem("");
+      setDayInstead("");
       // Picked today or tomorrow out of the calendar: those have their own
       // place on the list above, so the dropdown goes back to naming the
       // day and the calendar closes behind it. Left open, the box sat
@@ -1336,7 +1365,11 @@ export default function Checkout({
           {farDay !== "" && (
             <option value={farDay}>{runDateLabel(farDay)}</option>
           )}
-          {further.length > 0 && <option value="pick">Pick a date</option>}
+          {/* Always, not only where a further day is already on the list.
+              A cart that one run in the fortnight can carry has today and
+              tomorrow and nothing else, which is exactly the cart somebody
+              wants to look further ahead on, and the box was not there. */}
+          <option value="pick">Pick a date</option>
         </select>
 
         {/*
@@ -1367,7 +1400,23 @@ export default function Checkout({
               aria-label="The day you want it"
             />
             {dayProblem !== "" && (
-              <p className="text-sm text-brand-dark">{dayProblem}</p>
+              <p className="text-sm text-brand-dark">
+                {dayProblem}
+                {dayInstead !== "" && (
+                  <>
+                    {" "}
+                    The soonest after it is{" "}
+                    <button
+                      type="button"
+                      onClick={() => goTo(dayInstead)}
+                      className="font-semibold underline underline-offset-4"
+                    >
+                      {runDateLabel(dayInstead)}
+                    </button>
+                    .
+                  </>
+                )}
+              </p>
             )}
           </div>
         )}
@@ -1663,8 +1712,12 @@ export default function Checkout({
             Only where there is more than one day to pick from, and never
             for somebody adding to an order, joining a friend or in a
             group, whose day was settled when they were invited. */}
+        {/* Wherever there is a day at all. It used to want two of them,
+            on the reasoning that a dropdown with one answer is furniture.
+            It is not: the day somebody wants may be neither of the two
+            near ones, and the way to ask for it is in here. */}
         {!noRunThere &&
-          (dayChoices.length > 1 || twoWaysOnADay) &&
+          dayChoices.length > 0 &&
           adding === null &&
           joining === null &&
           party === "" &&

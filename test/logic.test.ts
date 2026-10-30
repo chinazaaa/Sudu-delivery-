@@ -7364,3 +7364,31 @@ test("a day already on offer is left exactly as it is", () => {
 test("nothing on offer at all changes nothing, rather than clearing the page", () => {
   assert.equal(dayToHoldTo([], { runId: "whatever", at: "" }, "", true), null);
 });
+
+test("a car on a later day is not offered as the hurry", () => {
+  const tonight = {
+    runId: "r1",
+    at: "",
+    when: "Between 6:45pm and 7pm, today",
+    said: "between 6:45pm and 7pm today",
+    onARun: true,
+    date: "2026-10-30",
+  };
+  const carTomorrow = {
+    runId: "",
+    at: "2026-10-31T13:00:00.000Z",
+    when: "Between 2pm and 5pm tomorrow",
+    said: "between 2pm and 5pm tomorrow",
+    onARun: false,
+    date: "2026-10-31",
+  };
+  // Two o'clock tomorrow is not sooner than seven o'clock tonight, however
+  // the hours compare.
+  assert.equal(otherWorthSaying(tonight, carTomorrow), null);
+
+  // The same car on the same day, properly earlier, is still worth saying.
+  assert.deepEqual(
+    otherWorthSaying(tonight, { ...carTomorrow, date: "2026-10-30" }),
+    { ...carTomorrow, date: "2026-10-30" }
+  );
+});

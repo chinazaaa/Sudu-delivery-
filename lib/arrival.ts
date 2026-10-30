@@ -52,6 +52,11 @@ export type Arrival = {
   said: string;
   /** Whether this is a shared run, which is what makes it the cheaper one. */
   onARun: boolean;
+  /** The day it lands, as "2026-10-31". Carried so two arrivals can be
+   *  compared as days and not only as hours: two o'clock tomorrow is not
+   *  sooner than seven o'clock tonight, and the hour on its own says it
+   *  is. Empty where whatever built it did not know the day. */
+  date?: string;
 };
 
 /**
@@ -76,6 +81,7 @@ export function nextArrival(
     when: run.when,
     said: run.said,
     onARun: true,
+    date: run.runDate,
   });
   const onItsOwn = (slot: Slot): Arrival => {
     /*
@@ -100,6 +106,7 @@ export function nextArrival(
       when: said.charAt(0).toUpperCase() + said.slice(1),
       said,
       onARun: false,
+      date: slot.date,
     };
   };
 
@@ -192,5 +199,17 @@ export function otherWorthSaying(
   if (!other || other.said === decided.said) return null;
   // The headline is a car, so the other way is the cheaper run. Always.
   if (!decided.onARun) return other;
+  /*
+   * A car on a later day is not a hurry at all.
+   *
+   * The hours were compared and the days were not, so a car between two
+   * and five tomorrow read as four and three quarter hours sooner than a
+   * run between a quarter to seven and seven tonight. The front page
+   * offered it, for more money, under a headline promising the food this
+   * evening.
+   */
+  if ((decided.date ?? "") !== "" && (other.date ?? "") !== "") {
+    if ((other.date ?? "") > (decided.date ?? "")) return null;
+  }
   return worthACar(decided.when, other.when) ? other : null;
 }
