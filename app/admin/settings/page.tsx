@@ -261,11 +261,16 @@ export default async function SettingsAdmin() {
           ["#messages", "Messages"],
           ["#fees", "Delivery fees"],
           ["#aisles", "Aisles"],
-          ["#plans", "Standing orders"],
-          ["#told", "Team"],
-          /* The board draws six. Notifications is a card the board does not
-             have, and it has to be reachable, so it goes after the six rather
-             than in the middle of them. */
+          /* Two deep ones, in place of Standing orders and Team.
+             
+             A pill is worth one of nine slots, and a slot should go to what
+             is opened weekly rather than to what is tidy. These two live
+             inside Delivery fees, several ladders down, and they are what
+             gets changed: who we are driving to, and what time we go. The
+             two they replaced are opened once a term and are a word in the
+             box above. */
+          ["#areas", "Further out"],
+          ["#week", "Hours"],
           ["#buzz", "Notifications"],
         ].map(([href, said]) => (
           <a key={href} href={href} className="pill-admin">
