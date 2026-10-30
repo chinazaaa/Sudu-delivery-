@@ -852,107 +852,8 @@ export default function CartView({
         </div>
       )}
 
-      {/* Before anything else, because it costs nothing to send and it is what
-          makes the delivery cheaper for all of them. In a group already, the
-          bar at the top says so and this would only repeat it. */}
-      {/* The figures live on the Start card rather than beside it: "split one
-          delivery" is an idea, two real numbers are an argument, and making
-          the point twice in a row made it weaker rather than louder. */}
-      <GroupLink
-        openNow={startGroup}
-        runs={runs}
-        slots={slots}
-        today={today}
-        alone={alone}
-        // An offer with a floor under it does not split evenly: five people
-        // at a thousand each is five thousand, not two. Promising a split
-        // the offer will not give is worse than promising nothing.
-        splits={promotion ? promotion.offer.minEach === 0 : true}
-      />
 
 
-      {!inParty && (
-      /*
-       * Folded away until somebody wants it.
-       *
-       * Putting names to the food is for one cart in twenty, and it was a
-       * full card with a heading, a paragraph and a text box standing
-       * between the food and the total on every other one. The question is
-       * worth asking and it is not worth a card, so it is one line that
-       * opens into the same thing. Open from the start once there are
-       * names in it, because then it is the cart rather than an offer.
-       */
-      <details className="card" open={people.length > 0}>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-          <span className="font-bold">
-            {people.length > 0 ? "People in this order" : "Ordering for them, and paying?"}
-          </span>
-          <span aria-hidden className="shrink-0 text-sm font-semibold text-muted">
-            {people.length > 0 ? people.length : "Add names"}
-          </span>
-        </summary>
-
-        <div className="mt-3 space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-sm text-muted">
-            {people.length > 0
-              ? "Now tap a name under each item below to say whose it is. Bags are labelled with these names on delivery."
-              : "Add their names, then tap a name under each item to say whose it is. The delivery fee does not change."}
-          </p>
-          {people.length > 0 && (
-            <button
-              type="button"
-              onClick={clearPeople}
-              className="shrink-0 text-sm font-semibold text-muted hover:text-brand"
-            >
-              Turn off group
-            </button>
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {people.map((person) => (
-            <span key={person.name} className="chip border-black/10 bg-paper">
-              {person.name}
-              <button
-                type="button"
-                onClick={() => removePerson(person.name)}
-                aria-label={`Remove ${person.name}`}
-                className="text-muted"
-              >
-                ✕
-              </button>
-            </span>
-          ))}
-
-          <span className="flex items-center gap-1">
-            <input
-              className="field w-32 py-1.5 text-sm"
-              placeholder="Add a name"
-              value={newPerson}
-              onChange={(e) => setNewPerson(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter") return;
-                e.preventDefault();
-                addPerson(newPerson);
-                setNewPerson("");
-              }}
-            />
-            <button
-              type="button"
-              className="chip border-black/10 bg-paper"
-              onClick={() => {
-                addPerson(newPerson);
-                setNewPerson("");
-              }}
-            >
-              Add
-            </button>
-          </span>
-        </div>
-        </div>
-      </details>
-      )}
 
 
       {group !== "" && (
@@ -1220,6 +1121,120 @@ export default function CartView({
             </span>
           </div>
         </section>
+      )}
+
+      {/*
+          Both of these come after the food now, where the app has them.
+
+          They were the first two cards on the page: a tinted card about
+          splitting the fee, then a card about putting names to it, and
+          only then the thing somebody came to look at. Two screens of
+          offers before your own dinner is the whole of why this page felt
+          like more work than the app's, which goes meter, food, what it
+          comes to, and only then asks about friends.
+
+          Neither is buried. Somebody who wants to share a run looks for it
+          once they know what they are sharing, which is exactly here.
+       */}
+      {/* Before anything else, because it costs nothing to send and it is what
+          makes the delivery cheaper for all of them. In a group already, the
+          bar at the top says so and this would only repeat it. */}
+      {/* The figures live on the Start card rather than beside it: "split one
+          delivery" is an idea, two real numbers are an argument, and making
+          the point twice in a row made it weaker rather than louder. */}
+      <GroupLink
+        openNow={startGroup}
+        runs={runs}
+        slots={slots}
+        today={today}
+        alone={alone}
+        // An offer with a floor under it does not split evenly: five people
+        // at a thousand each is five thousand, not two. Promising a split
+        // the offer will not give is worse than promising nothing.
+        splits={promotion ? promotion.offer.minEach === 0 : true}
+      />
+
+      {!inParty && (
+      /*
+       * Folded away until somebody wants it.
+       *
+       * Putting names to the food is for one cart in twenty, and it was a
+       * full card with a heading, a paragraph and a text box standing
+       * between the food and the total on every other one. The question is
+       * worth asking and it is not worth a card, so it is one line that
+       * opens into the same thing. Open from the start once there are
+       * names in it, because then it is the cart rather than an offer.
+       */
+      <details className="card" open={people.length > 0}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+          <span className="font-bold">
+            {people.length > 0 ? "People in this order" : "Ordering for them, and paying?"}
+          </span>
+          <span aria-hidden className="shrink-0 text-sm font-semibold text-muted">
+            {people.length > 0 ? people.length : "Add names"}
+          </span>
+        </summary>
+
+        <div className="mt-3 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm text-muted">
+            {people.length > 0
+              ? "Now tap a name under each item below to say whose it is. Bags are labelled with these names on delivery."
+              : "Add their names, then tap a name under each item to say whose it is. The delivery fee does not change."}
+          </p>
+          {people.length > 0 && (
+            <button
+              type="button"
+              onClick={clearPeople}
+              className="shrink-0 text-sm font-semibold text-muted hover:text-brand"
+            >
+              Turn off group
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {people.map((person) => (
+            <span key={person.name} className="chip border-black/10 bg-paper">
+              {person.name}
+              <button
+                type="button"
+                onClick={() => removePerson(person.name)}
+                aria-label={`Remove ${person.name}`}
+                className="text-muted"
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+
+          <span className="flex items-center gap-1">
+            <input
+              className="field w-32 py-1.5 text-sm"
+              placeholder="Add a name"
+              value={newPerson}
+              onChange={(e) => setNewPerson(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                addPerson(newPerson);
+                setNewPerson("");
+              }}
+            />
+            <button
+              type="button"
+              className="chip border-black/10 bg-paper"
+              onClick={() => {
+                addPerson(newPerson);
+                setNewPerson("");
+              }}
+            >
+              Add
+            </button>
+          </span>
+        </div>
+        </div>
+      </details>
       )}
 
       {asking && (
