@@ -211,25 +211,36 @@ export default function GroupLink({
   if (inGroup) return null;
 
   if (!open) {
+    /*
+     * One line, the way the app says it.
+     *
+     * This was a four line tinted card: a heading with the fee in it, then
+     * three lines explaining what a group is and how the splitting works,
+     * standing on the cart above somebody's own food. All of that is true
+     * and none of it is needed before the tap: whoever wants to share a
+     * run knows what sharing is, and the card it opens into says the rest.
+     *
+     * The fee stays in the sentence, because it is the argument. "Split
+     * the ₦4,000" is a reason to tap; "ordering with friends?" is a
+     * question about your social life.
+     */
     return (
       <button
         type="button"
         onClick={() => setOpen(true)}
         className="flex w-full items-center justify-between gap-3 rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3 text-left transition active:scale-[0.99]"
       >
-        <span>
-          <span className="block font-bold text-brand-dark">
-            {alone > 0 ? `Delivery on this is ${naira(alone)} on your own` : "Ordering with friends?"}
-          </span>
-          <span className="block text-sm text-ink/75">
+        <span className="text-[15px] leading-[1.35]">
+          <span className="font-bold text-brand-dark">Ordering with friends?</span>{" "}
+          <span className="text-ink/80">
             {alone > 0
-              ? splits
-                ? "Start a group and that splits evenly between everybody in the car. You each pay for your own food."
-                : "Start a group and everybody orders their own food out of one car. Your share of delivery is worked out when it closes."
-              : "Start a group and send them a link. Everybody orders their own food and you split one delivery."}
+              ? `Share this run and split the ${naira(alone)}.`
+              : "Share this run and split one delivery."}
           </span>
         </span>
-        <span className="shrink-0 text-sm font-extrabold text-brand-dark">Start</span>
+        <span aria-hidden className="shrink-0 text-lg font-extrabold text-brand-dark">
+          ›
+        </span>
       </button>
     );
   }
@@ -247,6 +258,16 @@ export default function GroupLink({
       }
     >
       {!openNow && <p className="font-bold">Start a group</p>}
+
+      {/* How the money works, said here rather than on the line that opens
+          this. An offer with a floor under it does not split evenly, and
+          promising a split we will not give is worse than promising
+          nothing, so it is said wherever the promise is actually made. */}
+      <p className="text-sm text-muted">
+        {splits
+          ? "Everybody orders their own food out of one car, and the delivery splits evenly between you."
+          : "Everybody orders their own food out of one car. Your share of delivery is worked out when it closes."}
+      </p>
 
       <div>
         <label className="label" htmlFor="group_name">
