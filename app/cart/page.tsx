@@ -13,7 +13,7 @@ import {
 } from "@/lib/areas-server";
 import { dropLabel, nextDrop, skincareOn } from "@/lib/skincare";
 import { nextDrop as nextPharmacyDrop, pharmacyOn } from "@/lib/pharmacy";
-import { livePrices, openRestaurants } from "@/lib/menu";
+import { livePrices } from "@/lib/menu";
 import Reprice from "@/components/Reprice";
 import { hostelNames } from "@/lib/hostels";
 import { liveOffers } from "@/lib/coupons";
@@ -35,10 +35,10 @@ export default async function CartPage({
   // said what they want; asking again on this page was the same button twice.
   const startGroup = (await searchParams).start === "1";
 
-  const [restaurants, batches, settings, { ice, needsIce }] = await Promise.all([
-    // The cart is where someone realises they forgot the drinks, so the
-    // restaurants are right there rather than back through the home page.
-    openRestaurants(),
+  // The counter list used to be read here for a card of chips at the bottom
+  // of the cart, one per shop. That card is a single line now, so the query
+  // that fed it goes with it.
+  const [batches, settings, { ice, needsIce }] = await Promise.all([
     openBatches(),
     safeSettings(),
     iceForCart(),
@@ -86,7 +86,6 @@ export default async function CartPage({
       <IceInCart ice={ice} needsIce={needsIce} />
       <CartView
       iceItemId={ice?.itemId ?? ""}
-      restaurants={restaurants}
       runs={batches
         .slice(0, 4)
         .map(toBatchView)

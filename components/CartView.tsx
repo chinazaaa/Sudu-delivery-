@@ -49,7 +49,6 @@ import PayChoice from "./PayChoice";
 
 /** Review and fix the order. Nothing is asked for here except the food. */
 export default function CartView({
-  restaurants = [],
   runs = [],
   slots = [],
   today = "",
@@ -68,7 +67,6 @@ export default function CartView({
   startGroup = false,
   iceItemId = "",
 }: {
-  restaurants?: { id: string; name: string; href: string }[];
   /** The bag of ice block, which the shop puts in and takes out itself.
    *  Empty where the shop has not said which item it is. */
   iceItemId?: string;
@@ -783,7 +781,11 @@ export default function CartView({
   return (
     <div className="mx-auto max-w-3xl space-y-5 pb-36">
       <div className="flex items-baseline justify-between gap-3">
-        <h1 className="font-display text-[min(16vw,5.5rem)] font-black uppercase leading-[0.88] sm:text-[clamp(3.5rem,7vw,5.5rem)]">
+        {/* Half a phone screen of the word CART, over a page whose whole
+            job is the four lines under it. The desk keeps the big one:
+            there the page is wide and the heading is the only thing
+            holding the top of it together. */}
+        <h1 className="font-display text-[min(9vw,2.25rem)] font-black uppercase leading-[0.95] sm:text-[clamp(3.5rem,7vw,5.5rem)]">
           Your cart
         </h1>
         {group !== "" && (
@@ -870,11 +872,33 @@ export default function CartView({
 
 
       {!inParty && (
-      <section className="card space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <h2 className="font-bold">
+      /*
+       * Folded away until somebody wants it.
+       *
+       * Putting names to the food is for one cart in twenty, and it was a
+       * full card with a heading, a paragraph and a text box standing
+       * between the food and the total on every other one. The question is
+       * worth asking and it is not worth a card, so it is one line that
+       * opens into the same thing. Open from the start once there are
+       * names in it, because then it is the cart rather than an offer.
+       */
+      <details className="card" open={people.length > 0}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+          <span className="font-bold">
             {people.length > 0 ? "People in this order" : "Ordering for them, and paying?"}
-          </h2>
+          </span>
+          <span aria-hidden className="shrink-0 text-sm font-semibold text-muted">
+            {people.length > 0 ? people.length : "Add names"}
+          </span>
+        </summary>
+
+        <div className="mt-3 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-sm text-muted">
+            {people.length > 0
+              ? "Now tap a name under each item below to say whose it is. Bags are labelled with these names on delivery."
+              : "Add their names, then tap a name under each item to say whose it is. The delivery fee does not change."}
+          </p>
           {people.length > 0 && (
             <button
               type="button"
@@ -884,13 +908,6 @@ export default function CartView({
               Turn off group
             </button>
           )}
-        </div>
-        <div>
-          <p className="text-sm text-muted">
-            {people.length > 0
-              ? "Now tap a name under each item below to say whose it is. Bags are labelled with these names on delivery."
-              : "Add their names, then tap a name under each item to say whose it is. The delivery fee does not change."}
-          </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -933,7 +950,8 @@ export default function CartView({
             </button>
           </span>
         </div>
-      </section>
+        </div>
+      </details>
       )}
 
 
@@ -1148,25 +1166,61 @@ export default function CartView({
         </section>
       ))}
 
+      {/*
+          One line, at the bottom of the food, where the app puts it.
+
+          This was a card of its own headed "Add something else" with a chip
+          for every counter in the shop under it: a heading, a wall of
+          twenty names and a decision, all to say the thing somebody already
+          knows how to do. The one fact worth saying there is not which
+          counters exist, it is that another kitchen rides in the same car
+          for the same fee, which is what the meter at the top is about and
+          what this says in its own words.
+       */}
+      <Link
+        href="/products"
+        className="card flex min-h-[56px] items-center gap-2.5 px-4 py-3 font-bold text-brand transition hover:border-ink"
+      >
+        <span aria-hidden className="text-2xl leading-none">
+          +
+        </span>
+        Add from another kitchen, same car
+      </Link>
+
       {theCar}
 
-      <section className="card space-y-2">
-        <h2 className="font-bold">Add something else</h2>
-        <div className="flex flex-wrap gap-2">
-          {restaurants.map((restaurant) => (
-            <Link
-              key={restaurant.id}
-              href={`/r/${restaurant.href}`}
-              className="chip border-black/10 bg-white hover:border-ink/30"
-            >
-              {restaurant.name}
-            </Link>
-          ))}
-          <Link href="/" className="chip border-black/10 bg-white hover:border-ink/30">
-            Everything
-          </Link>
-        </div>
-      </section>
+      {/*
+          What it comes to, written out.
+
+          The cart never said this. It had the food's subtotal on the bar at
+          the bottom and the delivery fee nowhere at all, so the first time
+          anybody saw what they were actually paying was the checkout. The
+          app has shown all three lines since it was built, and it is the
+          reason its cart reads as finished and this one read as a list.
+
+          Not in a group: there the fee is split when the car closes and a
+          total here would be a number nobody is going to be charged.
+       */}
+      {group === "" && (
+        <section className="card space-y-2">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-muted">Subtotal</span>
+            <span className="font-semibold">{naira(cartSubtotal(cart))}</span>
+          </div>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-muted">
+              Delivery{tier === "" ? "" : ` (${tier})`}
+            </span>
+            <span className="font-semibold">{naira(alone)}</span>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 border-t-[1.5px] border-rule pt-2">
+            <span className="font-bold">Total</span>
+            <span className="font-display text-[28px] font-black leading-none">
+              {naira(cartSubtotal(cart) + alone)}
+            </span>
+          </div>
+        </section>
+      )}
 
       {asking && (
         <Sheet
@@ -1269,11 +1323,17 @@ export default function CartView({
         )}
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <div className="min-w-0 flex-1">
+            {/* The whole price, not the food's half of it. The bar said
+                the subtotal while the total on the next screen was several
+                thousand more, which is the shop quoting a number it is not
+                going to charge. In a group the fee is split when the car
+                closes, so there the food is the honest figure. */}
             <p className="ticket text-muted">
               {countItems(cart)} item{countItems(cart) === 1 ? "" : "s"}
+              {group === "" && tier !== "" ? ` · ${tier}` : ""}
             </p>
             <p className="truncate font-display text-[32px] font-black leading-none">
-              {naira(cartSubtotal(cart))}
+              {naira(cartSubtotal(cart) + (group === "" ? alone : 0))}
             </p>
           </div>
           {group !== "" ? (
