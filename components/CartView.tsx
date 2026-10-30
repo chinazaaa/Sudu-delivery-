@@ -942,13 +942,17 @@ export default function CartView({
           )}
 
           {section.lines.map((line) => (
-            <div key={line.key} className="card flex gap-3">
+            /* Tighter than it was. A hundred and twenty pixels of card for
+               one pie, with the price on a row of its own in display type
+               and Remove on another below it, meant two items filled a
+               phone. The app says the same four things in half the height. */
+            <div key={line.key} className="card flex gap-3 p-3">
               {/* The picture and the name go back to the product, which is
                   where you go to check what is in it or change the choices. */}
               <Link
                 href={`/p/${line.itemId}?line=${encodeURIComponent(line.key)}`}
                 aria-label={`Open ${line.name}`}
-                className="size-20 shrink-0 overflow-hidden rounded-xl"
+                className="size-16 shrink-0 overflow-hidden rounded-xl"
               >
                 <Thumb src={line.imageUrl} name={line.name} rounded="rounded-none" />
               </Link>
@@ -987,12 +991,33 @@ export default function CartView({
                   )}
                   {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
                   {people.length > 0 && !inParty && ` · for ${line.forName || "you"}`}
-                </p>
-
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <span className="font-display text-[26px] font-extrabold leading-none">
+                  {" · "}
+                  {/* Beside the counter rather than under it in display
+                      type. It is a price on a line in a cart, not the
+                      headline of the page. */}
+                  <span className="font-bold text-ink">
                     {naira(line.unitPrice * line.qty)}
                   </span>
+                </p>
+
+                <div className="mt-1.5 flex items-center justify-between gap-2">
+                  {/* Taking something out had no button of its own: the only
+                      way was to press minus until the row went, and somebody
+                      who did not know that reported that the cart would not
+                      let her delete anything. It shares this row with the
+                      stepper rather than taking one of its own. */}
+                  {line.itemId !== iceItemId ? (
+                    <button
+                      type="button"
+                      onClick={() => setQty(line.key, 0)}
+                      className="text-xs font-semibold text-muted underline hover:text-ink"
+                      aria-label={`Remove ${line.name} from the cart`}
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <span />
+                  )}
                   {/* The bag of ice block is not somebody's to change. It
                       arrived because the cart has ice cream in it and it
                       leaves when the ice cream does, so a stepper and a
@@ -1007,7 +1032,7 @@ export default function CartView({
                     <button
                       type="button"
                       onClick={() => setQty(line.key, line.qty - 1)}
-                      className="grid size-9 place-items-center rounded-full text-lg leading-none"
+                      className="grid size-8 place-items-center rounded-full text-lg leading-none"
                       aria-label={`One less ${line.name}`}
                     >
                       −
@@ -1018,7 +1043,7 @@ export default function CartView({
                     <button
                       type="button"
                       onClick={() => setQty(line.key, line.qty + 1)}
-                      className="grid size-9 place-items-center rounded-full bg-brand text-lg leading-none"
+                      className="grid size-8 place-items-center rounded-full bg-brand text-lg leading-none"
                       aria-label={`One more ${line.name}`}
                     >
                       +
@@ -1026,21 +1051,6 @@ export default function CartView({
                   </span>
                   )}
                 </div>
-
-                {/* Taking something out had no button of its own: the only way
-                    was to press minus until the row went, and somebody who
-                    did not already know that reported that the cart would not
-                    let her delete anything. A word that says what it does. */}
-                {line.itemId !== iceItemId && (
-                  <button
-                    type="button"
-                    onClick={() => setQty(line.key, 0)}
-                    className="mt-2 text-xs font-semibold text-muted underline hover:text-ink"
-                    aria-label={`Remove ${line.name} from the cart`}
-                  >
-                    Remove
-                  </button>
-                )}
 
                 {people.length > 0 && !inParty && (
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
