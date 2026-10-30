@@ -78,7 +78,7 @@ export default async function SendAGiftPage() {
         ? `Delivery starts at ${naira(cheapest.fee)} and is one fee for the ` +
           "car, not a fee per item. It is shown before you pay, with nothing " +
           "added afterwards."
-        : "Delivery is one fee for the car rather than a fee per item, and it " +
+        : "Delivery is one fee for the whole order rather than a fee per item, and it " +
           "is shown before you pay.",
     },
     {

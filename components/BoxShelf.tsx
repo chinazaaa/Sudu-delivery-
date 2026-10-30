@@ -206,7 +206,7 @@ export default async function BoxShelf({
               Build your own box
             </span>
             <span className="leading-relaxed">
-              Pick anything from any kitchen. It all comes in one car.
+              Pick anything from any kitchen. It all comes together.
             </span>
             <span className="flex items-center gap-2 font-bold">
               Open the menu <span aria-hidden>→</span>

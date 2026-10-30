@@ -74,9 +74,9 @@ export default async function PauStudentStorePage() {
       q: "How much is delivery?",
       a: cheapest
         ? `Delivery starts at ${naira(cheapest.fee)}, and it is one fee for ` +
-          "the car rather than a fee per item, so a full month of shopping " +
+          "the whole order rather than a fee per item, so a full month of shopping " +
           "costs the same to bring as a packet of biscuits."
-        : "One fee for the car rather than a fee per item, so a full month of " +
+        : "One fee for the whole order rather than a fee per item, so a full month of " +
           "shopping costs the same to bring as a packet of biscuits.",
     },
     {
@@ -201,7 +201,7 @@ export default async function PauStudentStorePage() {
 
         <Section title="Why it is cheaper to order together">
           <p>
-            The delivery fee is for the car, not for what is in it. One person
+            The delivery fee is for the trip, not for what is in it. One person
             ordering a month of foodstuff pays it alone; four people in one
             shared delivery split it four ways and each still gets their own
             labelled bag.{" "}

@@ -266,7 +266,7 @@ export default async function BecomeAPromoter() {
                   "No shifts, no targets, nothing to lose if you never share it.",
                 ],
                 [
-                  "We pay after the run",
+                  "We pay after the delivery",
                   "Your money is counted the moment they pay, and sent on the next payday.",
                 ],
                 [

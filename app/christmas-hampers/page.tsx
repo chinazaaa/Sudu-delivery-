@@ -180,7 +180,7 @@ export default async function ChristmasHampersPage() {
       q: "Do you deliver hampers outside Ibeju-Lekki?",
       a:
         "Yes, anywhere in Lagos. A hamper is put together and then carried, " +
-        "so it does not have to go on a food run: put the address in at the " +
+        "so it does not have to travel with the food: put the address in at the " +
         "checkout instead of a hostel block. Outside Lagos we do not " +
         "deliver, because somebody in Abuja can buy a hamper in Abuja.",
     },
@@ -383,7 +383,7 @@ export default async function ChristmasHampersPage() {
           </p>
           <p>
             Beyond that we go anywhere in Lagos. A hamper is put together and
-            then carried, so it does not have to travel on a food run: give
+            then carried, so it does not have to travel with the food: give
             an address at the checkout instead of a hostel block. It is
             handed over at the door rather than left with somebody at a gate.
           </p>

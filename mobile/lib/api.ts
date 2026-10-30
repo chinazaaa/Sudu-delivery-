@@ -1769,6 +1769,21 @@ export function feeRidingAlong(args: {
  * comes back null and the caller decides: guessing a time here would move
  * money. The same function as the website's lib/pick-a-day.
  */
+/**
+ * Whether an earlier time is worth offering beside the one going anyway.
+ *
+ * It costs more, and the only thing it buys is arriving sooner, so it has
+ * to arrive properly sooner: an hour, maybe, for a dearer trip is the shop
+ * talking somebody into the expensive thing for nothing. The website uses
+ * the same two hours; see lib/pick-a-day.
+ */
+export function worthACar(runWindow: string, carWindow: string, leastHours = 2): boolean {
+  const run = windowStart(runWindow);
+  const car = windowStart(carWindow);
+  if (run === null || car === null) return true;
+  return run - car >= leastHours;
+}
+
 export function windowStart(said: string): number | null {
   const found = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i.exec(said ?? "");
   if (!found) return null;

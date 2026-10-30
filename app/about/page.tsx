@@ -240,8 +240,8 @@ export default async function AboutPage() {
                 ? `${places
                     .slice(0, 3)
                     .map((one) => one.name)
-                    .join(", ")} and more, mixed in one run.`
-                : "The restaurants around Sangotedo and Lekki, mixed in one run.",
+                    .join(", ")} and more, mixed in one delivery.`
+                : "The restaurants around Sangotedo and Lekki, mixed in one delivery.",
             ],
             [
               "/collections",
@@ -274,7 +274,7 @@ export default async function AboutPage() {
             [
               "/group",
               "Group orders",
-              "One car, one fee, split between friends.",
+              "One delivery, one fee, split between friends.",
             ],
           ].map(([href, said, note]) => (
             <Link
@@ -295,7 +295,7 @@ export default async function AboutPage() {
         <div className="shell grid gap-6 py-12 sm:grid-cols-3 sm:py-14">
           {[
             [
-              "One payment, one run",
+              "One payment, one delivery",
               "Mix restaurants and shops in one order. One fee per car, split with whoever is on it.",
             ],
             [

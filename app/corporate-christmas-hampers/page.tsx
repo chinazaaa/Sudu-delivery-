@@ -146,7 +146,7 @@ export default async function CorporateHampersPage() {
         "Anywhere in Lagos. We are based in Ibeju-Lekki and the car is out " +
         "around Sangotedo, Awoyaya, Lakowe, Abijo and Pan-Atlantic " +
         "University every day, and a hamper is carried rather than put on a " +
-        "food run, so Lekki, Ikoyi, Victoria Island, Ajah and the mainland " +
+        "food delivery, so Lekki, Ikoyi, Victoria Island, Ajah and the mainland " +
         "are all ordinary deliveries. Outside Lagos we do not deliver.",
     },
   ];

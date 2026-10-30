@@ -27,6 +27,7 @@ import {
   daysOnOffer,
   slotDayWord,
   slotWindow,
+  worthACar,
   type DayOnOffer,
   dearestArea,
   mixedExtra,
@@ -317,6 +318,29 @@ export default function Checkout() {
     setRunId(day.runId);
     setDeliverAt(day.at);
   };
+
+  /*
+   * The second question, on a day that has two answers.
+   *
+   * A day with a run on it is on the list as that run, because the run
+   * arrives the same evening for thousands less. It is not the only way:
+   * a time of its own can be at the block hours earlier, and the app had
+   * no way to ask for one, so a day with both silently offered the later
+   * of the two. The website asks this; the app did not.
+   *
+   * Two times, and nothing about what drives them. Only where the earlier
+   * one is properly earlier: an hour's difference for a dearer trip is the
+   * shop talking somebody into the expensive thing for nothing.
+   */
+  const runToday = runsHere.find((one) => one.runDate === chosenDate) ?? null;
+  const timesToday = runToday
+    ? slots.filter(
+        (one) =>
+          one.date === chosenDate &&
+          worthACar(runToday.deliveryWindow, slotWindow(one))
+      )
+    : [];
+  const twoTimes = runToday !== null && timesToday.length > 0;
 
   const arriving = picked
     ? `${slotWindow(picked)} ${slotDayWord(picked)}`
@@ -630,6 +654,54 @@ export default function Checkout() {
                 ? " None of the runs coming up are, so this goes as a car of its own, at the time you pick below."
                 : " None of the runs coming up are."}
           </Text>
+        )}
+
+        {twoTimes && runToday && (
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: T.onInkMuted, fontFamily: F.bodySemi, fontSize: 13 }}>
+              What time
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {[
+                { at: "", window: runToday.deliveryWindow },
+                ...timesToday.map((one) => ({ at: one.at, window: slotWindow(one) })),
+              ].map((one) => {
+                const on = deliverAt === one.at;
+                const said =
+                  one.window === ""
+                    ? ""
+                    : one.window.charAt(0).toUpperCase() + one.window.slice(1);
+                return (
+                  <Pressable
+                    key={one.at || "run"}
+                    onPress={() => {
+                      setRunId(runToday.id);
+                      setDeliverAt(one.at);
+                    }}
+                    style={{
+                      minHeight: 44,
+                      justifyContent: "center",
+                      paddingHorizontal: 14,
+                      borderRadius: 999,
+                      borderWidth: 2,
+                      borderColor: on ? T.volt : T.onInkMuted,
+                      backgroundColor: on ? T.volt : "transparent",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: on ? F.bodyBold : F.body,
+                        fontSize: 14,
+                        color: on ? T.ink : T.onInk,
+                      }}
+                    >
+                      {said}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
         )}
 
         {/* The estimate used to be said here in full: half an hour either

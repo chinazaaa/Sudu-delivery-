@@ -62,8 +62,8 @@ export default function GroupHub({
             <span className="text-brand">group</span>
           </h1>
           <p className="max-w-[480px] text-[17px] leading-relaxed text-ink/80 sm:text-lg">
-            Everyone adds their own food from any kitchen, it all comes in one
-            car, and you split one delivery fee.
+            Everyone adds their own food from any kitchen, it all comes
+            together, and you split one delivery fee.
           </p>
 
           {read && group !== "" && (
@@ -102,14 +102,14 @@ export default function GroupHub({
               />
               <div className="relative flex flex-col gap-3 rounded-2xl bg-ink p-5 text-shell shadow-[8px_8px_0_#e5321d]">
                 <span className="ticket text-volt">
-                  {shared ? "Shared run to PAU" : "Private car to PAU"}
+                  {shared ? "Shared delivery to PAU" : "Your own time to PAU"}
                 </span>
                 <span className="font-display text-[clamp(1.9rem,6vw,2.5rem)] font-extrabold uppercase leading-[0.95]">
                   {chosen}
                 </span>
                 <div className="border-t-2 border-dashed border-[#4a423b]" />
                 <div className="flex flex-wrap justify-between gap-3 text-sm">
-                  <span>{shared ? "One car, one fee" : "A car of your own"}</span>
+                  <span>{shared ? "One delivery, one fee" : "The time you picked"}</span>
                   <span className="text-[#b9b0a5]">Same time for everyone</span>
                 </div>
               </div>
@@ -134,11 +134,11 @@ export default function GroupHub({
       </div>
 
       {/* How it works, the board's four numbered steps on Ink. The whole
-          thing turns on strangers believing that one car really is one fee,
+          thing turns on strangers believing that one order really is one fee,
           and a page that only offers a button never says why. */}
       <section className="bleed bg-ink text-shell">
         <div className="shell flex flex-col gap-8 py-12 sm:py-16">
-          <h2 className="section-title">How a group run works</h2>
+          <h2 className="section-title">How a group works</h2>
           <ol className="grid gap-7 sm:grid-cols-2 lg:grid-cols-4">
             {[
               [
@@ -150,8 +150,8 @@ export default function GroupHub({
                 "Friends open it and add their own food, from any kitchen.",
               ],
               [
-                "One car, one fee",
-                "Everything rides together, so the delivery fee is split between you.",
+                "One delivery, one fee",
+                "Everything comes together, so the fee is split between you.",
               ],
               [
                 "Same time for all",

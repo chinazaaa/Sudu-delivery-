@@ -116,7 +116,7 @@ export default async function AppPage() {
 
         <p className="max-w-[580px] text-[15px] leading-relaxed text-ink/70">
           Everything works here too. The app is the same shop with your orders
-          already on it, and a notification when the run reaches your block.
+          already on it, and a notification when it reaches your block.
         </p>
       </section>
     </article>

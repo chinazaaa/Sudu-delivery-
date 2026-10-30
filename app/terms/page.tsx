@@ -136,7 +136,7 @@ export default async function TermsPage() {
 
       <Clause n={3} title="Delivery">
         <p>
-          One car, one fee, shared between everybody on that run. What you pay
+          One delivery, one fee, shared between everybody in it. What you pay
           depends on how much room your order takes, or on what the shopping
           comes to where a counter is priced that way. The checkout shows it
           before you order and explains how it was worked out.

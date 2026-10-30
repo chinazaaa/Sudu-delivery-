@@ -88,7 +88,7 @@ export default async function DeliveryToPauPage() {
       a:
         places.length > 0
           ? `Through Sudu: ${places.map((one) => one.name).join(", ")}. ` +
-            "They are collected together and brought onto campus on one car, " +
+            "They are collected together and brought onto campus in one go, " +
             "so an order can draw on more than one of them."
           : "The list is on the menu page, and everything on it comes to campus.",
     },
@@ -135,7 +135,7 @@ export default async function DeliveryToPauPage() {
           : ".") +
         (areaNames.length > 0
           ? ` ${areaNames.join(" and ")} as well, on the runs that go that way` +
-            (farthest > 0 ? `, which adds ${naira(farthest)} to the car.` : ".")
+            (farthest > 0 ? `, which adds ${naira(farthest)} to the fee.` : ".")
           : "") +
         " Everything on a run is collected and brought onto campus together.",
     },
@@ -228,7 +228,7 @@ export default async function DeliveryToPauPage() {
         title="Food delivery to PAU, done properly"
         lead={`${
           places.length > 0 ? `${places.length} kitchens` : "Every kitchen"
-        }, one car, one fee, handed over at your hostel block.`}
+        }, one delivery, one fee, handed over at your hostel block.`}
         tone="ink"
       >
         <Link
@@ -309,7 +309,7 @@ export default async function DeliveryToPauPage() {
         {bands.length > 0 ? (
           <>
             <p>
-              One fee for the car, not a fee each. It goes by how much is in it:
+              One fee for the order, not a fee each. It goes by how much is in it:
             </p>
             <ul className="space-y-1 pt-1">
               {bands.map((band, index) => (
@@ -330,7 +330,7 @@ export default async function DeliveryToPauPage() {
           </>
         ) : (
           <p>
-            One fee for the car, not a fee each, split between everybody
+            One fee for the order, not a fee each, split between everybody
             ordering on the same run.
           </p>
         )}
@@ -364,7 +364,7 @@ export default async function DeliveryToPauPage() {
             and a bigger fee
             {farthest > 0 ? `, ${naira(farthest)} on top of the ladder above` : ""}.
             The checkout only offers you a run that can actually fetch what is
-            in your cart, so you cannot end up waiting on a car that was never
+            in your cart, so you cannot end up waiting on a delivery that was never
             going that way.
           </p>
         </Section>
