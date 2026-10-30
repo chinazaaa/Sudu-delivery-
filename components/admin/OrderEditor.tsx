@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { saidPick } from "@/lib/picks";
 import ActionButton from "@/components/ActionButton";
 
@@ -273,6 +273,26 @@ export default function OrderEditor({
                       product. */}
                   <SwapForm lineId={line.id} swap={swapLine} />
 
+                  {/* The choices it already has, as choices.
+
+                      Changing the drink from Coke to Sprite meant finding
+                      the Coke chip, pressing its ×, opening a dropdown of
+                      every choice the dish has, all three questions mixed
+                      into one list, picking Sprite, and pressing Add. Four
+                      steps and a guess, to change one word. It is one
+                      dropdown a question now, each showing what is on the
+                      order. */}
+                  <PickForm
+                    lineId={line.id}
+                    chosen={line.options}
+                    real={
+                      catalogue.find((one) => one.id === line.menu_item_id)
+                        ?.options ?? []
+                    }
+                    add={addOption}
+                    drop={removeOption}
+                  />
+
                   <ChoiceForm
                     lineId={line.id}
                     real={
@@ -361,6 +381,116 @@ export default function OrderEditor({
         </button>
       )}
     </section>
+  );
+}
+
+/** A choice's own words, without the question in front of them. The shop
+ *  writes a menu choice as "Drink: Sprite" when it is added by hand and as
+ *  "Sprite" when it came off the menu, and both mean the same thing. */
+const bare = (said: string): string =>
+  said.includes(": ") ? said.slice(said.indexOf(": ") + 2) : said;
+
+/**
+ * The questions a dish asks, each with its answer on the order.
+ *
+ * Changing a drink used to be four steps: find the chip, press its ×, open
+ * a list of every choice the dish has with all three questions mixed into
+ * it, find Sprite, press Add. One dropdown a question, showing what was
+ * ordered, is the same change in one tap, and it cannot leave two answers
+ * to one question behind the way the old way could.
+ *
+ * Only the questions the menu actually asks. Anything written by hand,
+ * "twelve inches", stays a chip and is still taken off by its ×, because
+ * no dropdown can hold a thing nobody has thought of yet.
+ */
+function PickForm({
+  lineId,
+  chosen,
+  real,
+  add,
+  drop,
+}: {
+  lineId: string;
+  chosen: { id: string; name: string; delta: number; group: string }[];
+  real: { name: string; delta: number }[];
+  add: (form: FormData) => void;
+  drop: (form: FormData) => void;
+}) {
+  const [busy, setBusy] = useState("");
+
+  // "Drink: Sprite" is the question and the answer in one string, which is
+  // how the picker hands them over. Split back into the questions.
+  const groups = useMemo(() => {
+    const out = new Map<string, { label: string; delta: number }[]>();
+    for (const one of real) {
+      const at = one.name.indexOf(": ");
+      if (at < 0) continue;
+      const question = one.name.slice(0, at);
+      const answer = one.name.slice(at + 2);
+      out.set(question, [...(out.get(question) ?? []), { label: answer, delta: one.delta }]);
+    }
+    return [...out.entries()].map(([question, answers]) => ({ question, answers }));
+  }, [real]);
+
+  if (groups.length === 0) return null;
+
+  const answering = (question: string) =>
+    chosen.find(
+      (one) =>
+        one.group === question || one.name.startsWith(`${question}: `)
+    ) ?? null;
+
+  return (
+    <div className="space-y-2 border-t border-black/5 pt-3">
+      {groups.map(({ question, answers }) => {
+        const now = answering(question);
+        return (
+          <label key={question} className="flex items-center gap-2">
+            <span className="w-16 shrink-0 text-xs font-semibold text-muted">
+              {question}
+            </span>
+            <select
+              value={now ? bare(now.name) : ""}
+              disabled={busy !== ""}
+              onChange={async (event) => {
+                const picked = answers.find((one) => one.label === event.target.value);
+                setBusy(question);
+                try {
+                  // Off first, so a question is never left with two
+                  // answers to it on the same order.
+                  if (now) {
+                    const off = new FormData();
+                    off.set("option_row_id", now.id);
+                    await drop(off);
+                  }
+                  if (picked) {
+                    const on = new FormData();
+                    on.set("line_id", lineId);
+                    on.set("name", `${question}: ${picked.label}`);
+                    on.set("delta", String(picked.delta));
+                    await add(on);
+                  }
+                } finally {
+                  setBusy("");
+                }
+              }}
+              className="field bg-white py-1.5 text-sm"
+            >
+              <option value="">Not chosen</option>
+              {answers.map((one) => (
+                <option key={one.label} value={one.label}>
+                  {one.label}
+                  {one.delta !== 0 ? ` (+${one.delta})` : ""}
+                </option>
+              ))}
+            </select>
+            {busy === question && (
+              <span className="text-xs text-muted">Saving…</span>
+            )}
+          </label>
+        );
+      })}
+    </div>
   );
 }
 
