@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { naira } from "@/lib/money";
 import type { Slot } from "@/lib/same-day";
 import {
-  ESTIMATE_NOTE,
   nextArrival,
   otherWorthSaying,
   type ArrivalRun,
@@ -315,30 +314,28 @@ export default function GroupLink({
                     </svg>
                   )}
                 </span>
+                {/*
+                    Two words and a time.
+
+                    This carried a name for each way, a badge, the window,
+                    and then two or three lines explaining why a run costs
+                    less than a car. Nobody buying lunch is choosing
+                    between a run and a car: they are choosing between
+                    cheaper and later, and dearer and sooner. The badge
+                    says which is which and the window says when, so the
+                    paragraph was the shop talking about its own logistics
+                    on the screen where somebody is picking a time.
+                 */}
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="flex flex-wrap items-center justify-between gap-2.5">
-                    <span className="text-[17px] font-bold">
-                      {way.onARun ? "Shared run" : "Private car"}
-                    </span>
-                    <span
-                      className={`ticket px-2 py-1 ${
-                        on ? "bg-volt text-ink" : "border border-ink"
-                      }`}
-                    >
-                      {way.onARun ? "Cheapest" : "Faster"}
-                    </span>
+                  <span
+                    className={`ticket w-fit px-2 py-1 ${
+                      on ? "bg-volt text-ink" : "border border-ink"
+                    }`}
+                  >
+                    {way.onARun ? "Cheaper" : "Sooner"}
                   </span>
                   <span className="font-display text-[26px] font-extrabold uppercase leading-none sm:text-[30px]">
                     {way.said}
-                  </span>
-                  <span
-                    className={`text-sm leading-snug ${
-                      on ? "text-rail-text" : "text-muted"
-                    }`}
-                  >
-                    {way.onARun
-                      ? "Rides the run going out then, so it costs less. Everybody who joins is told the same time."
-                      : "A car of its own, straight to you. Costs more. Everybody who joins is told the same time."}
                   </span>
                 </span>
               </button>
@@ -347,9 +344,8 @@ export default function GroupLink({
         </fieldset>
       )}
 
-      <p className="rounded-xl bg-brand-tint px-3.5 py-3 text-sm leading-snug">
-        {ESTIMATE_NOTE}
-      </p>
+      {/* The estimate said in full under two windows that are already
+          windows. Half an hour either way is what a window is. */}
 
       {error !== "" && <p className="text-sm font-semibold text-brand-dark">{error}</p>}
 
