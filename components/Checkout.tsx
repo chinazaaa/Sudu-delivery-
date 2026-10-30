@@ -612,6 +612,23 @@ export default function Checkout({
    *  behind one word, the way the app has it: sixteen fat buttons is four
    *  rows of them on the page where somebody is trying to finish. */
   const [allBlocks, setAllBlocks] = useState(false);
+  /*
+   * Nothing is empty until the browser has looked.
+   *
+   * The cart lives in this browser, and the page is drawn on the server
+   * where there is no such thing: the first paint of every cart and every
+   * checkout is an empty one, and it stays on the screen until the
+   * JavaScript lands and hydration finishes. On a phone on campus wifi
+   * that is a second or two of "your cart is empty" over a cart with food
+   * in it, in front of somebody who has just tapped Checkout.
+   *
+   * So the empty answer waits for the browser to have read its own
+   * storage. Until then the page says nothing rather than something
+   * false.
+   */
+  const [looked, setLooked] = useState(false);
+  useEffect(() => setLooked(true), []);
+
   const [filled, setFilled] = useState(false);
   const [note, setNote] = useState("");
   // Set once, when the page is drawn, rather than read at submit: what
@@ -1214,6 +1231,15 @@ export default function Checkout({
   if (holdTo !== null) {
     if (holdTo.runId !== batchId) setBatchId(holdTo.runId);
     if (holdTo.at !== deliverAt) setDeliverAt(holdTo.at);
+  }
+
+  if (cart.length === 0 && !looked) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-3 py-10" aria-busy>
+        <div className="h-24 animate-pulse rounded-2xl bg-black/[0.05]" />
+        <div className="h-24 animate-pulse rounded-2xl bg-black/[0.04]" />
+      </div>
+    );
   }
 
   if (cart.length === 0) {
