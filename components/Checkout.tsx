@@ -2272,7 +2272,17 @@ export default function Checkout({
                             value={name}
                             required
                             checked={hostel === name}
-                            onChange={() => setHostel(name)}
+                            /* And it folds back up. Picking is the end of
+                               the question, and the list that answered it
+                               stood open afterwards: four rows of blocks
+                               between the number above and everything
+                               below, which has to be scrolled past every
+                               time. The chosen one leads the short row, so
+                               what is left behind is the answer. */
+                            onChange={() => {
+                              setHostel(name);
+                              setAllBlocks(false);
+                            }}
                             className="sr-only"
                           />
                           {name}

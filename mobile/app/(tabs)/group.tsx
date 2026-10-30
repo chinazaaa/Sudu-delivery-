@@ -4,7 +4,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import {
   api,
-  ESTIMATE_NOTE,
   lagosToday,
   naira,
   nextArrival,
@@ -364,46 +363,76 @@ export default function Group() {
             {/* Said, not asked. The group goes on whatever is going soonest,
                 which is the same answer the checkout gives anybody ordering
                 alone. */}
-            {going && (
-              <View style={{ marginTop: 12 }}>
-                <Text style={{ color: T.muted, marginBottom: 2 }}>When it arrives</Text>
-                <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>
-                  Order now, get it {going.said}
-                </Text>
-                <Text style={{ color: T.muted, fontSize: 12, marginTop: 4 }}>
-                  {going.onARun
-                    ? "It rides the run going out then, which is why it costs less. Everybody who joins is told the same time."
-                    : "A car of your own, because no run is going in time for this. Everybody who joins is told the same time."}
-                </Text>
-                <Text style={{ color: T.muted, fontSize: 12, marginTop: 4 }}>
-                  {ESTIMATE_NOTE}
-                </Text>
+            {/*
+                The two ways, as two cards, the way the website asks it.
 
-                {/* The other way, and a way to take it. Saying it without a
-                    tap would be telling somebody what they cannot have. The
-                    sentence words the one it would move to, so it stays true
-                    whichever way round it currently is. */}
-                {swap && (
-                  <Pressable
-                    onPress={() => setTakeOther((was) => !was)}
-                    style={{
-                      marginTop: 8,
-                      backgroundColor: T.shell,
-                      borderRadius: 12,
-                      paddingHorizontal: 12,
-                      paddingVertical: 10,
-                    }}
-                  >
-                    <Text style={{ color: T.brandDark, fontFamily: F.bodyBold, fontSize: 13 }}>
-                      {(takeOther ? decided : other)?.onARun
-                        ? `Rather pay less? We can be there ${(takeOther ? decided : other)?.said} for less.`
-                        : `In a hurry? We can be there ${(takeOther ? decided : other)?.said}, for more.`}
-                      <Text style={{ textDecorationLine: "underline" }}>
-                        {" "}Tap to start the group on that instead.
-                      </Text>
-                    </Text>
-                  </Pressable>
-                )}
+                This was a sentence saying what the group would go on, a
+                paragraph explaining that a run rides a car already going
+                so it costs less, the estimate in full, and a tinted box
+                offering the other way with a tap. Four blocks of type for
+                one question.
+
+                Nobody is choosing between a run and a car: they are
+                choosing between cheaper and later and dearer and sooner.
+                One word and a time says that, and the one that is picked
+                is the one the group goes on.
+             */}
+            {going && (
+              <View style={{ marginTop: 12, gap: 8 }}>
+                <Text style={{ color: T.muted }}>When it arrives</Text>
+                {(swap && worth ? [decided, worth] : [decided])
+                  .filter((way): way is NonNullable<typeof way> => way !== null)
+                  .map((way) => {
+                    const on = way.said === going.said;
+                    return (
+                      <Pressable
+                        key={way.said}
+                        onPress={() => setTakeOther(way.said !== decided?.said)}
+                        style={{
+                          borderWidth: 2,
+                          borderColor: T.ink,
+                          borderRadius: 14,
+                          backgroundColor: on ? T.ink : T.paper,
+                          padding: 12,
+                          gap: 6,
+                        }}
+                      >
+                        <View
+                          style={{
+                            alignSelf: "flex-start",
+                            borderRadius: 6,
+                            borderWidth: on ? 0 : 1,
+                            borderColor: T.ink,
+                            backgroundColor: on ? T.volt : "transparent",
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontFamily: F.mono,
+                              fontSize: 11,
+                              letterSpacing: 1,
+                              color: T.ink,
+                            }}
+                          >
+                            {way.onARun ? "CHEAPER" : "SOONER"}
+                          </Text>
+                        </View>
+                        <Text
+                          style={{
+                            fontFamily: F.display,
+                            fontSize: 24,
+                            lineHeight: 26,
+                            textTransform: "uppercase",
+                            color: on ? T.onInk : T.ink,
+                          }}
+                        >
+                          {way.said}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
               </View>
             )}
 
