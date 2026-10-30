@@ -1381,6 +1381,12 @@ export default function Checkout({
      * that silently has no Today on it is a row somebody reads twice
      * looking for it. One that says Today is closed has answered them.
      */
+    /** A window with its first letter up: these are written "between 4pm
+     *  and 6:30pm" for the middle of a sentence, and here each one is the
+     *  whole of what an option says. */
+    const said = (window: string) =>
+      window === "" ? "" : window.charAt(0).toUpperCase() + window.slice(1);
+
     const chipFor = (date: string) => {
       if (date === today) return "Today";
       if (date === dayAfter(today)) return "Tomorrow";
@@ -1526,7 +1532,7 @@ export default function Checkout({
         {bothWays.run !== null && bothWays.cars.length > 0 && (
           <div className="space-y-1.5">
             <label className="label text-shell/70" htmlFor="when-how">
-              How it comes
+              What time
             </label>
             <select
               id="when-how"
@@ -1551,24 +1557,21 @@ export default function Checkout({
               }}
             >
               {/*
-                  The time goes on the option that is not picked.
+                  Times, and nothing else.
 
-                  Both options carried their window, and the headline two
-                  inches above carries the window of whichever is picked:
-                  "On the run · between 4pm and 6:30pm" under BETWEEN 4PM
-                  AND 6:30PM, TOMORROW. The only time worth printing here
-                  is the one you cannot see yet, which is the other way's.
+                  These read "On the run" and "A car of its own", which are
+                  the shop's two words for its own arrangements. Nobody
+                  ordering lunch knows what a run is, or needs to: there
+                  are two times on a day that has two, and the only
+                  question is which one suits. The fee follows the choice
+                  and is written out underneath, where the money is.
                */}
               <option value="run">
-                On the run
-                {deliverAt === ""
-                  ? ""
-                  : ` · ${bothWays.run.deliveryWindow || bothWays.run.label}`}
+                {said(bothWays.run.deliveryWindow || bothWays.run.label)}
               </option>
               {bothWays.cars.map((car) => (
                 <option key={car.at} value={`car:${car.at}`}>
-                  A car of its own
-                  {deliverAt === car.at ? "" : ` · ${car.window || car.label}`}
+                  {said(car.window || car.label)}
                 </option>
               ))}
             </select>
