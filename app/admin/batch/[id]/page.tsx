@@ -1430,8 +1430,17 @@ export default async function BatchPage({
                                 {group.lines.length === 1 ? "" : "s"}
                               </span>
                             </span>
+                            {/* What this stop will ask for, not what the
+                                food sold for. The list is read while
+                                driving to it and the number on it is the
+                                one somebody is about to hand over, so
+                                printing the selling total here had the
+                                route disagreeing with the counter sheet it
+                                opens: 28,450 on the card, 16,150 at the
+                                till. Less anything that turned out to be
+                                sold out, exactly as the sheet counts it. */}
                             <span className="font-display text-[25px] font-black leading-none">
-                              {naira(group.expectedFoodTotal)}
+                              {naira(costAt(group))}
                             </span>
                           </Link>
                           {/* Arranged from the list itself. Opening every
