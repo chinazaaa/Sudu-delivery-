@@ -446,12 +446,20 @@ export default function Home({
                 <li key={kind.label}>
                   <Link
                     href={kindHref(kind)}
-                    className="flex h-full min-h-[104px] flex-col items-start justify-between gap-2 rounded-xl border-2 border-ink bg-paper p-4 transition active:translate-x-0.5 active:translate-y-0.5"
+                    /* Smaller tiles, same grid. Nine of them at a hundred
+                       and four pixels each is a whole phone screen for a
+                       row of signposts, and what is under them, what
+                       everybody is ordering, was never seen. A slider
+                       would save the same space by hiding five of the
+                       nine, which is the wrong trade for the one control
+                       that is the way into the menu: all nine fit in half
+                       the height instead. */
+                    className="flex h-full min-h-[76px] flex-col items-start justify-between gap-1 rounded-xl border-2 border-ink bg-paper p-2.5 transition active:translate-x-0.5 active:translate-y-0.5 sm:min-h-[96px] sm:gap-2 sm:p-4"
                   >
-                    <span aria-hidden className="text-3xl leading-none">
+                    <span aria-hidden className="text-xl leading-none sm:text-3xl">
                       {kind.emoji}
                     </span>
-                    <span className="font-display text-[19px] font-extrabold uppercase leading-none">
+                    <span className="font-display text-[15px] font-extrabold uppercase leading-[1.05] sm:text-[19px]">
                       {kind.label}
                     </span>
                   </Link>
