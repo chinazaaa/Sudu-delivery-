@@ -5,7 +5,13 @@ import { otherMoneyTotals, type OtherMoney } from "./other-money";
 // own copies, and they drifted: food nobody typed into a sheet was counted
 // as having cost nothing, so a half-reconciled run read as a large saving
 // and this page claimed a profit the dashboard never agreed with.
-import { chargedByRestaurant, commissionByRun, counterCosts, overMenu } from "./admin";
+import {
+  chargedByRestaurant,
+  choiceCosts,
+  commissionByRun,
+  counterCosts,
+  overMenu,
+} from "./admin";
 import type { Batch, Order } from "./types";
 
 /**
@@ -504,14 +510,18 @@ export async function profitByKitchen(from: string, to: string): Promise<ByKitch
   // What these things really cost, where somebody has written it down off a
   // board or a receipt, so this page and the run's own sheet reckon the
   // same food the same way.
-  const atCounter = await counterCosts(lines.map((line) => line.menu_item_id));
+  const [atCounter, perChoice] = await Promise.all([
+    counterCosts(lines.map((line) => line.menu_item_id)),
+    choiceCosts(lines.map((line) => line.menu_item_id)),
+  ]);
 
   const rows: KitchenRunRow[] = reconciled.flatMap((id) =>
     chargedByRestaurant(
       lines.filter((line) => runOfOrder.get(line.order_id) === id),
       spend.filter((row) => String(row.batch_id) === id),
       {},
-      atCounter
+      atCounter,
+      perChoice
     ).map((place) => ({
       restaurant: place.restaurant,
       batchId: id,

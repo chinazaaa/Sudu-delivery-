@@ -1739,7 +1739,7 @@ export default async function BatchPage({
                                       )}
                                     </span>
                                     <span className="shrink-0 font-mono text-[13.5px] font-semibold">
-                                      {naira(one.expectedFoodTotal)}
+                                      {naira(costAt(one))}
                                     </span>
                                   </Link>
                                 </li>
@@ -1762,8 +1762,13 @@ export default async function BatchPage({
                         className="flex justify-between gap-3 border-t-[1.5px] border-rule py-2"
                       >
                         <span>{group.restaurant}</span>
+                        {/* The money that leaves your hand, which is the
+                            counter's price and not ours. The rows said the
+                            selling price while the total under them said
+                            the cost, so the column did not add up to its
+                            own total. */}
                         <span className="font-mono font-semibold">
-                          {naira(group.expectedFoodTotal)}
+                          {naira(costAt(group))}
                         </span>
                       </li>
                     ))}

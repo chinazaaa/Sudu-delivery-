@@ -1514,7 +1514,10 @@ export async function overMenu(
   // What these things really cost, where somebody has written it down, so
   // this agrees with the run's own sheet rather than reckoning the same
   // food two ways on two screens.
-  const atCounter = await counterCosts(lines.map((line) => line.menu_item_id));
+  const [atCounter, perChoice] = await Promise.all([
+    counterCosts(lines.map((line) => line.menu_item_id)),
+    choiceCosts(lines.map((line) => line.menu_item_id)),
+  ]);
 
   for (const id of reconciledIds) {
     const mine = lines.filter((line) => batchOfOrder.get(line.order_id) === id);
@@ -1522,7 +1525,8 @@ export async function overMenu(
       mine,
       spend.filter((row) => row.batch_id === id),
       markups,
-      atCounter
+      atCounter,
+      perChoice
     ).reduce(
       (total, place) => total + place.charged,
       0
@@ -1582,7 +1586,17 @@ export function chargedByRestaurant(
    * over and the costs are one query its callers already have reason to
    * make. Empty is the markup sum, which is how it worked before.
    */
-  costs: Map<string, number> = new Map()
+  costs: Map<string, number> = new Map(),
+  /*
+   * And what each choice adds at the counter, by the words it is called.
+   *
+   * A cost against an item is the cost of the ordinary one, so a large
+   * pizza was being counted as a medium here exactly as it was on the run
+   * sheet: the shop looked more profitable than it was, by the size of
+   * every size anybody ordered. Empty counts the item alone, which is how
+   * this worked before.
+   */
+  choices: Map<string, Map<string, number>> = new Map()
 ): CounterCharge[] {
   const spentOn = new Map(spend.map((row) => [row.line_key, Number(row.paid ?? 0)]));
   const gotBack = new Map(spend.map((row) => [row.line_key, Number(row.recovered ?? 0)]));
@@ -1603,7 +1617,14 @@ export function chargedByRestaurant(
           );
         }
         const said = costs.get(line.itemId) ?? 0;
-        if (said > 0) return total + said * line.qty;
+        if (said > 0) {
+          const mine = choices.get(line.itemId) ?? new Map<string, number>();
+          const sizes = (line.picks ?? []).reduce(
+            (sum, pick) => sum + (mine.get(pick.name.trim().toLowerCase()) ?? 0),
+            0
+          );
+          return total + (said + sizes) * line.qty;
+        }
         return (
           total +
           (markup === undefined
