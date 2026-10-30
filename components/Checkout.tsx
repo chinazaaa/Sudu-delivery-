@@ -2242,24 +2242,44 @@ export default function Checkout({
                   : hostels.slice(0, 5);
                 const open =
                   allBlocks || (hostel !== "" && !few.includes(hostel));
+                /*
+                 * Opening it shows the blocks, not a box to open next.
+                 *
+                 * "All 16 blocks" used to swap the chips for a dropdown,
+                 * which is two taps to see a list and a third to pick out
+                 * of it. The app opens straight onto the names. So does
+                 * this: one tap to ask for them, one tap to choose.
+                 */
                 return open ? (
-                  <select
-                    id="hostel"
-                    name="hostel"
-                    required
-                    value={hostels.includes(hostel) ? hostel : ""}
-                    onChange={(event) => setHostel(event.target.value)}
-                    className="field"
+                  <div
+                    role="radiogroup"
+                    aria-label="Hostel block"
+                    className="max-h-[42vh] overflow-y-auto rounded-xl border-2 border-line p-2"
                   >
-                    <option value="" disabled>
-                      Pick your block
-                    </option>
-                    {hostels.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                      {hostels.map((name) => (
+                        <label
+                          key={name}
+                          className={`chip min-h-11 cursor-pointer px-3 text-sm font-semibold sm:px-4 sm:text-[15px] ${
+                            hostel === name
+                              ? "border-ink bg-brand text-white"
+                              : "border-line bg-paper"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="hostel"
+                            value={name}
+                            required
+                            checked={hostel === name}
+                            onChange={() => setHostel(name)}
+                            className="sr-only"
+                          />
+                          {name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 ) : (
                   <div
                     role="radiogroup"
