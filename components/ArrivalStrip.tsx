@@ -76,8 +76,18 @@ export default function ArrivalStrip({
       <span className="mt-4 grid grid-cols-3 gap-3 text-sm">
         <span className="min-w-0">
           <span className="ticket block text-shell/60">From</span>
+          {/*
+              Breaking at the slash, not inside Lekki.
+
+              Two names joined by a slash have nowhere a browser is allowed
+              to break, so the cell wrapped wherever it ran out of room:
+              "Sangotedo/L" over "ekki". A zero width space after the slash
+              is the one place a break belongs, and it is invisible and
+              copies as nothing. Anywhere is kept as the last resort for a
+              single name longer than the column.
+           */}
           <span className="block font-bold [overflow-wrap:anywhere]">
-            {from || "Sangotedo"}
+            {(from || "Sangotedo").replace(/\//g, "/\u200B")}
           </span>
         </span>
         <span className="min-w-0">
