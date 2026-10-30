@@ -30,7 +30,6 @@ import {
   type DayOnOffer,
   dearestArea,
   mixedExtra,
-  ESTIMATE_NOTE,
   lagosToday,
   naira,
   nextArrival,
@@ -624,11 +623,10 @@ export default function Checkout() {
           </Text>
         )}
 
-        {/* An estimate, and said to be one: four o'clock to the minute is a
-            promise nobody can keep in Lagos traffic. */}
-        <Text style={{ color: T.onInkMuted, fontFamily: F.body, fontSize: 13, lineHeight: 19 }}>
-          {ESTIMATE_NOTE}
-        </Text>
+        {/* The estimate used to be said here in full: half an hour either
+            way, called when it is at your block. Three lines of small type
+            under a headline that already gives a window, on the screen
+            where somebody is trying to finish. The window is the estimate. */}
 
         {/*
             The one thing this card cannot do.
@@ -654,9 +652,8 @@ export default function Checkout() {
             <Text
               style={{ color: T.onInkMuted, fontFamily: F.body, fontSize: 13, lineHeight: 19 }}
             >
-              Cannot find your day, or need it sooner?{" "}
-              <Text style={{ fontFamily: F.bodyBold, color: T.volt }}>Message us</Text>{" "}
-              and we will say what we can do.
+              Need another day or time?{" "}
+              <Text style={{ fontFamily: F.bodyBold, color: T.volt }}>Message us</Text>
             </Text>
           </Pressable>
         )}
