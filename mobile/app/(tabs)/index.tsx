@@ -142,7 +142,47 @@ export default function Home() {
   // Empty when parcels are off, and then the page does not mention them.
   const [parcels, setParcels] = useState("");
 
+  /*
+   * The doors, off the one answer wherever the shop sends them.
+   *
+   * Each of these used to be a request of its own, and each filled in its
+   * own strip of the page as it landed: the page assembled itself in front
+   * of somebody for several seconds on campus wifi. They ride with the
+   * menu now. The four calls underneath are the fallback for a server
+   * older than that, so an app in somebody's pocket keeps working.
+   */
+  const given = shop?.doors ?? null;
+
   useEffect(() => {
+    if (!given) return;
+    setSkincare(given.skincare.on ? `Order any day. It comes ${given.skincare.when}.` : "");
+    setPharmacy(given.pharmacy.on ? `Order any day. It comes ${given.pharmacy.when}.` : "");
+    setParcels(
+      given.parcels.on && given.parcels.places.length > 0
+        ? `${
+            given.parcels.places.length > 1
+              ? `${given.parcels.places.slice(0, -1).join(", ")} and ${
+                  given.parcels.places[given.parcels.places.length - 1]
+                }`
+              : given.parcels.places[0]
+          }, to PAU and back. Its own trip, on a day we agree.`
+        : ""
+    );
+    setShelves(
+      given.shelves.slice(0, 8).map((one) => ({
+        slug: one.slug,
+        name: one.name,
+        from: one.from,
+        kind: one.kind ?? "collection",
+        image: one.image ?? "",
+      }))
+    );
+  }, [given]);
+
+  useEffect(() => {
+    // Answered with the menu: nothing to ask for.
+    if (given) return;
+
     void api
       .shelf()
       .then((next) => {
@@ -206,7 +246,7 @@ export default function Home() {
       .catch(() => {
         /* Also a door. */
       });
-  }, []);
+  }, [given]);
 
   // The order of the doors, as the website has it. An older server sends
   // none, and then the app keeps the order both of them ship with.

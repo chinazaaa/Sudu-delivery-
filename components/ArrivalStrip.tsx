@@ -87,7 +87,11 @@ export default function ArrivalStrip({
         <span className="min-w-0">
           <span className="ticket block text-shell/60">Fee from</span>
           <span className="block font-bold [overflow-wrap:anywhere]">
-            {feeFrom > 0 ? `${naira(feeFrom)} / car` : "see fees"}
+            {/* The figure on its own. "/ car" was answering a question
+                nobody standing here is asking: the label above already
+                says this is the fee and that it is the lowest one, and a
+                unit nobody uses reads as a second number to work out. */}
+            {feeFrom > 0 ? naira(feeFrom) : "see fees"}
           </span>
         </span>
       </span>

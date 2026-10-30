@@ -158,7 +158,23 @@ function Floater({
         position: "absolute",
         left: left as unknown as number,
         fontSize: size,
-        opacity: 0.22,
+        /*
+         * Solid enough to be seen.
+         *
+         * This sat at 0.22, on the theory that something drifting over the
+         * words should be faint. Over a cream page in daylight, a fifth of
+         * a pumpkin is a smudge: the decorations read as dust on the screen
+         * rather than as decoration, and a decoration nobody can see costs
+         * the same as one nobody wanted. The website learnt this and went
+         * to 0.9; the app was left behind, so Halloween was on the site and
+         * barely on the phone.
+         */
+        opacity: 0.9,
+        // A little shadow so a pale ghost still reads over a pale page,
+        // the same as the website's.
+        textShadowColor: "rgba(36, 22, 51, 0.35)",
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
         transform: [
           {
             translateY: along.interpolate({

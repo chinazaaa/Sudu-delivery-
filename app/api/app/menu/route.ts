@@ -26,6 +26,7 @@ import {
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { ERRANDS } from "@/lib/errands";
 import { readDoors } from "@/lib/home-doors";
+import { appDoors } from "@/lib/app-doors";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 import { liveRibbon } from "@/lib/ribbon";
@@ -188,8 +189,24 @@ export async function GET(): Promise<NextResponse> {
       }))
     );
 
+    /*
+     * The four doors, answered here rather than asked for one at a time.
+     *
+     * The home screen used to fetch the skincare shelf, the pharmacy
+     * shelf, the parcel routes and the boxes itself, each filling in its
+     * own strip of the page as it landed. On a phone that is the page
+     * assembling in front of somebody for several seconds. They are small
+     * and already cached, so they ride along with the menu the app is
+     * fetching anyway.
+     *
+     * Never at the cost of the menu: a door that cannot be read is a door
+     * the app does not draw, exactly as before.
+     */
+    const doors = await appDoors().catch(() => null);
+
     return NextResponse.json({
       menu,
+      doors,
       hostels,
       sameDay: {
         slots,

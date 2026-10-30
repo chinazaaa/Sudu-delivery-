@@ -349,8 +349,31 @@ export type Slot = {
   urgent: boolean;
 };
 
+/** The four doors on the home screen, answered with the menu. */
+export type Doors = {
+  skincare: { on: boolean; when: string };
+  pharmacy: { on: boolean; when: string };
+  parcels: { on: boolean; places: string[] };
+  shelves: {
+    slug: string;
+    name: string;
+    from: number | null;
+    kind: string;
+    image: string;
+  }[];
+};
+
 export type Shop = {
   menu: Place[];
+  /*
+   * The doors, in the same answer as the menu.
+   *
+   * The home screen used to ask for each of these itself, and each one
+   * filled in its own strip of the page as it landed: the page assembled
+   * itself in front of somebody, one section at a time. Missing where the
+   * server is older than this, and then the screen asks the old way.
+   */
+  doors?: Doors | null;
   /** The blocks admin delivers to. Empty means the list is not set up, and
    *  the checkout falls back to a typed answer exactly as the website does. */
   hostels?: string[];
