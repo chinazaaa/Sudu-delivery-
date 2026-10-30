@@ -502,6 +502,26 @@ export default function Checkout({
     farShops.length === 1
       ? farShops[0]
       : `${farShops.slice(0, -1).join(", ")} and ${farShops[farShops.length - 1]}`;
+  /*
+   * Each of them with its own part of Lagos.
+   *
+   * "The Place and Yin Yang Express are in Ajah and Lekki" leaves the
+   * reader to work out which is which, and the cart's version of this
+   * sentence put both of them in Ajah. Yin Yang Express is in Lekki. Said
+   * one by one, there is nothing to work out and nothing to get wrong.
+   */
+  const farWhereSaid = (() => {
+    const pairs = [
+      ...new Map(
+        farLines.map((line) => [
+          line.restaurantName,
+          far.find((one) => one.id === (areaOf[line.restaurantId] ?? ""))?.name ?? "",
+        ])
+      ).entries(),
+    ].map(([shop, where]) => (where ? `${shop} is in ${where}` : shop));
+    if (pairs.length <= 1) return pairs[0] ?? "";
+    return `${pairs.slice(0, -1).join(", ")} and ${pairs[pairs.length - 1]}`;
+  })();
 
 
   // The soonest run that can carry the far half of this cart, against the
@@ -1746,8 +1766,7 @@ export default function Checkout({
         {farHoldsItUp && withoutFar && (
           <p className="soft border-2 border-brand bg-brand-wash px-3.5 py-2.5 text-[14.5px] text-brand-dark">
             <span className="font-semibold">
-              {farShopSaid} {farShops.length === 1 ? "is" : "are"} in {farNames},
-              which is what sets the date above.
+              {farWhereSaid}, which is what sets the date above.
             </span>{" "}
             Take {farLines.length === 1 ? "it" : "those"} out and the rest can
             come {withoutFar.said}.{" "}

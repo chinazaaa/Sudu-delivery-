@@ -639,10 +639,38 @@ export default function CartView({
     return area !== undefined && !area.sameDay;
   });
   const runOnlyNames = [...new Set(runOnlyLines.map((line) => line.restaurantName))];
-  const runOnlySaid =
-    runOnlyNames.length === 1
-      ? runOnlyNames[0]
-      : `${runOnlyNames.slice(0, -1).join(", ")} and ${runOnlyNames[runOnlyNames.length - 1]}`;
+  /** A list said the way it is read: "A", "A and B", "A, B and C". */
+  const listed = (words: string[], joiner = "and") =>
+    words.length <= 1
+      ? (words[0] ?? "")
+      : `${words.slice(0, -1).join(", ")} ${joiner} ${words[words.length - 1]}`;
+  const runOnlySaid = listed(runOnlyNames);
+  /*
+   * Which shop is in which part of Lagos, said one by one.
+   *
+   * This used to take the area off the first of them and put every name in
+   * it, so a cart with The Place and Yin Yang Express in it told somebody
+   * that Yin Yang Express is in Ajah. It is in Lekki. A sentence the
+   * customer can see is wrong is worse than no sentence: it is the shop
+   * being confidently wrong about its own counters.
+   */
+  const areaNameOf = (restaurantId: string) =>
+    areas.find((one) => one.id === (areaOf[restaurantId] ?? ""))?.name ?? "";
+  const runOnlyWhere = [
+    ...new Map(
+      runOnlyLines.map((line) => [
+        line.restaurantName,
+        areaNameOf(line.restaurantId),
+      ])
+    ).entries(),
+  ];
+  const runOnlyWhereSaid = listed(
+    runOnlyWhere.map(([shop, where]) => (where ? `${shop} is in ${where}` : shop))
+  );
+  const runOnlyAreasSaid = listed(
+    [...new Set(runOnlyWhere.map(([, where]) => where).filter(Boolean))],
+    "or"
+  );
   /*
    * The day we are next going there, said the way a day is said.
    *
@@ -871,15 +899,15 @@ export default function CartView({
         <div className="rounded-2xl border border-brand/30 bg-brand-tint px-4 py-3">
           <p className="text-sm text-brand-dark">
             <span className="font-bold">
-              We are not going to {runOnlyArea} today
+              We are not going to {runOnlyAreasSaid || runOnlyArea} today
               {goingWord !== "" ? `, we are going ${goingWord}` : ""}.
             </span>{" "}
-            {runOnlySaid} {runOnlyNames.length === 1 ? "is" : "are"} there,
+            {runOnlyWhereSaid || runOnlySaid}
             {runOnlyLines.length < cart.length
-              ? " and the whole order comes in one car, so all of it comes then. Take it out and the rest can come sooner."
+              ? ", and the whole order comes in one car, so all of it comes then. Take those out and the rest can come sooner."
               : goingWord !== ""
-                ? " so that is when it comes."
-                : " and we do not have the next day for it yet. Message us and we will say."}
+                ? ", so that is when it comes."
+                : ", and we do not have the next day for it yet. Message us and we will say."}
           </p>
         </div>
       )}
