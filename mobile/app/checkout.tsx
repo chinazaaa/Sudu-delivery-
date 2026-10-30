@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useIceInCart } from "@/lib/ice";
 import {
   ActivityIndicator,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -49,6 +50,7 @@ import KeepCart from "@/components/KeepCart";
 import { registerForPush } from "@/lib/push";
 import { Card, Display, Ticket } from "@/components/ui";
 import { F, T } from "@/lib/theme";
+import { whatsappTo } from "@/lib/whatsapp";
 
 /** Who it is for, which run, and how they are paying. Nothing else. */
 export default function Checkout() {
@@ -617,6 +619,37 @@ export default function Checkout() {
         <Text style={{ color: T.onInkMuted, fontFamily: F.body, fontSize: 13, lineHeight: 19 }}>
           {ESTIMATE_NOTE}
         </Text>
+
+        {/*
+            The one thing this card cannot do.
+            
+            Everything above is the shop's timetable. Somebody who needs it
+            in forty minutes, or wants a day that is not on the list, is
+            outside it, and whether it can be done at all depends on where
+            the car is this minute, which only a person knows. One line
+            with the message already written beats letting them read the
+            days twice and close the app.
+         */}
+        {(shop?.shop.whatsapp ?? "") !== "" && (
+          <Pressable
+            onPress={() =>
+              Linking.openURL(
+                whatsappTo(
+                  shop?.shop.whatsapp ?? "",
+                  "Hi Sudu, I need my order on a day that is not on the list."
+                )
+              )
+            }
+          >
+            <Text
+              style={{ color: T.onInkMuted, fontFamily: F.body, fontSize: 13, lineHeight: 19 }}
+            >
+              Cannot find your day, or need it sooner?{" "}
+              <Text style={{ fontFamily: F.bodyBold, color: T.volt }}>Message us</Text>{" "}
+              and we will say what we can do.
+            </Text>
+          </Pressable>
+        )}
 
         {noRunThere && (
           <Text style={{ color: T.volt, fontFamily: F.bodySemi, fontSize: 14, lineHeight: 20 }}>

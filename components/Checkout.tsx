@@ -608,6 +608,10 @@ export default function Checkout({
   const [name, setName] = useState(adding?.name ?? you?.name ?? "");
   const [phone, setPhone] = useState(adding?.phone ?? you?.phone ?? "");
   const [hostel, setHostel] = useState(adding?.hostel ?? you?.hostel ?? "");
+  /** Whether the whole list of blocks is open. A few to tap and the rest
+   *  behind one word, the way the app has it: sixteen fat buttons is four
+   *  rows of them on the page where somebody is trying to finish. */
+  const [allBlocks, setAllBlocks] = useState(false);
   const [filled, setFilled] = useState(false);
   const [note, setNote] = useState("");
   // Set once, when the page is drawn, rather than read at submit: what
@@ -2140,54 +2144,90 @@ export default function Checkout({
             className={`field ${badPhone ? "border-red-400 ring-4 ring-red-100" : ""}`}
             autoComplete="tel"
           />
-          <p className="mt-1 text-xs text-muted">
-            {badPhone
-              ? "A Nigerian mobile: 0803 123 4567, or +234 803 123 4567."
-              : "This is how you are reached, and what matches your transfer."}
-          </p>
+          {/* Only when it is wrong. "This is how you are reached" under a
+              box labelled Phone is the form explaining itself to somebody
+              who has filled in a form before. */}
+          {badPhone && (
+            <p className="mt-1 text-xs text-brand">
+              A Nigerian mobile: 0803 123 4567, or +234 803 123 4567.
+            </p>
+          )}
         </div>
         <div>
           <label className="label" htmlFor="hostel">Hostel / block</label>
           {hostels.length > 0 ? (
             <>
-              {/* Blocks as chips rather than a dropdown. There are sixteen of
-                  them and the answer is always one somebody already knows, so
-                  a list you can see beats a list you have to open, scroll and
-                  pick out of on a phone.
+              {/*
+                  A few to tap, and the rest behind one word.
 
-                  Real radios underneath, so the browser's own "pick one"
-                  still works and the form submits without any help from us. */}
-              <div role="radiogroup" aria-label="Hostel block" className="flex flex-wrap gap-1.5 sm:gap-2">
-                {hostels.map((name) => (
-                  <label
-                    key={name}
-                    className={`chip min-h-11 cursor-pointer px-3 text-sm font-semibold sm:px-4 sm:text-[15px] ${
-                      hostel === name
-                        ? "border-ink bg-brand text-white"
-                        : "border-line bg-paper"
-                    }`}
+                  Sixteen blocks as chips is four rows of fat buttons
+                  pushing the rest of the form off the screen, on the one
+                  page where somebody is trying to finish. A plain dropdown
+                  hides the common answer behind a tap and a scroll. So:
+                  the first few where a thumb can reach them, and all
+                  sixteen one tap away, which is what the app does.
+               */}
+              {(() => {
+                const few = hostels.slice(0, 5);
+                const open =
+                  allBlocks || (hostel !== "" && !few.includes(hostel));
+                return open ? (
+                  <select
+                    id="hostel"
+                    name="hostel"
+                    required
+                    value={hostels.includes(hostel) ? hostel : ""}
+                    onChange={(event) => setHostel(event.target.value)}
+                    className="field"
                   >
-                    <input
-                      type="radio"
-                      name="hostel"
-                      value={name}
-                      required
-                      checked={hostel === name}
-                      onChange={() => setHostel(name)}
-                      className="sr-only"
-                    />
-                    {hostel === name && (
-                      <svg viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                        <path d="M5 12l5 5 9-10" />
-                      </svg>
+                    <option value="" disabled>
+                      Pick your block
+                    </option>
+                    {hostels.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div
+                    role="radiogroup"
+                    aria-label="Hostel block"
+                    className="flex flex-wrap gap-1.5 sm:gap-2"
+                  >
+                    {few.map((name) => (
+                      <label
+                        key={name}
+                        className={`chip min-h-11 cursor-pointer px-3 text-sm font-semibold sm:px-4 sm:text-[15px] ${
+                          hostel === name
+                            ? "border-ink bg-brand text-white"
+                            : "border-line bg-paper"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="hostel"
+                          value={name}
+                          required
+                          checked={hostel === name}
+                          onChange={() => setHostel(name)}
+                          className="sr-only"
+                        />
+                        {name}
+                      </label>
+                    ))}
+                    {hostels.length > few.length && (
+                      <button
+                        type="button"
+                        onClick={() => setAllBlocks(true)}
+                        className="chip min-h-11 border-dashed border-ink/40 bg-paper px-3 text-sm font-semibold sm:px-4 sm:text-[15px]"
+                      >
+                        All {hostels.length} blocks
+                      </button>
                     )}
-                    {name}
-                  </label>
-                ))}
-              </div>
-              <p className="mt-1.5 text-sm text-muted">
-                We hand it to you at this block, not the gate.
-              </p>
+                  </div>
+                );
+              })()}
               {hostel !== "" && !hostels.includes(hostel) && (
                 <p className="mt-1 text-xs text-brand">
                   You used &quot;{hostel}&quot; last time, which is not on the
