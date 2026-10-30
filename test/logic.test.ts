@@ -13,7 +13,7 @@ import { runToWorkOn, type RunToPick } from "../lib/which-run";
 import { dayCostSoFar, shareOut, splitDayCosts } from "../lib/day-costs";
 import { windowGone } from "../lib/last-minute";
 import { carsBeforeTheRun } from "../lib/one-driver";
-import { dayAfter, daySaid, daysOnOffer, dayOfChoice, soonestDay } from "../lib/pick-a-day";
+import { dayAfter, daySaid, daysOnOffer, dayOfChoice, dayToHoldTo, soonestDay } from "../lib/pick-a-day";
 import { carsStillDrivable, driverIsOut } from "../lib/one-driver";
 import { saidPick, saidPicks, saidPicksLine } from "../lib/picks";
 import { closureSaid, datesIn, isOn, rangeLabel } from "../lib/closures";
@@ -7316,4 +7316,51 @@ test("a stop carrying ice cream drops behind the ones that are not", () => {
     ).map((one) => one.restaurant),
     ["KFC", "Domino's Pizza", "Burger King", "Cold Stone Creamery"]
   );
+});
+
+/*
+ * The Ajah checkout that quoted five thousand for a run that was not going.
+ *
+ * The page settles its run before the cart has finished loading out of the
+ * browser. An empty cart can go on any run, so today's Sangotedo run was
+ * picked; the Ajah food landed a second later and nothing looked again.
+ */
+test("a run the cart cannot go on is let go of for the soonest day it can", () => {
+  const days = daysOnOffer({
+    runs: [{ id: "tomorrow-ajah", runDate: "2026-10-31" }],
+    slots: [{ at: "2026-10-30T15:00:00.000Z", date: "2026-10-30" }],
+  });
+
+  // The car tonight, not tomorrow's run: today is the soonest day on
+  // offer, and it is a car day, so the window is the answer and no run is
+  // held at all.
+  const held = dayToHoldTo(days, { runId: "today-sangotedo", at: "" }, "tomorrow-ajah", true);
+  assert.deepEqual(held, { runId: "", at: "2026-10-30T15:00:00.000Z" });
+});
+
+test("somebody who is never offered a car is put on a run instead", () => {
+  const days = daysOnOffer({
+    runs: [{ id: "tomorrow", runDate: "2026-10-31" }],
+    slots: [{ at: "2026-10-30T15:00:00.000Z", date: "2026-10-30" }],
+  });
+
+  // No car on offer: somebody joining a friend is on the run by definition,
+  // so the window is never the answer for them.
+  assert.deepEqual(
+    dayToHoldTo(days, { runId: "gone", at: "" }, "tomorrow", false),
+    { runId: "tomorrow", at: "" }
+  );
+});
+
+test("a day already on offer is left exactly as it is", () => {
+  const days = daysOnOffer({
+    runs: [{ id: "tomorrow", runDate: "2026-10-31" }],
+    slots: [],
+  });
+
+  assert.equal(dayToHoldTo(days, { runId: "tomorrow", at: "" }, "tomorrow", true), null);
+});
+
+test("nothing on offer at all changes nothing, rather than clearing the page", () => {
+  assert.equal(dayToHoldTo([], { runId: "whatever", at: "" }, "", true), null);
 });

@@ -56,6 +56,7 @@ import { waLink } from "@/lib/whatsapp";
 import {
   dayAfter,
   dayOfChoice,
+  dayToHoldTo,
   daySaid,
   daysOnOffer,
   soonestDay,
@@ -555,31 +556,18 @@ export default function Checkout({
   // coupon and the offer rules are asked about. The time is what decides
   // the price, and it wins wherever both are set.
   const [batchId, setBatchId] = useState(
-    adding?.batchId ??
+    adding?.batchId ||
       // A car of its own carries a run id too, so where the soonest day
-      // is a car day this still falls through to a real run.
-      firstDay?.runId ??
-      decided?.runId ??
-      openable[0]?.id ??
+      // is a car day this still falls through to a real run. Falling
+      // through on empty rather than on null on purpose: the soonest
+      // arrival writes an empty run id for a car, and `??` kept that empty
+      // string as the answer, which left the page holding no run at all.
+      firstDay?.runId ||
+      decided?.runId ||
+      openable[0]?.id ||
       ""
   );
 
-  // The run is picked once, when the page is drawn, and the cart can change
-  // after that. Adding something from Lekki to a cart that was going out
-  // tomorrow leaves tomorrow's run picked although it cannot carry it, so the
-  // page said "get it between 5pm and 7pm tomorrow" directly above "no run is
-  // going to Lekki/Ikoyi". Whenever the picked run cannot carry what is in
-  // the cart, it moves to one that can.
-  //
-  // Not while adding to an order already placed: that one is locked to its
-  // own run, which is the whole point of adding to it.
-  if (
-    adding === null &&
-    batchId !== "" &&
-    !openable.some((one) => one.id === batchId)
-  ) {
-    setBatchId(decided?.runId ?? openable[0]?.id ?? "");
-  }
   const [method, setMethod] = useState<"transfer" | "card">(you?.paymentMethod ?? "transfer");
   // Empty is naira, which is nearly every order. Cleared whenever somebody
   // goes back to a transfer, so a currency cannot ride along on an order
@@ -1179,6 +1167,48 @@ export default function Checkout({
     if (!offersSameDay && deliverAt) setDeliverAt("");
   }, [offersSameDay, deliverAt]);
 
+  /*
+   * The day on the page, kept to a day the shop can really do.
+   *
+   * Both halves of the answer are held here: a run id and, where it is a
+   * car of its own, the time. They are settled when the page is first
+   * drawn, and at that moment the cart is still being read out of the
+   * browser, so they are settled for an empty cart. An empty cart can go
+   * on any run at all, so today's run was picked, and when the Ajah food
+   * arrived a second later nothing went back and looked again: today's
+   * run cannot reach Ajah, so the page quietly held a run that was not on
+   * the list, said "on the next run", and quoted the run ladder for a day
+   * nothing was going. A lady in Ajah was shown five thousand for a trip
+   * that was not happening.
+   *
+   * So whenever the pair does not name a day that is on offer, it moves to
+   * the soonest day that is, and moves both halves together: the run where
+   * that day has one, the window where it is a car. A car day still keeps
+   * a run id where there is a run to keep, because that is what the
+   * coupons and the offers are asked about, and the time is what the price
+   * is worked out from.
+   *
+   * It also covers what this replaced, which was the same repair done to
+   * the run alone: a Lekki bowl added to a cart going out on tomorrow's
+   * Sangotedo run leaves that run picked although it cannot carry it.
+   *
+   * Not while adding to an order already placed: that one is locked to its
+   * own run, which is the whole point of adding to it.
+   */
+  const holdTo =
+    adding === null
+      ? dayToHoldTo(
+          dayChoices,
+          { runId: batchId, at: deliverAt },
+          openable[0]?.id ?? "",
+          offersSameDay
+        )
+      : null;
+  if (holdTo !== null) {
+    if (holdTo.runId !== batchId) setBatchId(holdTo.runId);
+    if (holdTo.at !== deliverAt) setDeliverAt(holdTo.at);
+  }
+
   if (cart.length === 0) {
     return (
       <Empty icon="cart" title="Your cart is empty" href="/" action="Browse the menu">
@@ -1645,39 +1675,32 @@ export default function Checkout({
             far counter is in the cart, and the only sentence that makes
             sense of it was the third paragraph down in small grey type. */}
         {/*
-            Only where the far counter is actually what sets the date.
+            Only where there is something to do about it.
 
-            It said "The Place is in Ajah, and we only go there on a run,
-            that is what sets the date above" over a picker reading today,
-            between four and seven, which is a car of its own going there
-            this afternoon. Both halves wrong at once: nothing was being
-            held up, and the thing it said we never do was the thing on the
-            screen above it.
+            This used to explain the shop's own words back at the customer:
+            "The Place is in Ajah, and we only go there on a run." Nobody
+            ordering lunch knows or cares what a run is, and on Ajah it was
+            not even true, because nothing runs there and the car is the
+            only way it ever goes. It also sat over a picker reading today
+            between four and seven, so it was explaining a delay that was
+            not happening.
 
-            So it waits for a date that is not today, which is the only
-            time the sentence explains anything, and it only claims a run
-            where a car genuinely cannot go for this cart.
+            What is worth saying is the one case where the customer can
+            act: this shop is why the date is what it is, and taking it out
+            brings the rest sooner. Said in days and food, with no word
+            about how we drive. Everything else is the shop's business.
         */}
-        {far.length > 0 && !noRunThere && !comesToday && (
+        {farHoldsItUp && withoutFar && (
           <p className="soft border-2 border-brand bg-brand-wash px-3.5 py-2.5 text-[14.5px] text-brand-dark">
             <span className="font-semibold">
-              {farShopSaid} {farShops.length === 1 ? "is" : "are"} in {farNames}
-              {sameDaySlots.length === 0
-                ? ", and we only go there on a run."
-                : "."}
+              {farShopSaid} {farShops.length === 1 ? "is" : "are"} in {farNames},
+              which is what sets the date above.
             </span>{" "}
-            That is what sets the date above.{" "}
-            {farHoldsItUp && withoutFar ? (
-              <>
-                Take {farLines.length === 1 ? "it" : "those"} out and the rest
-                can come {withoutFar.said}.{" "}
-                <Link href="/cart" className="font-semibold underline">
-                  Change the cart
-                </Link>
-              </>
-            ) : (
-              "Everything here travels together, so there is one delivery fee."
-            )}
+            Take {farLines.length === 1 ? "it" : "those"} out and the rest can
+            come {withoutFar.said}.{" "}
+            <Link href="/cart" className="font-semibold underline">
+              Change the cart
+            </Link>
           </p>
         )}
 

@@ -163,3 +163,49 @@ export function worthACar(
   if (run === null || car === null) return true;
   return run - car >= leastHours;
 }
+
+/**
+ * The day to hold the page to, where the one it is on is not on offer.
+ *
+ * A checkout holds two halves of one answer: a run id, and the window
+ * where it is a car of its own instead. They are settled when the page is
+ * first drawn, and at that moment the cart is still being read out of the
+ * browser. An empty cart can go on any run there is, so today's run was
+ * picked, and when the food arrived a second later nothing looked again.
+ * Today's run does not reach Ajah, so the page held a run that was not on
+ * its own list, said "on the next run", and quoted the run ladder for a
+ * day nothing was going.
+ *
+ * Null where the pair already names a day on offer, which is nearly every
+ * render: a caller is meant to do nothing on null rather than set the same
+ * two values again.
+ */
+export function dayToHoldTo(
+  days: DayOnOffer[],
+  chosen: { runId: string; at: string },
+  /** A run to hang the coupons and the offers off, where the soonest day
+   *  is a car of its own and there is still a run to name. */
+  anyRun: string,
+  /** Whether a car of its own is on offer to this person at all. Somebody
+   *  joining a friend or adding to an order is on the run by definition,
+   *  so they are moved to the run and never to the window. */
+  carsOffered: boolean
+): { runId: string; at: string } | null {
+  if (dayOfChoice(days, chosen) !== null) return null;
+  const first = soonestDay(days);
+  if (first === null) return null;
+  const at = carsOffered ? (first.at ?? "") : "";
+  return {
+    // A car of its own goes on no run at all, and the day it goes on has
+    // none by construction: a run wins its own day outright. So the time
+    // is the whole answer there, and hanging a different day's run on it
+    // would file the order on a sheet it is not going out with.
+    //
+    // `anyRun` is for the other way round: somebody joining a friend or
+    // adding to an order is on a run by definition and is never offered a
+    // car, so where the soonest day is a car day they are put on a run
+    // rather than left holding nothing.
+    runId: first.runId ?? (at === "" ? anyRun : ""),
+    at,
+  };
+}
