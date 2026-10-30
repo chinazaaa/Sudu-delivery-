@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { dealLeft, sellingNow, wasPrice, type DealRow } from "./deals";
 
 import { unstable_cache } from "next/cache";
 import { onTheMenu } from "./shelf";
@@ -58,7 +59,7 @@ async function readMenu(): Promise<MenuView[]> {
 
   const groupsByItem = await optionGroupsFor(
     menuItems.map((i) => i.id),
-    Object.fromEntries(menuItems.map((i) => [i.id, i.price_food])),
+    Object.fromEntries(menuItems.map((i) => [i.id, sellingNow(i)])),
     Object.fromEntries(menuItems.map((i) => [i.id, i.name]))
   );
 
@@ -84,7 +85,9 @@ async function readMenu(): Promise<MenuView[]> {
           id: i.id,
           href: i.slug || i.id,
           name: i.name,
-          price: i.price_food,
+          price: sellingNow(i),
+          wasPrice: wasPrice(i),
+          dealLeft: dealLeft(i),
           available: i.available,
           imageUrl: i.image_url ?? "",
           description: i.description ?? "",
@@ -355,7 +358,7 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
 
   const groupsByItem = await optionGroupsFor(
     menuItems.map((i) => i.id),
-    Object.fromEntries(menuItems.map((i) => [i.id, i.price_food])),
+    Object.fromEntries(menuItems.map((i) => [i.id, sellingNow(i)])),
     Object.fromEntries(menuItems.map((i) => [i.id, i.name]))
   );
 
@@ -377,7 +380,9 @@ async function readMenuFor(ref: string): Promise<MenuView | null> {
         id: i.id,
         href: i.slug || i.id,
         name: i.name,
-        price: i.price_food,
+        price: sellingNow(i),
+        wasPrice: wasPrice(i),
+        dealLeft: dealLeft(i),
         available: i.available,
         imageUrl: i.image_url ?? "",
         description: i.description ?? "",
@@ -499,10 +504,17 @@ async function readPrices(): Promise<{
   const half: Record<string, true> = {};
 
   try {
-    const items = await everyRow<{ id: string; price_food: number }>((from, to) =>
-      db().from("menu_items").select("id, price_food").order("id").range(from, to)
+    // Repricing a basket left open uses the same rule the checkout charges
+    // by, so a sale starting or ending while somebody was away moves the
+    // cart with it rather than leaving a price nobody will honour.
+    const items = await everyRow<DealRow & { id: string }>((from, to) =>
+      db()
+        .from("menu_items")
+        .select("id, price_food, deal_price, deal_until")
+        .order("id")
+        .range(from, to)
     );
-    for (const one of items) item[one.id] = one.price_food ?? 0;
+    for (const one of items) item[one.id] = sellingNow(one);
 
     const options = await everyRow<{ id: string; price_delta: number }>((from, to) =>
       db().from("item_options").select("id, price_delta").order("id").range(from, to)

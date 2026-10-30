@@ -1,6 +1,7 @@
 import { cache } from "react";
 
 import { db } from "./supabase";
+import { dealLeft, dealLive, dealOff, sellingNow, wasPrice } from "./deals";
 import { aislesFrom, NOT_DINNER } from "./aisles";
 import { safeSettings } from "./settings";
 import { onTheMenu } from "./shelf";
@@ -31,6 +32,11 @@ export type Product = {
   name: string;
   description: string;
   price: number;
+  /** What it costs on an ordinary day, where this one is on sale. Zero
+   *  otherwise, and then nothing is struck out. */
+  wasPrice?: number;
+  /** How long the sale has left, said the way a deadline is read. */
+  dealLeft?: string;
   imageUrl: string;
   restaurantId: string;
   restaurant: string;
@@ -61,6 +67,9 @@ export type Browse = {
   upTo?: boolean;
   /** Include the shelves that are not food. */
   all?: boolean;
+  /** Only what a counter has put on sale, biggest saving first unless
+   *  somebody has asked for another order. See lib/deals. */
+  deals?: boolean;
 };
 
 export type Facets = {
@@ -218,6 +227,21 @@ export async function browseProducts(
   if (categoryIds) query = query.in("category_id", categoryIds);
 
   /*
+   * Only what is on sale, where that is what was asked for.
+   *
+   * The end date does the work: a sale is live until the moment the
+   * counter said it stops, and after that this list is empty again with
+   * nothing to switch off. The cheaper-than-usual half is checked in the
+   * code below, because it is one column against another and the database
+   * cannot be asked that from here.
+   */
+  if (options.deals) {
+    query = query
+      .gt("deal_price", 0)
+      .gt("deal_until", new Date().toISOString());
+  }
+
+  /*
    * The bare list is the food list.
    *
    * Nothing chosen is where everybody lands, and sorted by what sells it put
@@ -275,18 +299,41 @@ export async function browseProducts(
               .order("sort_order", { ascending: true })
               .order("name", { ascending: true });
 
-  const { data, count, error } = await query.range(from, to);
+  /*
+   * A page of sales is short enough to sort in the code.
+   *
+   * Biggest saving first is the order a sale list wants, and it is a sum
+   * across two columns rather than a column, so the database cannot order
+   * by it. There are tens of these, not thousands, so the whole lot comes
+   * back and the paging happens here.
+   */
+  const { data, count, error } = options.deals
+    ? await query
+    : await query.range(from, to);
   if (error) return { products: [], total: 0 };
 
+  let rows = (data ?? []) as MenuItem[];
+  let found = count ?? 0;
+  if (options.deals) {
+    rows = rows.filter((one) => dealLive(one));
+    if (!options.sort) {
+      rows = [...rows].sort((a, b) => dealOff(b) - dealOff(a));
+    }
+    found = rows.length;
+    rows = rows.slice(from, to + 1);
+  }
+
   return {
-    products: ((data ?? []) as MenuItem[]).map((one) => {
+    products: rows.map((one) => {
       const place = byId.get(one.restaurant_id);
       return {
         id: one.id,
         href: one.slug || one.id,
         name: one.name,
         description: one.description ?? "",
-        price: one.price_food,
+        price: sellingNow(one),
+        wasPrice: wasPrice(one),
+        dealLeft: dealLeft(one),
         imageUrl: one.image_url ?? "",
         restaurantId: one.restaurant_id,
         restaurant: place?.name ?? "",
@@ -296,7 +343,7 @@ export async function browseProducts(
         containerPct: pctOf(one),
       };
     }),
-    total: count ?? 0,
+    total: found,
   };
 }
 

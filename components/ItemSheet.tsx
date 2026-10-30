@@ -98,7 +98,18 @@ export default function ItemSheet({
               {restaurant.name}
             </p>
             <h2 className="text-xl font-extrabold leading-tight">{item.name}</h2>
-            <p className="font-bold">{naira(item.price)}</p>
+            <p className="font-bold">
+              {naira(item.price)}
+              {(item.wasPrice ?? 0) > 0 && (
+                <>
+                  {" "}
+                  <span className="text-sm font-semibold text-muted line-through">
+                    {naira(item.wasPrice ?? 0)}
+                  </span>{" "}
+                  <span className="tag bg-brand text-white">{item.dealLeft}</span>
+                </>
+              )}
+            </p>
           </div>
 
           <button

@@ -766,6 +766,45 @@ export default async function RestaurantAdmin({
                       />
                       Cost checked
                     </label>
+                    {/*
+                        A counter's sale, passed through.
+
+                        Three boxes and they travel together: what it sells
+                        for while the sale runs, what the counter charges us
+                        while it runs, and the day it stops. Without the day
+                        there is no sale at all, which is the whole safety of
+                        it: a Black Friday price cannot still be live in
+                        December because nobody remembered to take it off.
+                     */}
+                    <div className="w-28">
+                      <label className="label">Sale price</label>
+                      <input
+                        name="deal_price"
+                        inputMode="numeric"
+                        defaultValue={item.deal_price ?? ""}
+                        placeholder="while it runs"
+                        className="field"
+                      />
+                    </div>
+                    <div className="w-28">
+                      <label className="label">Sale cost</label>
+                      <input
+                        name="deal_cost"
+                        inputMode="numeric"
+                        defaultValue={item.deal_cost ?? ""}
+                        placeholder="at the counter"
+                        className="field"
+                      />
+                    </div>
+                    <div className="w-36">
+                      <label className="label">Sale ends</label>
+                      <input
+                        type="date"
+                        name="deal_until"
+                        defaultValue={(item.deal_until ?? "").slice(0, 10)}
+                        className="field"
+                      />
+                    </div>
                     <div className="w-40">
                       <label className="label">Category</label>
                       <select

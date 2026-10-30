@@ -63,6 +63,7 @@ import { feeRidingAlong, type StepFee } from "./step-fee";
 import { realPromoter } from "./promoters";
 import { containersIn, pctOf } from "./containers";
 import { key as priceKey, linePrice, type AsItem, type ChosenOption } from "./pricing";
+import { sellingNow, type DealRow } from "./deals";
 import { isExampleNumber, ordersLately, TOO_MANY } from "./guard";
 import { areasOfRun, runCovers } from "./areas";
 import { runCarries } from "./run-places";
@@ -1125,7 +1126,10 @@ export async function priceLines(
   ];
   if (linked.length > 0) {
     const [{ data: realItems }, { data: realGroups }] = await Promise.all([
-      db().from("menu_items").select("id, price_food").in("id", linked),
+      db()
+        .from("menu_items")
+        .select("id, price_food, deal_price, deal_until")
+        .in("id", linked),
       db().from("item_option_groups").select("id, name, menu_item_id").in("menu_item_id", linked),
     ]);
     const groupRows = (realGroups ?? []) as { id: string; name: string; menu_item_id: string }[];
@@ -1137,14 +1141,14 @@ export async function priceLines(
         .in("group_id", groupRows.map((one) => one.id));
       optionRows = (data ?? []) as typeof optionRows;
     }
-    for (const item of (realItems ?? []) as { id: string; price_food: number }[]) {
+    for (const item of (realItems ?? []) as DealRow[] & { id: string }[]) {
       const delta: Record<string, number> = {};
       for (const group of groupRows.filter((one) => one.menu_item_id === item.id)) {
         for (const option of optionRows.filter((one) => one.group_id === group.id)) {
           delta[priceKey(group.name, option.name)] = Number(option.price_delta ?? 0);
         }
       }
-      stands.set(item.id, { base: Number(item.price_food ?? 0), delta });
+      stands.set(item.id, { base: sellingNow(item), delta });
     }
   }
 
@@ -1188,7 +1192,11 @@ export async function priceLines(
       options: chosen,
       // Added up for everything that adds up, and the dearer of the two for
       // a pizza that is half one thing and half another.
-      unitPrice: linePrice(item.price_food, asked),
+      // The sale price while a sale is running, and the ordinary one the
+      // minute it stops. The server decides this, not the cart: a price
+      // that has gone back up between filling a basket and paying for it
+      // must go back up here too. See lib/deals.
+      unitPrice: linePrice(sellingNow(item), asked),
     });
   }
   return { lines: priced };
@@ -2480,7 +2488,9 @@ export async function repeatLines(order: FullOrder): Promise<RepeatResult> {
   // returns nothing, which silently emptied the whole repeat.
   const { data: items, error } = await db()
     .from("menu_items")
-    .select("id, name, price_food, image_url, available, restaurant_id")
+    .select(
+      "id, name, price_food, deal_price, deal_until, image_url, available, restaurant_id"
+    )
     .in("id", itemIds);
   if (error) throw new Error(error.message);
 
@@ -2544,7 +2554,7 @@ export async function repeatLines(order: FullOrder): Promise<RepeatResult> {
       restaurantName: byRestaurant.get(item.restaurant_id) ?? "",
       imageUrl: item.image_url ?? "",
       unitPrice:
-        item.price_food +
+        sellingNow(item) +
         chosenHere.reduce(
           (sum: number, option: any) => sum + (option.price_delta as number),
           0

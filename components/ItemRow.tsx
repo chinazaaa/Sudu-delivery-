@@ -119,6 +119,15 @@ export default function ItemRow({
           <span className="ticket text-muted">Sold out today</span>
         )}
 
+        {/* How long is left, where a counter is running one. The deadline
+            is the counter's, not ours, and it is the reason to buy today
+            rather than on Saturday. */}
+        {item.available && (item.dealLeft ?? "") !== "" && (
+          <span className="tag w-fit bg-brand text-white">
+            {item.dealLeft}
+          </span>
+        )}
+
         <div className="mt-auto flex items-center justify-between gap-2 sm:gap-3">
           <span className="font-display text-[26px] font-extrabold leading-none sm:text-[30px]">
             {item.groups.length > 0 && (
@@ -127,6 +136,14 @@ export default function ItemRow({
               </span>
             )}
             {naira(item.price)}
+            {/* What it costs on an ordinary day, struck through. A sale
+                price on its own is just a price: the number it is not is
+                the whole of what makes it a deal. */}
+            {(item.wasPrice ?? 0) > 0 && (
+              <span className="ml-1.5 font-sans text-sm font-semibold text-muted line-through">
+                {naira(item.wasPrice ?? 0)}
+              </span>
+            )}
           </span>
 
           {one ? (

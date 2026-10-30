@@ -1803,9 +1803,28 @@ export async function updateMenuItem(form: FormData): Promise<void> {
   const cost =
     costTyped === "" || !Number.isFinite(costValue) || costValue < 0 ? null : costValue;
 
+  /*
+   * The counter's own sale, with an end on it.
+   *
+   * The ordinary price above is never touched by this: a sale is a second
+   * price that stops. No end date, no sale, which is what stops a Black
+   * Friday price still being charged on a Tuesday in December because
+   * nobody remembered to put it back.
+   *
+   * The end is typed as a day and runs to the close of it, because a
+   * counter's sale ends on a date rather than at a minute.
+   */
+  const dealTyped = Math.round(Number(form.get("deal_price") ?? 0)) || 0;
+  const dealEnds = String(form.get("deal_until") ?? "").trim();
+  const dealCost = Math.round(Number(form.get("deal_cost") ?? 0)) || 0;
+  const dealOn = dealTyped > 0 && dealEnds !== "";
+
   const fields = {
     price_food: Math.round(price),
     price_cost: cost,
+    deal_price: dealOn ? dealTyped : null,
+    deal_cost: dealOn && dealCost > 0 ? dealCost : null,
+    deal_until: dealOn ? `${dealEnds}T23:59:59+01:00` : null,
     cost_confirmed: cost !== null && form.get("cost_confirmed") === "on",
     // Priced at nothing means off, whatever the tick says. The menu prints a
     // zero rather than hiding it, so an item on sale at ₦0 is free food on

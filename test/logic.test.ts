@@ -1,3 +1,4 @@
+import { costNow, dealLive, dealOff, sellingNow, wasPrice } from "../lib/deals";
 import { soundsUrgent } from "../lib/bot-match";
 import { otherWorthSaying } from "../lib/arrival";
 import { windowStart, worthACar } from "../lib/pick-a-day";
@@ -7413,4 +7414,58 @@ test("a car picked on a day a run also goes is not taken for nothing", () => {
     dayToHoldTo(days, { runId: "tonight", at: carAt }, dateOfAt, "tonight", true),
     null
   );
+});
+
+test("a sale is only live while it has an end in the future", () => {
+  const now = new Date("2026-11-27T12:00:00Z");
+  const on = {
+    price_food: 12000,
+    deal_price: 8000,
+    deal_until: "2026-11-28T23:59:59+01:00",
+  };
+  assert.equal(dealLive(on, now), true);
+  assert.equal(sellingNow(on, now), 8000);
+  assert.equal(wasPrice(on, now), 12000);
+  assert.equal(dealOff(on, now), 33);
+
+  // The day after it stops, the ordinary price is simply what is charged
+  // again. Nothing has to be restored, which is the point.
+  const after = new Date("2026-11-29T12:00:00Z");
+  assert.equal(dealLive(on, after), false);
+  assert.equal(sellingNow(on, after), 12000);
+  assert.equal(wasPrice(on, after), 0);
+});
+
+test("a sale with no end, or dearer than usual, is not a sale", () => {
+  const now = new Date("2026-11-27T12:00:00Z");
+  // No end date: never live, however tempting the number.
+  assert.equal(
+    dealLive({ price_food: 12000, deal_price: 8000, deal_until: "" }, now),
+    false
+  );
+  // Dearer than the ordinary price is somebody typing in the wrong box,
+  // and it must never be the price charged.
+  const wrong = {
+    price_food: 8000,
+    deal_price: 12000,
+    deal_until: "2026-11-28T23:59:59+01:00",
+  };
+  assert.equal(dealLive(wrong, now), false);
+  assert.equal(sellingNow(wrong, now), 8000);
+});
+
+test("what we pay at the counter follows the sale too, where it was given", () => {
+  const now = new Date("2026-11-27T12:00:00Z");
+  const row = {
+    price_food: 12000,
+    price_cost: 10000,
+    deal_price: 8000,
+    deal_cost: 6500,
+    deal_until: "2026-11-28T23:59:59+01:00",
+  };
+  assert.equal(costNow(row, now), 6500);
+  assert.equal(costNow(row, new Date("2026-12-01T12:00:00Z")), 10000);
+  // A counter that cut our cost without us cutting the menu price leaves
+  // the sale cost empty, and the usual cost stands.
+  assert.equal(costNow({ ...row, deal_cost: 0 }, now), 10000);
 });

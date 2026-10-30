@@ -42,7 +42,14 @@ export type ItemView = {
    *  same reason. */
   href: string;
   name: string;
+  /** What it costs today, which is the sale price while one is running. */
   price: number;
+  /** What it costs on an ordinary day, for printing with a line through
+   *  it. Zero when nothing is on sale, which is most days. */
+  wasPrice?: number;
+  /** How long the sale has left, said the way a deadline is read: "2 days
+   *  left". Empty when there is no sale. */
+  dealLeft?: string;
   available: boolean;
   imageUrl: string;
   description: string;

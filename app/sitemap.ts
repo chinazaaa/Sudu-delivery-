@@ -48,6 +48,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // The two pages somebody searching for what we do would land on, and
     // neither was listed.
     { url: `${site}/products`, changeFrequency: "daily" as const, priority: 0.9 },
+    // What the counters have cut, which changes by the day and is the page
+    // somebody searching for a deal should land on.
+    { url: `${site}/deals`, changeFrequency: "daily" as const, priority: 0.8 },
     { url: `${site}/parcel`, changeFrequency: "weekly" as const, priority: 0.7 },
     // Two whole shelves of the shop that were never listed at all: the one
     // with two thousand products on it, and the one that makes delivery

@@ -100,6 +100,11 @@ export type MenuItem = {
   slug?: string | null;
   name: string;
   price_food: number;
+  /** A counter's own sale, passed through: the price while it runs, what we
+   *  pay at the counter while it runs, and when it stops. See lib/deals. */
+  deal_price?: number | null;
+  deal_cost?: number | null;
+  deal_until?: string | null;
   /** What it costs at the counter, before the shop's markup. Null means
    *  nobody has said. */
   price_cost?: number | null;

@@ -203,7 +203,20 @@ export default async function ProductPage({
             <h1 className="mt-2 text-3xl font-extrabold leading-tight tracking-tight">
               {item.name}
             </h1>
-            <p className="mt-1 text-2xl font-bold text-brand">{naira(item.price)}</p>
+            <p className="mt-1 text-2xl font-bold text-brand">
+              {naira(item.price)}
+              {(item.wasPrice ?? 0) > 0 && (
+                <span className="ml-2 text-base font-semibold text-muted line-through">
+                  {naira(item.wasPrice ?? 0)}
+                </span>
+              )}
+            </p>
+            {/* The counter's sale, and how long it has. */}
+            {(item.dealLeft ?? "") !== "" && (
+              <p className="mt-1">
+                <span className="tag bg-brand text-white">{item.dealLeft}</span>
+              </p>
+            )}
             {item.groups.length > 0 && (
               <p className="text-sm text-muted">Before choices below</p>
             )}
