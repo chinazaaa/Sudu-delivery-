@@ -80,6 +80,11 @@ export default function Checkout() {
    *  has asked this since it was built and the app never did, so the one
    *  thing somebody needs to tell us had nowhere to go. */
   const [note, setNote] = useState("");
+  /** Buying it for somebody else: their name and number, and the block
+   *  above is theirs. Both or neither; the shop refuses half of it. */
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [giftName, setGiftName] = useState("");
+  const [giftPhone, setGiftPhone] = useState("");
   /** Whose money a card link is made out in. Empty is naira, which is
    *  almost everybody, so it stays the default. */
   const [money, setMoney] = useState("");
@@ -468,6 +473,10 @@ export default function Checkout() {
         heardFrom,
         heardSaid,
         customerNote: note,
+        giftTo:
+          giftOpen && (giftName.trim() !== "" || giftPhone.trim() !== "")
+            ? { name: giftName.trim(), phone: giftPhone.trim() }
+            : undefined,
         coupon: applied?.code ?? "",
         groupMode: sharing.length > 0 ? mode : null,
         collectMode: collect,
@@ -928,6 +937,44 @@ export default function Checkout() {
           onChange={setNote}
           placeholder="A room number, a gate, no pepper"
         />
+
+        {/*
+            Buying it for somebody else.
+
+            Folded away, because nearly every order is for whoever is
+            typing and two more boxes on every checkout is a tax on all of
+            them to serve the few. The website has had this since the first
+            term and the app had nothing, so a gift bought on a phone
+            arrived with the buyer's name on the bag.
+
+            Not inside a group: a group is already several people with
+            their own names and blocks, and a gift in one is two answers to
+            the same question.
+         */}
+        {sharing.length === 0 && (
+          <>
+            <Pressable onPress={() => setGiftOpen((was) => !was)}>
+              <Text style={{ fontFamily: F.bodySemi, fontSize: 14, color: T.brand }}>
+                {giftOpen ? "Not a gift after all" : "Sending this to somebody else?"}
+              </Text>
+            </Pressable>
+            {giftOpen && (
+              <>
+                <Text style={{ fontFamily: F.body, fontSize: 12, color: T.muted, lineHeight: 18 }}>
+                  Put their block above, and their name and number here. You
+                  pay, and we deal with you about the money.
+                </Text>
+                <Field label="Their name" value={giftName} onChange={setGiftName} />
+                <Field
+                  label="Their number"
+                  value={giftPhone}
+                  onChange={setGiftPhone}
+                  keyboard="phone-pad"
+                />
+              </>
+            )}
+          </>
+        )}
       </Card>
 
       <Step number="03" title="Pay" />

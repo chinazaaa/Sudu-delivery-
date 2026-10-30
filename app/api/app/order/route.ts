@@ -30,6 +30,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       customerNote?: string;
       heardFrom?: string;
       heardSaid?: string;
+      giftTo?: { name?: string; phone?: string };
       groupMode?: string;
       collectMode?: string;
       people?: { name?: string; phone?: string; hostel?: string; pays?: string }[];
@@ -79,6 +80,25 @@ export async function POST(request: Request): Promise<NextResponse> {
       // website has asked this for a while and the app had no way to send
       // it, so every app answer that was not a promoter was thrown away.
       heardSaid: String(body.heardSaid ?? "").trim().slice(0, 120),
+      /*
+       * Buying it for somebody else.
+       *
+       * The website has had this since the first term: the food goes to
+       * their block and their number, and the person who paid is still who
+       * we talk to about the money. The app could not say it at all, so a
+       * gift bought on a phone arrived with the buyer's name on the bag.
+       *
+       * Both halves or neither, which lib/orders enforces: a gift with no
+       * number is a bag nobody can be called about.
+       */
+      giftTo:
+        String(body.giftTo?.name ?? "").trim() !== "" ||
+        String(body.giftTo?.phone ?? "").trim() !== ""
+          ? {
+              name: String(body.giftTo?.name ?? "").trim(),
+              phone: String(body.giftTo?.phone ?? "").trim(),
+            }
+          : undefined,
     });
 
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });

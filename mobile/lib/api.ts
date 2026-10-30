@@ -806,6 +806,10 @@ export const api = {
     /** Where they really heard about us, in their own words, where none of
      *  the names on the list is it. */
     heardSaid?: string;
+    /** Buying it for somebody else: whose door it goes to and who we call
+     *  when it is there. The buyer still pays and is still who we talk to
+     *  about the money. */
+    giftTo?: { name: string; phone: string };
     /** A group order: one payer, or everybody pays their own share. */
     groupMode?: "one_payer" | "split" | null;
     collectMode?: "leader" | "each";
