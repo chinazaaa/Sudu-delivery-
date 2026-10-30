@@ -803,6 +803,9 @@ export const api = {
     /** Who they say they heard about the shop from, as a promoter's code.
      *  Written once, on a first order, and theirs for life after that. */
     heardFrom?: string;
+    /** Where they really heard about us, in their own words, where none of
+     *  the names on the list is it. */
+    heardSaid?: string;
     /** A group order: one payer, or everybody pays their own share. */
     groupMode?: "one_payer" | "split" | null;
     collectMode?: "leader" | "each";

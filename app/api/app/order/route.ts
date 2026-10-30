@@ -29,6 +29,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       payCurrency?: string;
       customerNote?: string;
       heardFrom?: string;
+      heardSaid?: string;
       groupMode?: string;
       collectMode?: string;
       people?: { name?: string; phone?: string; hostel?: string; pays?: string }[];
@@ -74,6 +75,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       })),
       customerNote: String(body.customerNote ?? "").trim().slice(0, 300),
       heardFrom: String(body.heardFrom ?? "").trim(),
+      // In their own words, where none of the names on the list is it. The
+      // website has asked this for a while and the app had no way to send
+      // it, so every app answer that was not a promoter was thrown away.
+      heardSaid: String(body.heardSaid ?? "").trim().slice(0, 120),
     });
 
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });

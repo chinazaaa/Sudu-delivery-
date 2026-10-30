@@ -73,6 +73,14 @@ export default function Checkout() {
   const [method, setMethod] = useState<"transfer" | "card">("transfer");
   /** Who they say they heard about us from. Empty is "somewhere else". */
   const [heardFrom, setHeardFrom] = useState("");
+  /** Where they really heard about us, where none of the chips is it. The
+   *  list is a name or two and a channel; at a university nearly every real
+   *  answer is a sentence, and "my roommate" is worth more than any box. */
+  const [heardSaid, setHeardSaid] = useState("");
+  /** Anything we should know: a gate, a room number, no pepper. The website
+   *  has asked this since it was built and the app never did, so the one
+   *  thing somebody needs to tell us had nowhere to go. */
+  const [note, setNote] = useState("");
   /** Whose money a card link is made out in. Empty is naira, which is
    *  almost everybody, so it stays the default. */
   const [money, setMoney] = useState("");
@@ -459,6 +467,8 @@ export default function Checkout() {
         paymentMethod: method,
         payCurrency: method === "card" ? money : "",
         heardFrom,
+        heardSaid,
+        customerNote: note,
         coupon: applied?.code ?? "",
         groupMode: sharing.length > 0 ? mode : null,
         collectMode: collect,
@@ -666,18 +676,30 @@ export default function Checkout() {
         )}
       </View>
 
-      {(shop.promoters ?? []).length > 0 && (
-        <Card style={{ gap: 8 }}>
-          {/* Asked once, on the one form a first order passes through.
-              Whoever they name is theirs for life, so there is no second
-              chance at it, and "somewhere else" is a real answer: most
-              people are nobody's referral. */}
+      {/* Asked once, on the one form a first order passes through.
+          Whoever they name is theirs for life, so there is no second chance
+          at it, and "somewhere else" is a real answer: most people are
+          nobody's referral.
+
+          Always, now, rather than only where the shop has promoters on its
+          books. ChatGPT is on the list wherever it is asked, and the box
+          underneath is the answer most people actually have. */}
+      <Card style={{ gap: 8 }}>
           <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }}>
             Where did you hear about us?
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={{ flexDirection: "row", gap: 8 }}>
-              {[{ code: "", name: "Somewhere else" }, ...(shop.promoters ?? [])].map((one) => (
+              {[
+                { code: "", name: "Somewhere else" },
+                /* Not a person, so it carries a prefix a promoter's code
+                   can never have: codes are letters and numbers, and this
+                   one has a colon in it. It is filed as the channel they
+                   came through and credits nobody, which is the whole
+                   difference. */
+                { code: "c:chatgpt", name: "ChatGPT" },
+                ...(shop.promoters ?? []),
+              ].map((one) => (
                 <Pressable
                   key={one.code || "none"}
                   onPress={() => setHeardFrom(one.code)}
@@ -704,8 +726,42 @@ export default function Checkout() {
               ))}
             </View>
           </ScrollView>
+
+          {/*
+              Somewhere else, with somewhere to say where.
+
+              Everybody who is nobody's referral landed on "Somewhere else",
+              which recorded nothing: the shop asked its best question and
+              threw the answer away. Optional, and it says so, because this
+              is the last thing between somebody and paying and a question
+              you have to answer is a question answered "x".
+           */}
+          {heardFrom === "" && (
+            <>
+              <TextInput
+                value={heardSaid}
+                onChangeText={setHeardSaid}
+                maxLength={120}
+                placeholder="If you like: a friend, a group chat, a poster"
+                placeholderTextColor={T.muted}
+                style={{
+                  borderWidth: 2,
+                  borderColor: T.ink,
+                  borderRadius: 12,
+                  backgroundColor: T.field,
+                  paddingHorizontal: 12,
+                  minHeight: 46,
+                  fontFamily: F.body,
+                  fontSize: 15,
+                  color: T.ink,
+                }}
+              />
+              <Text style={{ fontFamily: F.body, fontSize: 12, color: T.muted }}>
+                Optional, and it helps us a lot.
+              </Text>
+            </>
+          )}
         </Card>
-      )}
 
       {sharing.length > 0 && (
         <Card style={{ gap: 10 }}>
@@ -869,6 +925,12 @@ export default function Checkout() {
         <Field label="Your name" value={name} onChange={setName} />
         <Field label="WhatsApp number" value={phone} onChange={setPhone} keyboard="phone-pad" />
         <Blocks label="Hostel or block" value={hostel} onChange={setHostel} all={hostels} />
+        <Field
+          label="Anything we should know?"
+          value={note}
+          onChange={setNote}
+          placeholder="A room number, a gate, no pepper"
+        />
       </Card>
 
       <Step number="03" title="Pay" />
@@ -1425,11 +1487,13 @@ function Field({
   value,
   onChange,
   keyboard,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (next: string) => void;
   keyboard?: "phone-pad";
+  placeholder?: string;
 }) {
   return (
     <View style={{ gap: 4 }}>
@@ -1438,6 +1502,8 @@ function Field({
         value={value}
         onChangeText={onChange}
         keyboardType={keyboard}
+        placeholder={placeholder}
+        placeholderTextColor={T.muted}
         style={{
           borderWidth: 2,
           borderColor: T.ink,
