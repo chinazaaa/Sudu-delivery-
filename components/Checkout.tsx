@@ -41,7 +41,7 @@ import { ladderFor, pricesByStep, pricesByValue, stepsFor } from "@/lib/areas-sh
 import { feeRidingAlong, type StepFee } from "@/lib/step-fee";
 import CouponBox from "@/components/CouponBox";
 import { clearJoin, readJoin } from "@/components/JoinDelivery";
-import GroupLink, {
+import {
   joinedViaLink,
   leaveGroup,
   PARTY_CHANGED,
@@ -851,8 +851,6 @@ export default function Checkout({
   const [deliverAt, setDeliverAt] = useState(
     adding ? "" : (firstDay?.at ?? "")
   );
-  // Ticked by hand when the food is not coming today. See comesToday below.
-  const [agreedWhen, setAgreedWhen] = useState(false);
   /*
    * Looked for in every window the shop sent, not only today's and
    * tomorrow's.
@@ -989,22 +987,6 @@ export default function Checkout({
       ? `${sameDay.window} ${sameDayWord(sameDay)}`
       : "on the next run";
 
-  /*
-   * Food that is not coming today has to be agreed to, not merely printed.
-   *
-   * The date is on this page three times over and somebody still ordered a
-   * burger from a counter we reach once a week, was told Saturday, and
-   * expected it that afternoon. A sentence can be skimmed past; a box you
-   * cannot pay without ticking cannot.
-   *
-   * Only when it is not today. An order landing in three hours surprises
-   * nobody, and a tick on every order is a tick people learn to click
-   * without reading, which would cost the one that matters its force.
-   */
-  const comesToday = onARun
-    ? runNow !== null && runNow.runDate === today
-    : sameDay !== null && sameDay !== undefined && sameDay.day === "today";
-
   // The same arrival as a line of its own rather than the tail of a
   // sentence: "Between 3:30pm and 5:30pm, Saturday, 26 Sept". Beside the
   // delivery fee, where what the money buys is the question being asked.
@@ -1016,9 +998,6 @@ export default function Checkout({
       ? `${sameDay.window.charAt(0).toUpperCase()}${sameDay.window.slice(1)} ${sameDayWord(sameDay)}`
       : "";
 
-  // Nothing to agree to where there is no arrival to name, and nothing to
-  // agree to on a cart that cannot be bought at all.
-  const mustAgreeWhen = !comesToday && !noRunThere && arrivingWhen !== "";
 
   /**
    * What this cart costs on a run, on a named run's numbers.
@@ -1353,48 +1332,96 @@ export default function Checkout({
       } else if (day.at !== null) {
         setDeliverAt(day.at);
       }
-      // A day agreed to is a day agreed to for that day, not for the one
-      // chosen before it.
-      setAgreedWhen(false);
+    };
+
+    /*
+     * The days as chips, the way the app draws them.
+     *
+     * A dropdown is one line and hides every answer but the one it is
+     * showing, so the question "can I have it tomorrow instead" needs a
+     * tap before it can even be asked. Four chips answer it without one,
+     * and on the dark card they are the only colour on the screen.
+     *
+     * Today and tomorrow are always on the row, on offer or not: a row
+     * that silently has no Today on it is a row somebody reads twice
+     * looking for it. One that says Today is closed has answered them.
+     */
+    const chipFor = (date: string) => {
+      if (date === today) return "Today";
+      if (date === dayAfter(today)) return "Tomorrow";
+      return runDateLabel(date).replace(/,\s*\d{4}$/, "");
     };
 
     return (
-      <div className="space-y-2">
-        <select
-          id="when-day"
-          aria-label="When do you want it"
-          className="field"
-          value={pickingDate ? "pick" : (chosen?.date ?? "")}
-          disabled={adding !== null || joining !== null || party !== ""}
-          onChange={(e) => {
-            if (e.target.value === "pick") {
-              setPickingDate(true);
-              // Opened on the next day after tomorrow, because that is what
-              // "pick a date" is for: today and tomorrow are a tap above it.
-              // An empty box asks somebody to find a day on a calendar when
-              // the obvious one could already be in it.
-              if (farDay === "" && further[0]) goTo(further[0].date);
-              return;
-            }
-            setPickingDate(false);
-            goTo(e.target.value);
-          }}
-        >
-          {near.map((one) => (
-            <option key={one.date} value={one.date} disabled={one.choice === null}>
-              {daySaid(one.date, today, runDateLabel)}
-              {one.choice === null ? " · closed" : ""}
-            </option>
-          ))}
-          {farDay !== "" && (
-            <option value={farDay}>{runDateLabel(farDay)}</option>
-          )}
-          {/* Always, not only where a further day is already on the list.
+      <div className="space-y-2.5">
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+          {near.map((one) => {
+            const on = chosen?.date === one.date && !pickingDate;
+            const shut = one.choice === null;
+            return (
+              <button
+                key={one.date}
+                type="button"
+                disabled={shut || adding !== null || joining !== null || party !== ""}
+                onClick={() => {
+                  setPickingDate(false);
+                  goTo(one.date);
+                }}
+                aria-pressed={on}
+                className={`min-h-11 shrink-0 whitespace-nowrap rounded-full border-2 px-4 text-sm font-bold transition ${
+                  on
+                    ? "border-volt bg-volt text-ink"
+                    : shut
+                      ? "border-shell/20 text-shell/40"
+                      : "border-shell/40 text-shell"
+                }`}
+              >
+                {chipFor(one.date)}
+                {shut ? " · closed" : ""}
+              </button>
+            );
+          })}
+
+          {further.map((one) => {
+            const on = chosen?.date === one.date && !pickingDate;
+            return (
+              <button
+                key={one.date}
+                type="button"
+                disabled={adding !== null || joining !== null || party !== ""}
+                onClick={() => {
+                  setPickingDate(false);
+                  goTo(one.date);
+                }}
+                aria-pressed={on}
+                className={`min-h-11 shrink-0 whitespace-nowrap rounded-full border-2 px-4 text-sm font-bold transition ${
+                  on ? "border-volt bg-volt text-ink" : "border-shell/40 text-shell"
+                }`}
+              >
+                {chipFor(one.date)}
+              </button>
+            );
+          })}
+
+          {/* Always, not only where a further day is already on the row.
               A cart that one run in the fortnight can carry has today and
               tomorrow and nothing else, which is exactly the cart somebody
-              wants to look further ahead on, and the box was not there. */}
-          <option value="pick">Pick a date</option>
-        </select>
+              wants to look further ahead on. */}
+          <button
+            type="button"
+            disabled={adding !== null || joining !== null || party !== ""}
+            onClick={() => {
+              setPickingDate(true);
+              if (farDay === "" && further[0]) goTo(further[0].date);
+            }}
+            aria-pressed={pickingDate}
+            className={`min-h-11 shrink-0 whitespace-nowrap rounded-full border-2 border-dashed px-4 text-sm font-bold transition ${
+              pickingDate ? "border-volt bg-volt text-ink" : "border-shell/40 text-shell"
+            }`}
+          >
+            Another day
+          </button>
+        </div>
 
         {/*
             Any day, because a car of its own can go on any of them.
@@ -1424,7 +1451,7 @@ export default function Checkout({
               aria-label="The day you want it"
             />
             {dayProblem !== "" && (
-              <p className="text-sm text-brand-dark">
+              <p className="text-sm text-volt">
                 {dayProblem}
                 {dayInstead !== "" && (
                   <>
@@ -1463,7 +1490,7 @@ export default function Checkout({
         */}
         {bothWays.run !== null && bothWays.cars.length > 0 && (
           <div className="space-y-1.5">
-            <label className="label" htmlFor="when-how">
+            <label className="label text-shell/70" htmlFor="when-how">
               How it comes
             </label>
             <select
@@ -1472,8 +1499,7 @@ export default function Checkout({
               value={deliverAt === "" ? "run" : `car:${deliverAt}`}
               onChange={(event) => {
                 const picked = event.target.value;
-                setAgreedWhen(false);
-                if (picked === "run") {
+                          if (picked === "run") {
                   if (bothWays.run) setBatchId(bothWays.run.id);
                   setDeliverAt("");
                   return;
@@ -1495,7 +1521,7 @@ export default function Checkout({
                 </option>
               ))}
             </select>
-            <p className="text-xs text-muted">
+            <p className="text-xs text-shell/60">
               The run is the cheap way and comes in the window above. A car of
               its own goes when you say and costs more; the total below
               follows whichever you pick.
@@ -1507,7 +1533,7 @@ export default function Checkout({
             and the date box it was describing the day above it while the
             box below it was the thing being changed. */}
         {arriving !== "" && (
-          <p className="text-sm text-muted">Get it {arriving}.</p>
+          <p className="text-sm text-shell/70">Get it {arriving}.</p>
         )}
 
         {/*
@@ -1526,13 +1552,13 @@ export default function Checkout({
             to leave the checkout.
         */}
         {urgentChat && (
-          <p className="text-sm text-muted">
-            Need it sooner than that?{" "}
+          <p className="text-sm text-shell/70">
+            Need it sooner than that, or want a day that is not here?{" "}
             <a
               href={urgentChat}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-brand underline-offset-4 hover:underline"
+              className="font-semibold text-volt underline-offset-4 hover:underline"
             >
               Message us
             </a>{" "}
@@ -1670,7 +1696,11 @@ export default function Checkout({
       <input type="hidden" name="deliver_at" value={deliverAt} />
       <input type="hidden" name="people" value={JSON.stringify(people)} />
 
-      <h1 className="font-display text-[min(16vw,5.5rem)] font-black uppercase leading-[0.88] sm:text-[clamp(3.5rem,7vw,5.5rem)]">
+      {/* A heading the size of a heading. Two lines of BOOK YOUR RUN at
+          sixteen percent of the screen is most of a phone, on the page
+          where the only thing anybody wants is to finish. The desk keeps
+          the big one, where the page is wide and there is room for it. */}
+      <h1 className="font-display text-[min(9vw,2.25rem)] font-black uppercase leading-[0.95] sm:text-[clamp(3.5rem,7vw,5.5rem)]">
         Book your run
       </h1>
 
@@ -1713,17 +1743,29 @@ export default function Checkout({
           </p>
         </section>
       ) : (
-      <section className="card space-y-2">
-        {/* Decided, not asked, and said the same way as the front page. A
-            dropdown here asked somebody to know the fee ladder and the cut
-            off before they could buy lunch.
+      <section className="space-y-2.5">
+        {/*
+            The ticket, the way the app draws it.
+
+            This was a white card with a step number, a dropdown and four
+            paragraphs of grey type under it. The day is the one decision
+            on this page, and on the app it is a dark card with the arrival
+            in display type and the days as chips under it: you can see the
+            answer from across the room and change it with one tap.
 
             Silent where nothing can carry the cart: there is no arrival to
             promise, and the line under the basket already says what is
-            wrong and what to do about it. */}
-        {!noRunThere && (
-          <Step at="01">Choose when you want it</Step>
-        )}
+            wrong and what to do about it.
+         */}
+        {!noRunThere && <Step at="01">When</Step>}
+
+        <div className="space-y-3 rounded-2xl bg-ink p-4 text-shell sm:p-5">
+          <span className="ticket block text-volt">Choose when you want it</span>
+          {arrivingWhen !== "" && !noRunThere && (
+            <p className="font-display text-[clamp(1.55rem,6.6vw,2.15rem)] font-black uppercase leading-[0.96]">
+              {arrivingWhen}
+            </p>
+          )}
 
         {/* And the day is a choice again.
 
@@ -1768,13 +1810,13 @@ export default function Checkout({
             about how we drive. Everything else is the shop's business.
         */}
         {farHoldsItUp && withoutFar && (
-          <p className="soft border-2 border-brand bg-brand-wash px-3.5 py-2.5 text-[14.5px] text-brand-dark">
+          <p className="rounded-xl bg-white/10 px-3.5 py-2.5 text-[14.5px] leading-[1.45] text-shell">
             <span className="font-semibold">
               {farWhereSaid}, which is what sets the date above.
             </span>{" "}
             Take {farLines.length === 1 ? "it" : "those"} out and the rest can
             come {withoutFar.said}.{" "}
-            <Link href="/cart" className="font-semibold underline">
+            <Link href="/cart" className="font-semibold text-volt underline">
               Change the cart
             </Link>
           </p>
@@ -1802,7 +1844,7 @@ export default function Checkout({
             usual runs went. The headline above already names when this cart
             can actually come; this says why it is not sooner. */}
         {shutSoonest !== null && (
-          <p className="text-sm text-brand-dark">
+          <p className="text-sm leading-[1.45] text-shell/85">
             <span className="font-semibold">
               {shutSaid} {shutThere.length === 1 ? "is" : "are"} closed on{" "}
               {shutDayWord}s.
@@ -1835,7 +1877,8 @@ export default function Checkout({
         {/* An estimate, and said to be one. A time to the minute is a promise
             nobody can keep in Lagos traffic, and arriving at 4:15 for a four
             o'clock is fine unless somebody was told four o'clock exactly. */}
-        <p className="text-sm text-muted">{ESTIMATE_NOTE}</p>
+          <p className="text-sm leading-[1.45] text-shell/70">{ESTIMATE_NOTE}</p>
+        </div>
 
         {/* The offer of a car of its own used to live here, as a sentence:
             "need it sooner, a car can be there at four for 6,500". It was
@@ -1849,19 +1892,15 @@ export default function Checkout({
 
 
 
-      {/* The same one tap as the cart and the item sheet. There used to be a
-          tick box here saying "put your food in and you get a link", which is
-          the wrong way round: nobody invites their friends after they have
-          finished ordering. */}
-      {!groupOn && !joining && party === "" && (
-        <section className="space-y-3">
-          <GroupLink
-            runs={openable.map(runArrival)}
-            slots={sameDaySlots}
-            today={today}
-          />
-        </section>
-      )}
+      {/*
+          Sharing a run is asked on the cart, and only there.
+
+          It was asked here as well, in the middle of somebody filling in
+          their name and their block. Nobody gathers friends after they
+          have started paying: by this page the decision is made, so the
+          offer is an interruption in the one place that should be a
+          straight line to the button.
+       */}
 
       {groupOn && (
         <section className="card space-y-3">
@@ -2168,7 +2207,19 @@ export default function Checkout({
                   sixteen one tap away, which is what the app does.
                */}
               {(() => {
-                const few = hostels.slice(0, 5);
+                /*
+                 * Their own block first, where we know it.
+                 *
+                 * Somebody signed in, or who has ordered on this phone
+                 * before, has already told us where they live, and it is
+                 * the same answer every time. So it is filled in and it is
+                 * the first chip rather than the eleventh: the one tap
+                 * this field needs is checking that it still says Queen
+                 * Mary, not finding Queen Mary.
+                 */
+                const few = hostels.includes(hostel)
+                  ? [hostel, ...hostels.filter((one) => one !== hostel)].slice(0, 5)
+                  : hostels.slice(0, 5);
                 const open =
                   allBlocks || (hostel !== "" && !few.includes(hostel));
                 return open ? (
@@ -2719,31 +2770,19 @@ export default function Checkout({
               {state.error}
             </p>
           )}
-          {/* The one thing on this page somebody has to do rather than
-              read. Directly above the button, because that is the last
-              place anybody looks before paying. */}
-          {mustAgreeWhen && (
-            <label
-              className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 px-3.5 py-3 ${
-                agreedWhen ? "border-ink bg-shell" : "border-brand bg-brand-wash"
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={agreedWhen}
-                onChange={(event) => setAgreedWhen(event.target.checked)}
-                className="mt-0.5 size-5 shrink-0 accent-brand"
-              />
-              <span className="text-[14.5px] leading-snug">
-                <span className="font-bold">
-                  This is not coming today. {arrivingWhen}.
-                </span>{" "}
-                {far.length > 0
-                  ? `${farShopSaid} only ${farShops.length === 1 ? "goes" : "go"} out on a run, so it cannot come sooner.`
-                  : "Tick to say that works for you."}
-              </span>
-            </label>
-          )}
+          {/*
+              The day is said, not sworn to.
+
+              There was a tick box here: "this is not coming today, tick to
+              say that works for you", in front of the button, on every
+              order that was not for today. It went in after somebody
+              expected a Saturday burger that afternoon. The day is now the
+              first thing on the page, in the card where it is picked, in
+              type you cannot miss, and a box asking somebody to agree to
+              what they themselves chose is a page that does not believe
+              them. A tick everybody learns to click is worth nothing
+              anyway.
+           */}
 
           <div className="flex items-center gap-3">
             <span className="flex shrink-0 flex-col">
@@ -2764,7 +2803,6 @@ export default function Checkout({
               (!batchId && party === "" && !sameDay) ||
               noRunThere ||
               !splitReady ||
-              (mustAgreeWhen && !agreedWhen) ||
               unresolved.length > 0
             }
           >
