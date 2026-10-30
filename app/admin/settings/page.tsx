@@ -584,6 +584,29 @@ export default async function SettingsAdmin() {
                   </p>
                 </div>
 
+                {/* The word across the deals page, for the week it is in.
+                    The page itself is not seasonal: counters cut prices in
+                    March too, and one headed Black Friday in March is a
+                    page nobody believes. */}
+                <div>
+                  <label className="label" htmlFor="deals_headline">
+                    Word on the deals page
+                  </label>
+                  <input
+                    id="deals_headline"
+                    name="deals_headline"
+                    defaultValue={settings.deals_headline}
+                    maxLength={40}
+                    placeholder="Black Friday"
+                    className="field"
+                  />
+                  <p className="hint mt-1">
+                    Sits over &quot;On sale now&quot; at /deals. Empty the box when
+                    it is over and the page stays exactly as it is, for whenever a
+                    counter runs something.
+                  </p>
+                </div>
+
                 <div>
                   <label className="label" htmlFor="ribbon_href">Where it takes them</label>
                   <input

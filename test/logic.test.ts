@@ -1,4 +1,13 @@
-import { costNow, dealLive, dealOff, sellingNow, wasPrice } from "../lib/deals";
+import {
+  costNow,
+  dealLive,
+  dealOff,
+  freeFromPairs,
+  pairQualifies,
+  pairsInCart,
+  sellingNow,
+  wasPrice,
+} from "../lib/deals";
 import { soundsUrgent } from "../lib/bot-match";
 import { otherWorthSaying } from "../lib/arrival";
 import { windowStart, worthACar } from "../lib/pick-a-day";
@@ -7468,4 +7477,90 @@ test("what we pay at the counter follows the sale too, where it was given", () =
   // A counter that cut our cost without us cutting the menu price leaves
   // the sale cost empty, and the usual cost stands.
   assert.equal(costNow({ ...row, deal_cost: 0 }, now), 10000);
+});
+
+test("buy one get one free takes the cheaper of every pair", () => {
+  // Domino's: a large at 9,500 and a large at 8,900 is 9,500 to pay.
+  assert.equal(
+    freeFromPairs([
+      { group: "dominos-large", price: 9500 },
+      { group: "dominos-large", price: 8900 },
+    ]),
+    8900
+  );
+
+  // Three pays for two. The dearest two make the pair, so 9,500 goes free
+  // and the 8,900 is the one left over: that is the way round that costs
+  // the customer least.
+  assert.equal(
+    freeFromPairs([
+      { group: "dominos-large", price: 9500 },
+      { group: "dominos-large", price: 8900 },
+      { group: "dominos-large", price: 12000 },
+    ]),
+    9500
+  );
+
+  // Four is two free, and they are the second and fourth dearest.
+  assert.equal(
+    freeFromPairs([
+      { group: "g", price: 1000 },
+      { group: "g", price: 800 },
+      { group: "g", price: 600 },
+      { group: "g", price: 400 },
+    ]),
+    800 + 400
+  );
+
+  // One on its own is a pizza at full price, and two different deals do
+  // not pair with each other.
+  assert.equal(freeFromPairs([{ group: "g", price: 1000 }]), 0);
+  assert.equal(
+    freeFromPairs([
+      { group: "dominos-large", price: 9500 },
+      { group: "kfc-bucket", price: 8900 },
+    ]),
+    0
+  );
+});
+
+test("a pairing only counts at the size the counter put it on", () => {
+  const now = new Date("2026-11-27T12:00:00Z");
+  const row = {
+    price_food: 9500,
+    deal_kind: "pair",
+    deal_pair: "dominos-large",
+    deal_choice: "Large",
+    deal_until: "2026-11-28T23:59:59+01:00",
+  };
+  assert.equal(pairQualifies(row, ["Large", "Pepperoni"], now), true);
+  // Case is the menu's business, not the customer's.
+  assert.equal(pairQualifies(row, ["large"], now), true);
+  // A medium is a medium.
+  assert.equal(pairQualifies(row, ["Medium"], now), false);
+  // And it stops when it stops.
+  assert.equal(pairQualifies(row, ["Large"], new Date("2026-12-01T12:00:00Z")), false);
+});
+
+test("a basket is paired the same way in the browser as on the server", () => {
+  const deals = [
+    {
+      group: "dominos-large",
+      choice: "Large",
+      itemIds: ["pepperoni", "meat"],
+      said: "Buy one get one free at Domino's · Large",
+    },
+  ];
+  const basket = [
+    { itemId: "pepperoni", qty: 1, unitPrice: 9500, choices: ["Large"] },
+    { itemId: "meat", qty: 1, unitPrice: 8900, choices: ["Large"] },
+    // A medium is in the basket and is not in the deal.
+    { itemId: "pepperoni", qty: 1, unitPrice: 6000, choices: ["Medium"] },
+  ];
+  const got = pairsInCart(basket, deals);
+  assert.equal(got.off, 8900);
+  assert.equal(got.said, "Buy one get one free at Domino's · Large");
+
+  // Nothing on offer, nothing taken off.
+  assert.equal(pairsInCart(basket, []).off, 0);
 });

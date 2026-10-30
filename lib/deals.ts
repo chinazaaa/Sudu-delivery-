@@ -1,3 +1,4 @@
+import { db } from "./supabase";
 /**
  * A counter's own sale, passed through.
  *
@@ -94,4 +95,196 @@ export function dealLeft(row: DealRow, now: Date = new Date()): string {
   if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} left`;
   const days = Math.floor(hours / 24);
   return `${days} day${days === 1 ? "" : "s"} left`;
+}
+
+/**
+ * Buy one get one free, which is not a price.
+ *
+ * Domino's does not cut the price of a pizza: it gives you the cheaper of
+ * two away, and only at the size the deal is on. That is a rule about a
+ * basket rather than a number on a dish, so it is written as one: the dishes
+ * that pair with each other carry the same label, and the size they have to
+ * be is named beside it.
+ *
+ * Any two from the group, not two of the same thing. Somebody buying a large
+ * pepperoni at 9,500 and a large meat at 8,900 pays 9,500, which is what the
+ * counter itself does.
+ *
+ * Three pays for two, and the pairing is done from the top: the dearest two
+ * make a pair and the cheapest is the one left over at full price. That is
+ * the way round that costs the customer least. Pairing the dearest with the
+ * cheapest instead would free a smaller pizza and charge for a bigger one,
+ * which is the same deal read against them.
+ */
+export type PairRow = DealRow & {
+  /** "pair" is the only kind this is about. Empty is an ordinary price. */
+  deal_kind?: string | null;
+  /** The label dishes that pair with each other share. */
+  deal_pair?: string | null;
+  /** The choice they have to have made, "Large". Empty means any. */
+  deal_choice?: string | null;
+};
+
+/** Whether this dish is in a live buy-one-get-one at a given moment. */
+export function pairLive(row: PairRow, now: Date = new Date()): boolean {
+  if ((row.deal_kind ?? "") !== "pair") return false;
+  if ((row.deal_pair ?? "").trim() === "") return false;
+  const until = (row.deal_until ?? "").trim();
+  if (until === "") return false;
+  const ends = new Date(until).getTime();
+  return Number.isFinite(ends) && ends > now.getTime();
+}
+
+/**
+ * Whether a line qualifies: the right dish, at the size the deal is on.
+ *
+ * The names of what was chosen, as the menu says them, because that is what
+ * a line carries and what somebody reads on their own order. Matched loosely
+ * on case, since "Large" on one menu is "large" on another.
+ */
+export function pairQualifies(
+  row: PairRow,
+  chosen: string[],
+  now: Date = new Date()
+): boolean {
+  if (!pairLive(row, now)) return false;
+  const need = (row.deal_choice ?? "").trim().toLowerCase();
+  if (need === "") return true;
+  return chosen.some((one) => one.trim().toLowerCase() === need);
+}
+
+/** One qualifying thing in a basket: which deal it is in, and what it costs. */
+export type PairUnit = { group: string; price: number };
+
+/**
+ * What comes off, for every two.
+ *
+ * Each group on its own, dearest first, and every second one is free. Three
+ * larges is two paid and one free; five is three paid and two free.
+ */
+export function freeFromPairs(units: PairUnit[]): number {
+  const byGroup = new Map<string, number[]>();
+  for (const unit of units) {
+    if (unit.group === "" || unit.price <= 0) continue;
+    byGroup.set(unit.group, [...(byGroup.get(unit.group) ?? []), unit.price]);
+  }
+
+  let off = 0;
+  for (const prices of byGroup.values()) {
+    // Dearest first, then every second one is free: the second of each pair
+    // is the cheaper half of that pair, and an odd one left at the end is
+    // the cheapest of the lot, paid for in full.
+    const sorted = [...prices].sort((a, b) => b - a);
+    for (let at = 1; at < sorted.length; at += 2) off += sorted[at];
+  }
+  return off;
+}
+
+/** A live pairing, as a page hands it to the browser: which dishes are in
+ *  it, the size they have to be, and what to call it on screen. */
+export type PairDeal = {
+  group: string;
+  choice: string;
+  itemIds: string[];
+  /** "Buy one get one free at Domino's", for the line in the basket. */
+  said: string;
+};
+/**
+ * The pairings running right now, for the cart and the checkout.
+ *
+ * Both of those add the money up in the browser, so they need to know which
+ * dishes pair with each other before anything is sent anywhere. It is a
+ * handful of ids: the dishes a counter has put in a buy-one-get-one, which
+ * is usually one size at one kitchen.
+ */
+export async function livePairDeals(): Promise<PairDeal[]> {
+  try {
+    const { data } = await db()
+      .from("menu_items")
+      .select("id, restaurant_id, deal_kind, deal_pair, deal_choice, deal_until")
+      .eq("deal_kind", "pair")
+      .gt("deal_until", new Date().toISOString());
+
+    const rows = (data ?? []) as {
+      id: string;
+      restaurant_id: string;
+      deal_pair: string | null;
+      deal_choice: string | null;
+    }[];
+    if (rows.length === 0) return [];
+
+    const names = new Map<string, string>();
+    const places = [...new Set(rows.map((one) => one.restaurant_id))];
+    const { data: shops } = await db()
+      .from("restaurants")
+      .select("id, name")
+      .in("id", places);
+    for (const one of (shops ?? []) as { id: string; name: string }[]) {
+      names.set(one.id, one.name);
+    }
+
+    const byGroup = new Map<string, PairDeal>();
+    for (const row of rows) {
+      const group = (row.deal_pair ?? "").trim();
+      if (group === "") continue;
+      const had = byGroup.get(group);
+      if (had) {
+        had.itemIds.push(row.id);
+        continue;
+      }
+      const where = names.get(row.restaurant_id) ?? "";
+      const size = (row.deal_choice ?? "").trim();
+      byGroup.set(group, {
+        group,
+        choice: size,
+        itemIds: [row.id],
+        said: `Buy one get one free${where === "" ? "" : ` at ${where}`}${
+          size === "" ? "" : ` · ${size}`
+        }`,
+      });
+    }
+    return [...byGroup.values()];
+  } catch {
+    // A deal that cannot be read is a deal nobody is offered, which is the
+    // safe way round: the basket adds up at the ordinary prices.
+    return [];
+  }
+}
+
+/**
+ * What a basket in the browser gets off, and what to call it.
+ *
+ * The same sum the server does, from the same rule, so the line in the cart
+ * is the line on the bill. A cart holds the names of what was chosen, which
+ * is all the size constraint needs.
+ */
+export function pairsInCart(
+  lines: { itemId: string; qty: number; unitPrice: number; choices: string[] }[],
+  deals: PairDeal[]
+): { off: number; said: string } {
+  if (deals.length === 0) return { off: 0, said: "" };
+
+  const units: PairUnit[] = [];
+  const using = new Set<string>();
+  for (const line of lines) {
+    for (const deal of deals) {
+      if (!deal.itemIds.includes(line.itemId)) continue;
+      const need = deal.choice.trim().toLowerCase();
+      if (
+        need !== "" &&
+        !line.choices.some((one) => one.trim().toLowerCase() === need)
+      ) {
+        continue;
+      }
+      for (let at = 0; at < Math.max(0, line.qty); at += 1) {
+        units.push({ group: deal.group, price: line.unitPrice });
+      }
+      using.add(deal.said);
+      break;
+    }
+  }
+
+  const off = freeFromPairs(units);
+  if (off <= 0) return { off: 0, said: "" };
+  return { off, said: [...using].join(" · ") };
 }

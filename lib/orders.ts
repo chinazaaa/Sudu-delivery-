@@ -63,7 +63,7 @@ import { feeRidingAlong, type StepFee } from "./step-fee";
 import { realPromoter } from "./promoters";
 import { containersIn, pctOf } from "./containers";
 import { key as priceKey, linePrice, type AsItem, type ChosenOption } from "./pricing";
-import { sellingNow, type DealRow } from "./deals";
+import { freeFromPairs, pairQualifies, sellingNow, type DealRow } from "./deals";
 import { isExampleNumber, ordersLately, TOO_MANY } from "./guard";
 import { areasOfRun, runCovers } from "./areas";
 import { runCarries } from "./run-places";
@@ -1212,8 +1212,34 @@ const placesIn = (lines: PricedLine[]) => [
 // is. Read off the item, so the customer's cart cannot claim otherwise.
 const countItems = (lines: PricedLine[]) =>
   containersIn(lines.map((l) => ({ qty: l.qty, container_pct: l.item.container_pct })));
-const countFood = (lines: PricedLine[]) =>
-  lines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
+/**
+ * What the food comes to, with any buy-one-get-one already taken off.
+ *
+ * Here rather than at the end, because everything downstream asks this one
+ * question: the order's own subtotal, what a discount code is measured
+ * against, and what each person in a group owes. A free pizza that was only
+ * free on the last line would be charged for in all three.
+ */
+const countFood = (lines: PricedLine[]) => {
+  const full = lines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
+  return Math.max(0, full - pairsOff(lines));
+};
+
+/** Every qualifying thing in a basket, one entry each, for the pairing. */
+const pairsOff = (lines: PricedLine[]) =>
+  freeFromPairs(
+    lines.flatMap((line) =>
+      pairQualifies(
+        line.item,
+        line.options.map((one) => one.name)
+      )
+        ? Array.from({ length: Math.max(0, line.qty) }, () => ({
+            group: (line.item.deal_pair ?? "").trim(),
+            price: line.unitPrice,
+          }))
+        : []
+    )
+  );
 
 /** One half of a mixed cart: the market lines, or everything else. */
 const onlyFrom = (lines: PricedLine[], byValue: string[], want: boolean) =>

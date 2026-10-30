@@ -19,6 +19,7 @@ import { db } from "@/lib/supabase";
 import { openBatches, recentlyClosedBatch, carsOnOffer } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
+import { livePairDeals } from "@/lib/deals";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { normalisePhone } from "@/lib/phone";
 import {
@@ -197,6 +198,8 @@ export default async function CheckoutPage({
       // price it is about to charge rather than the ladder it is replacing.
       offers={await liveOffers()}
       hostels={await hostelNames()}
+      // Buy one get one free, as the counters are running it today.
+      pairDeals={await livePairDeals()}
       // Asked on the one form a first order has to pass through. Whoever
       // they name is theirs for life, so there is no second chance at it.
       promoters={promoters}

@@ -105,6 +105,12 @@ export type MenuItem = {
   deal_price?: number | null;
   deal_cost?: number | null;
   deal_until?: string | null;
+  /** "pair" for buy one get one free, empty for an ordinary price. */
+  deal_kind?: string | null;
+  /** The label dishes that pair with each other share. */
+  deal_pair?: string | null;
+  /** The choice they must have made for it to count: "Large". */
+  deal_choice?: string | null;
   /** What it costs at the counter, before the shop's markup. Null means
    *  nobody has said. */
   price_cost?: number | null;

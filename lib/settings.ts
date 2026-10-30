@@ -156,6 +156,10 @@ export type Settings = {
    * is off, expired or used up.
    */
   offer_code: string;
+  /** A word across the top of the deals page for the week it is: "Black
+   *  Friday". Empty the box and the page is itself again, which is what it
+   *  is for the other fifty weeks. */
+  deals_headline: string;
   /**
    * The coupon a promoter's own link carries: open sudu.store/s/ada and it
    * applies itself at the checkout.
@@ -335,6 +339,7 @@ export const EMPTY: Settings = {
   same_day_last_hour: "",
   run_last_hour: "",
   offer_code: "",
+  deals_headline: "",
   promoter_perk_code: "",
   auto_headline: "",
   auto_lines: "",

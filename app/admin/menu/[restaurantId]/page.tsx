@@ -796,6 +796,28 @@ export default async function RestaurantAdmin({
                         className="field"
                       />
                     </div>
+                    {/* Buy one get one free: a label the dishes that pair
+                        with each other share, and the size it is on. Any
+                        two from the label, cheaper one free, which is what
+                        the counter itself does. */}
+                    <div className="w-32">
+                      <label className="label">Pair label</label>
+                      <input
+                        name="deal_pair"
+                        defaultValue={item.deal_pair ?? ""}
+                        placeholder="dominos-large"
+                        className="field"
+                      />
+                    </div>
+                    <div className="w-28">
+                      <label className="label">Pair size</label>
+                      <input
+                        name="deal_choice"
+                        defaultValue={item.deal_choice ?? ""}
+                        placeholder="Large"
+                        className="field"
+                      />
+                    </div>
                     <div className="w-36">
                       <label className="label">Sale ends</label>
                       <input

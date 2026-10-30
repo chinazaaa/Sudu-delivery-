@@ -1818,13 +1818,25 @@ export async function updateMenuItem(form: FormData): Promise<void> {
   const dealEnds = String(form.get("deal_until") ?? "").trim();
   const dealCost = Math.round(Number(form.get("deal_cost") ?? 0)) || 0;
   const dealOn = dealTyped > 0 && dealEnds !== "";
+  const pairLabel = String(form.get("deal_pair") ?? "").trim();
+  const pairOn = pairLabel !== "" && dealEnds !== "";
 
   const fields = {
     price_food: Math.round(price),
     price_cost: cost,
     deal_price: dealOn ? dealTyped : null,
     deal_cost: dealOn && dealCost > 0 ? dealCost : null,
-    deal_until: dealOn ? `${dealEnds}T23:59:59+01:00` : null,
+    /*
+     * Buy one get one free, which is a rule rather than a price.
+     *
+     * Dishes that pair with each other share a label, and the size the
+     * counter put the deal on is named beside it. Same end date as a price
+     * cut, and for the same reason: without one there is no deal at all.
+     */
+    deal_kind: pairOn ? "pair" : null,
+    deal_pair: pairOn ? pairLabel : null,
+    deal_choice: pairOn ? String(form.get("deal_choice") ?? "").trim() : null,
+    deal_until: dealOn || pairOn ? `${dealEnds}T23:59:59+01:00` : null,
     cost_confirmed: cost !== null && form.get("cost_confirmed") === "on",
     // Priced at nothing means off, whatever the tick says. The menu prints a
     // zero rather than hiding it, so an item on sale at ₦0 is free food on
@@ -3358,6 +3370,7 @@ const SETTING_FIELDS = [
   "ribbon_text",
   "ribbon_href",
   "offer_code",
+  "deals_headline",
   "promoter_perk_code",
   "auto_headline",
   "auto_lines",

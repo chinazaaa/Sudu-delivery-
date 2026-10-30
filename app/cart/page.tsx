@@ -14,6 +14,7 @@ import {
 import { dropLabel, nextDrop, skincareOn } from "@/lib/skincare";
 import { nextDrop as nextPharmacyDrop, pharmacyOn } from "@/lib/pharmacy";
 import { livePrices } from "@/lib/menu";
+import { livePairDeals } from "@/lib/deals";
 import Reprice from "@/components/Reprice";
 import { hostelNames } from "@/lib/hostels";
 import { liveOffers } from "@/lib/coupons";
@@ -94,6 +95,8 @@ export default async function CartPage({
       slots={slots}
       today={lagosToday()}
       hostels={await hostelNames()}
+      // Buy one get one free, as the counters are running it today.
+      pairDeals={await livePairDeals()}
       // What is on today, so the cart can say when it is one thing away from
       // an offer rather than leaving somebody to wonder why it is not free.
       offers={await liveOffers()}

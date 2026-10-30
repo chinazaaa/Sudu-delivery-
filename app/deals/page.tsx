@@ -4,6 +4,7 @@ import Empty from "@/components/Empty";
 import ProductGrid from "@/components/ProductGrid";
 import { optionGroupsFor } from "@/lib/menu";
 import { browseProducts, productFacets } from "@/lib/products";
+import { safeSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,7 @@ export default async function DealsPage({
       ? asked.sort
       : "";
 
-  const [{ products, total }, facets] = await Promise.all([
+  const [{ products, total }, facets, settings] = await Promise.all([
     browseProducts({
       deals: true,
       place: asked.place,
@@ -54,7 +55,19 @@ export default async function DealsPage({
       upTo: true,
     }),
     productFacets(asked.place),
+    safeSettings(),
   ]);
+
+  /*
+   * A word for the week it is, where there is one.
+   *
+   * Black Friday is a fortnight of the year and this page is not: counters
+   * cut prices in March too, and a page headed Black Friday in March is a
+   * page nobody believes. So the headline is typed in admin and emptying
+   * the box takes it off, leaving the page exactly as it is the rest of
+   * the time.
+   */
+  const headline = (settings.deals_headline ?? "").trim();
 
   const groups = await optionGroupsFor(products.map((one) => one.id));
   const cards = products.map((one) => ({
@@ -106,6 +119,9 @@ export default async function DealsPage({
   return (
     <div className="space-y-4 pb-10">
       <header className="space-y-2">
+        {headline !== "" && (
+          <span className="ticket text-brand-dark">{headline}</span>
+        )}
         <h1 className="font-display text-[min(11vw,3rem)] font-black uppercase leading-[0.95] sm:text-[clamp(3rem,6vw,4.5rem)]">
           On sale now
         </h1>

@@ -42,6 +42,7 @@ import {
   usePeople,
 } from "@/lib/cart";
 import { bandIndex, feeFor, sameDayFee, type Band } from "@/lib/fees";
+import { pairsInCart, type PairDeal } from "@/lib/deals";
 import { nearMiss, pickOffer, type LiveOffer } from "@/lib/offers";
 import { DAY_NAMES, nextOpenDay, opensOn, weekdayOf } from "@/lib/open-days";
 import { naira } from "@/lib/money";
@@ -63,6 +64,7 @@ export default function CartView({
   stepFeeOf = {},
   openDaysOf = {},
   offers = [],
+  pairDeals = [],
   nextRunId = "",
   startGroup = false,
   iceItemId = "",
@@ -104,6 +106,8 @@ export default function CartView({
   /** The offers on today, so the cart can say when it is one thing away from
    *  one rather than leaving somebody to wonder why it is not free. */
   offers?: LiveOffer[];
+  /** Buy one get one free, as the counters are running it today. */
+  pairDeals?: PairDeal[];
   /** The run a cart prices against until they pick one at the checkout. */
   nextRunId?: string;
   /** They came here to start a group, so the form is already open. */
@@ -796,6 +800,15 @@ export default function CartView({
           } in ${naira(alone)}, from any kitchen.`
         : `That is as much as fits at ${naira(alone)}.`;
 
+  /*
+   * Buy one get one free, worked out here as well as on the server.
+   *
+   * The same rule and the same arithmetic, so the line in this basket is
+   * the line on the bill: a cheaper pizza free for every dearer one, at
+   * the size the counter put the deal on.
+   */
+  const paired = pairsInCart(cart, pairDeals);
+
   const names = people.map((p) => p.name);
   const groups = groupNames(cart, people)
     .map((person) => ({
@@ -1144,6 +1157,14 @@ export default function CartView({
             <span className="text-muted">Subtotal</span>
             <span className="font-semibold">{naira(cartSubtotal(cart))}</span>
           </div>
+          {paired.off > 0 && (
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-mint">{paired.said}</span>
+              <span className="font-semibold text-mint">
+                −{naira(paired.off)}
+              </span>
+            </div>
+          )}
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-muted">
               Delivery{tier === "" ? "" : ` (${tier})`}
@@ -1153,7 +1174,7 @@ export default function CartView({
           <div className="flex items-baseline justify-between gap-3 border-t-[1.5px] border-rule pt-2">
             <span className="font-bold">Total</span>
             <span className="font-display text-[28px] font-black leading-none">
-              {naira(cartSubtotal(cart) + alone)}
+              {naira(cartSubtotal(cart) - paired.off + alone)}
             </span>
           </div>
         </section>
@@ -1389,7 +1410,7 @@ export default function CartView({
               {group === "" && tier !== "" ? ` · ${tier}` : ""}
             </p>
             <p className="truncate font-display text-[26px] font-black leading-none">
-              {naira(cartSubtotal(cart) + (group === "" ? alone : 0))}
+              {naira(cartSubtotal(cart) - paired.off + (group === "" ? alone : 0))}
             </p>
           </div>
           {group !== "" ? (

@@ -48,6 +48,7 @@ import {
   readGroup,
 } from "@/components/GroupLink";
 import { type Slot } from "@/lib/same-day";
+import { pairsInCart, type PairDeal } from "@/lib/deals";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import FillDetails from "@/components/FillDetails";
 import KeepCart from "@/components/KeepCart";
@@ -136,6 +137,7 @@ export default function Checkout({
   openDaysOf = {},
   offers,
   hostels,
+  pairDeals = [],
   promoters,
   sentBy = "",
   sentByName = "",
@@ -191,6 +193,8 @@ export default function Checkout({
   monies?: { code: string; label: string; symbol: string; rate: number }[];
   /** The blocks the admin delivers to. Empty means anything typed is allowed. */
   hostels: string[];
+  /** Buy one get one free, as the counters are running it today. */
+  pairDeals?: PairDeal[];
   /** Who somebody could say they heard about the shop from. Empty means
    *  nobody is promoting, and then the question is not worth asking. */
   promoters: { code: string; name: string }[];
@@ -759,6 +763,15 @@ export default function Checkout({
   ];
   const itemCount = countItems(cart);
   const subtotal = cartSubtotal(cart);
+  /*
+   * Buy one get one free, by the same rule the server charges by.
+   *
+   * The cheaper of every pair, at the size the counter put the deal on.
+   * Worked out here so the number on this page is the number on the bill:
+   * the server does the same sum again before taking any money, because a
+   * price in a browser is a claim rather than a fact.
+   */
+  const paired = pairsInCart(cart, pairDeals);
 
   // A friend's delivery this browser said it was joining. Checked against the
   // server on the way in, so a link from a run that has since closed quietly
@@ -1078,7 +1091,10 @@ export default function Checkout({
   // One offer to a checkout: a typed code takes the slot if there is one,
   // and the link's own code only fills it when nothing else has.
   const linkOff = !applied && perk.kind === "applied" ? perk.discount : 0;
-  const total = Math.max(0, subtotal + charged - (applied?.discount ?? 0) - linkOff);
+  const total = Math.max(
+    0,
+    subtotal - paired.off + charged - (applied?.discount ?? 0) - linkOff
+  );
 
   const collect: "leader" | "each" = people.some(
     (person) =>
@@ -2509,6 +2525,12 @@ export default function Checkout({
           <span>Food</span>
           <span>{naira(subtotal)}</span>
         </div>
+        {paired.off > 0 && (
+          <div className="flex justify-between font-semibold text-mint">
+            <span>{paired.said}</span>
+            <span>−{naira(paired.off)}</span>
+          </div>
+        )}
         <div className="flex justify-between text-muted">
           <span>
             {sameDay
