@@ -279,12 +279,12 @@ export default function RestaurantMenu({
             that floats at the bottom, which says the same three numbers in
             the space a phone has for them. */}
         <aside
-          aria-label="Your run"
+          aria-label="Your order"
           className="sticky top-24 hidden w-[340px] shrink-0 overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-[8px_8px_0_#15110e] lg:block"
         >
           <div className="flex items-baseline justify-between gap-3 bg-ink px-[22px] py-[18px] text-shell">
             <span className="font-display text-[30px] font-black uppercase leading-none">
-              Your run
+              Your order
             </span>
             <span className="ticket text-volt">
               {count} item{count === 1 ? "" : "s"}
@@ -294,7 +294,7 @@ export default function RestaurantMenu({
             {count === 0 ? (
               <p className="leading-relaxed text-muted">
                 Nothing yet. Add from {place.restaurant.name}, or mix in any
-                other kitchen. Same car, same fee.
+                other kitchen. One delivery, one fee.
               </p>
             ) : (
               <>

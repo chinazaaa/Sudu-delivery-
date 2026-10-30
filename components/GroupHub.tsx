@@ -54,7 +54,7 @@ export default function GroupHub({
       <div className="grid items-start gap-10 pt-7 lg:grid-cols-2 lg:gap-12">
         <div className="flex flex-col gap-6">
           <span className="ticket text-brand-dark">
-            Group order · one car · one fee
+            Group order · one delivery · one fee
           </span>
           <h1 className="font-display text-[min(19vw,8.75rem)] font-black uppercase leading-[0.84] sm:text-[clamp(4rem,10vw,8.75rem)]">
             Start a

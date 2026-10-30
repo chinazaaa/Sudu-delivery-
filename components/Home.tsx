@@ -663,7 +663,7 @@ export default function Home({
           {/* How a run works: the answer to handing money over first. */}
           <section className="border-y-2 border-ink bg-paper">
             <div className="shell flex flex-col gap-10 py-16">
-              <h2 className="section-title">How a run works</h2>
+              <h2 className="section-title">How it works</h2>
               <ol className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
                 {[
                   [
@@ -671,8 +671,8 @@ export default function Home({
                     "Add items from one restaurant or several. Two kitchens in one order is fine.",
                   ],
                   [
-                    "Pick a run and your block",
-                    "Choose the delivery run that suits you and the hostel block you are in.",
+                    "Pick a time and your block",
+                    "Choose the time that suits you and the hostel block you are in.",
                   ],
                   [
                     "Pay once",
@@ -724,7 +724,7 @@ export default function Home({
                   One fee.
                 </h2>
                 <p className="max-w-[460px] text-lg leading-relaxed text-ink/80">
-                  Delivery is priced by how much of the car your order fills,
+                  Delivery is priced by how much space your order takes,
                   never by what the food costs. Order from as many counters as
                   you like and it is still one trip, at one of these prices.
                 </p>
@@ -778,10 +778,9 @@ export default function Home({
                   side is the thing the checkout was built to stop
                   somebody having to read. */}
               <p className="text-sm text-muted lg:col-span-2">
-                These are the prices on a day we are already driving. Pick a
-                day we are not and it comes on a car of its own, which costs
-                more because nobody else is sharing it. You see the price
-                before you pay, either way.
+                These are the prices on a day we are already driving. Another
+                day costs more, because nobody else is sharing it. You see
+                the price before you pay, either way.
               </p>
             </section>
           )}

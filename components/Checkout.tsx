@@ -879,15 +879,12 @@ export default function Checkout({
    */
   const sameDay = allSlots.find((one) => one.at === deliverAt) ?? null;
   /** The dropdown is on Today, Tomorrow, or a date somebody typed. */
-  const [pickingDate, setPickingDate] = useState(false);
   /** Why the day somebody typed cannot be done, where it cannot. Said out
    *  loud, because a date box that takes a tap and changes nothing reads as
    *  a broken page rather than as an answer. */
-  const [dayProblem, setDayProblem] = useState("");
   /** The day to offer instead, where the one somebody asked for cannot be
    *  done. A date box that says no and stops is a dead end: the shop knows
    *  which day does work and should say it, with a tap to take it. */
-  const [dayInstead, setDayInstead] = useState("");
   const shared = joining !== null || party !== "";
 
   // A promotion is the price rather than money off it, so it is settled
@@ -999,10 +996,10 @@ export default function Checkout({
   const arriving = onARun
     ? runNow
       ? runArrival(runNow).said
-      : "on the next run"
+      : "on the next delivery"
     : sameDay
       ? `${sameDay.window} ${sameDayWord(sameDay)}`
-      : "on the next run";
+      : "on the next delivery";
 
   // The same arrival as a line of its own rather than the tail of a
   // sentence: "Between 3:30pm and 5:30pm, Saturday, 26 Sept". Beside the
@@ -1245,7 +1242,7 @@ export default function Checkout({
   if (cart.length === 0) {
     return (
       <Empty icon="cart" title="Your cart is empty" href="/" action="Browse the menu">
-        Pick a few things and they gather here, ready to go on the next run.
+        Pick a few things and they gather here, ready for the next delivery.
       </Empty>
     );
   }
@@ -1328,39 +1325,11 @@ export default function Checkout({
     const goTo = (date: string) => {
       if (date === "") return;
       const day = dayChoices.find((one) => one.date === date);
-      if (!day) {
-        /*
-         * The soonest day that does work, by name.
-         *
-         * "Nothing is going that day. Try another." leaves somebody
-         * tapping through a calendar guessing, and on a cart that only one
-         * run in the fortnight can carry they can guess for a long time.
-         * The shop has the list in its hand, so it says the day.
-         */
-        const instead =
-          date < today
-            ? (dayChoices[0] ?? null)
-            : (dayChoices.find((one) => one.date > date) ?? null);
-        setDayInstead(instead?.date ?? "");
-        setDayProblem(
-          date < today
-            ? instead
-              ? "That day has gone."
-              : "That day has gone, and nothing is going yet."
-            : instead
-              ? "Nothing goes that day."
-              : "Nothing goes that day, or any day after it. Message us and we will say what we can do."
-        );
-        return;
-      }
-      setDayProblem("");
-      setDayInstead("");
-      // Picked today or tomorrow out of the calendar: those have their own
-      // place on the list above, so the dropdown goes back to naming the
-      // day and the calendar closes behind it. Left open, the box sat
-      // blank underneath a dropdown reading "Pick a date", with the day
-      // itself said nowhere.
-      if (named.includes(date)) setPickingDate(false);
+      // Only days on the row can be tapped, so there is nothing left to
+      // refuse: the calendar that could ask for a day we cannot do has
+      // gone, and with it the sentence explaining which day to try
+      // instead.
+      if (!day) return;
       if (day.runId !== null) {
         setBatchId(day.runId);
         setDeliverAt("");
@@ -1397,7 +1366,7 @@ export default function Checkout({
       <div className="space-y-2.5">
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
           {near.map((one) => {
-            const on = chosen?.date === one.date && !pickingDate;
+            const on = chosen?.date === one.date;
             const shut = one.choice === null;
             return (
               <button
@@ -1405,7 +1374,6 @@ export default function Checkout({
                 type="button"
                 disabled={shut || adding !== null || joining !== null || party !== ""}
                 onClick={() => {
-                  setPickingDate(false);
                   goTo(one.date);
                 }}
                 aria-pressed={on}
@@ -1424,14 +1392,13 @@ export default function Checkout({
           })}
 
           {further.map((one) => {
-            const on = chosen?.date === one.date && !pickingDate;
+            const on = chosen?.date === one.date;
             return (
               <button
                 key={one.date}
                 type="button"
                 disabled={adding !== null || joining !== null || party !== ""}
                 onClick={() => {
-                  setPickingDate(false);
                   goTo(one.date);
                 }}
                 aria-pressed={on}
@@ -1444,24 +1411,16 @@ export default function Checkout({
             );
           })}
 
-          {/* Always, not only where a further day is already on the row.
-              A cart that one run in the fortnight can carry has today and
-              tomorrow and nothing else, which is exactly the cart somebody
-              wants to look further ahead on. */}
-          <button
-            type="button"
-            disabled={adding !== null || joining !== null || party !== ""}
-            onClick={() => {
-              setPickingDate(true);
-              if (farDay === "" && further[0]) goTo(further[0].date);
-            }}
-            aria-pressed={pickingDate}
-            className={`min-h-11 shrink-0 whitespace-nowrap rounded-full border-2 border-dashed px-4 text-sm font-bold transition ${
-              pickingDate ? "border-volt bg-volt text-ink" : "border-shell/40 text-shell"
-            }`}
-          >
-            Another day
-          </button>
+          {/*
+              No "Another day" chip.
+
+              It opened a calendar, and the calendar's only honest answer
+              on most carts was that nothing goes that day either. The line
+              under this card already offers the one thing that can really
+              help, which is a person: need another day or time, message
+              us. Two ways to ask for the same thing, one of which usually
+              says no, is one too many.
+           */}
         </div>
 
         {/*
@@ -1477,42 +1436,6 @@ export default function Checkout({
             we cannot do says why rather than taking the tap and changing
             nothing, which reads as a broken page.
          */}
-        {pickingDate && (
-          <div className="space-y-2">
-            <input
-              type="date"
-              className="field"
-              min={today}
-              max={furthest}
-              // Whatever day is chosen, not only the far ones. `far` is
-              // empty for today and tomorrow, which left the box blank
-              // the moment somebody picked one of them in it.
-              value={chosen?.date ?? ""}
-              onChange={(e) => goTo(e.target.value)}
-              aria-label="The day you want it"
-            />
-            {dayProblem !== "" && (
-              <p className="text-sm text-volt">
-                {dayProblem}
-                {dayInstead !== "" && (
-                  <>
-                    {" "}
-                    The soonest after it is{" "}
-                    <button
-                      type="button"
-                      onClick={() => goTo(dayInstead)}
-                      className="font-semibold underline underline-offset-4"
-                    >
-                      {runDateLabel(dayInstead)}
-                    </button>
-                    .
-                  </>
-                )}
-              </p>
-            )}
-          </div>
-        )}
-
         {/*
             How it comes, on a day where there are two answers.
 
@@ -1629,7 +1552,7 @@ export default function Checkout({
           value={batchId}
           onChange={(e) => setBatchId(e.target.value)}
           disabled={adding !== null}
-          aria-label="Delivery run"
+          aria-label="When it comes"
         >
           {shownRuns.map((batch) => (
             <option key={batch.id} value={batch.id}>
@@ -1751,7 +1674,7 @@ export default function Checkout({
           where the only thing anybody wants is to finish. The desk keeps
           the big one, where the page is wide and there is room for it. */}
       <h1 className="font-display text-[min(9vw,2.25rem)] font-black uppercase leading-[0.95] sm:text-[clamp(3.5rem,7vw,5.5rem)]">
-        Book your run
+        Checkout
       </h1>
 
       {/* The board's two columns: the form, and the order beside it. One
@@ -1783,7 +1706,7 @@ export default function Checkout({
           <p className="text-sm text-ink/80">
             {partyWhen
               ? `Arriving ${partyWhen}.`
-              : "Everything ordered under your link rides in the same car."}
+              : "Everything ordered under your link comes in one delivery."}
             {partyPeople > 0 &&
               ` ${partyPeople} ${partyPeople === 1 ? "order" : "orders"} in it so far.`}
           </p>
@@ -1906,7 +1829,7 @@ export default function Checkout({
               ? `${stillFineSaid} ${stillFine.length === 1 ? "is" : "are"} open: take ${shutThere.length === 1 ? "it" : "them"} out and this can go on ${shutSoonest.label}. `
               : ""}
             {openable.length > 0
-              ? `Otherwise the next run that can carry everything is ${goingThere?.label ?? "the one below"}.`
+              ? `Otherwise the next one that can bring everything is ${goingThere?.label ?? "the one below"}.`
               : `${shutSaid} ${shutThere.length === 1 ? "opens" : "open"} again ${openAgainWord}.`}
           </p>
         )}
@@ -1919,8 +1842,8 @@ export default function Checkout({
             {openable.length > 0
               ? `The next one that does is ${goingThere?.label ?? "the one below"}.`
               : sameDaySlots.length > 0
-                ? "None of the runs coming up are, so this goes as a car of its own, at the time you pick below."
-                : "None of the runs coming up are."}
+                ? "None of the days coming up are, so this goes on its own, at the time you pick below."
+                : "None of the days coming up are."}
           </p>
         )}
 
@@ -2526,13 +2449,13 @@ export default function Checkout({
             board puts them here so the two halves of the answer are never
             on different screens. */}
         <div className="flex flex-col gap-2 bg-ink px-5 py-4 text-shell">
-          <span className="ticket text-volt">Your run</span>
+          <span className="ticket text-volt">When it comes</span>
           <span className="font-display text-[28px] font-extrabold uppercase leading-none">
             {noRunThere
               ? "Nothing going yet"
               : arriving !== ""
                 ? arriving
-                : "Pick a run"}
+                : "Pick a day"}
           </span>
           <div className="border-t-2 border-dashed border-[#4a423b]" />
           <div className="flex justify-between gap-3">
@@ -2703,7 +2626,7 @@ export default function Checkout({
             // as the price having gone up. It is the trip that is longer.
             note={
               farExtra > 0
-                ? `${secondStop > 0 ? `Your order comes from ${farNames}, which is two stops rather than one` : `${area.name} is a longer trip than Sangotedo`}, so every rung is ${naira(farExtra)} more. One fee for the whole order, however many restaurants are in it: it is the car, not the food, so it goes by how much room your order takes.`
+                ? `${secondStop > 0 ? `Your order comes from ${farNames}, which is two stops` : `${area.name} is further than Sangotedo`}, so every rung is ${naira(farExtra)} more.`
                 : undefined
             }
           />

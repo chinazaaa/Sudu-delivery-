@@ -1157,10 +1157,10 @@ export default function Checkout() {
               }
               note={
                 picked
-                  ? "A car of its own is one order, one driver, one trip, so there is nobody to share the petrol with. A run carries everybody at once, which is why it costs less."
+                  ? "This time is yours alone, so there is nobody to share it with."
                   : farExtra > 0
-                    ? `${secondStop > 0 ? `Your order comes from ${farNames}, which is two stops rather than one` : `${area.name} is a longer trip than Sangotedo`}, so every rung is ${naira(farExtra)} more. One fee for the whole order, however many kitchens are in it: it is the car, not the food, so it goes by how much room your order takes.`
-                    : "One fee for the whole order, however many kitchens are in it. It is the car, not the food, so it goes by how much room your order takes."
+                    ? `${secondStop > 0 ? `Your order comes from ${farNames}, which is two stops` : `${area.name} is further than Sangotedo`}, so every rung is ${naira(farExtra)} more.`
+                    : "One fee for the whole order, however many kitchens are in it."
               }
             />
           )

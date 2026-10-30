@@ -309,7 +309,7 @@ export default function ShelfCheckout({
                       {one.day === "today" ? "Today" : "Tomorrow"}, {one.label}
                     </span>
                     <span className="block text-xs text-muted">
-                      A car of its own, straight there
+                      Straight there, at the time you pick
                     </span>
                   </span>
                   <span className="shrink-0 font-extrabold">
@@ -526,7 +526,7 @@ export default function ShelfCheckout({
           bands={picked ? sameDayBands : bands}
         />
         <p className="text-xs text-muted">
-          One fee for the whole basket. It is the car, not the cream, so it
+          One fee for the whole basket. It is the trip, not the cream, so it
           goes by how much room your order takes.
         </p>
       </section>

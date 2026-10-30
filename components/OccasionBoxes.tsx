@@ -208,7 +208,7 @@ export default function OccasionBoxes({
           the left with a tick against every line, and what it costs on a
           panel of its own down the right with the button on it.
 
-          One price each, delivery in it, and the price moves with the car
+          One price each, delivery in it, and the price moves with the day
           rather than pretending it does not. */}
       {/*
           A shelf, laid out like the shop.
@@ -426,7 +426,7 @@ export default function OccasionBoxes({
                         <span>
                           <span className="font-semibold">{one.window}</span>
                           <span className="block text-muted">
-                            On the run
+                            Delivered
                           </span>
                         </span>
                       </span>
@@ -807,7 +807,7 @@ export default function OccasionBoxes({
 
       {extras.length > 0 && box && !shut && (
         <p className="text-sm text-muted">
-          {extras[0].name} rides the same car: {extras[0].blurb || "ask on WhatsApp"}.
+          {extras[0].name} comes with it: {extras[0].blurb || "ask on WhatsApp"}.
         </p>
       )}
     </div>

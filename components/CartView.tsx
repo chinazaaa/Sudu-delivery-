@@ -507,7 +507,7 @@ export default function CartView({
           action={`Check out the ${waiting.what}`}
         >
           {waiting.count === 1
-            ? `You have one ${waiting.what} item waiting. It is its own order on its own run, so it does not travel with food, and it is still here when you come back for some.`
+            ? `You have one ${waiting.what} item waiting. It is its own order on its own day, so it does not travel with food, and it is still here when you come back for some.`
             : `You have ${waiting.count} ${waiting.what} items waiting. They are their own order on their own run, so they do not travel with food, and they are still here when you come back for some.`}
         </Empty>
       );
@@ -515,7 +515,7 @@ export default function CartView({
 
     return (
       <Empty icon="cart" title="Your cart is empty" href="/" action="Browse the menu">
-        Pick a few things and they gather here, ready to go on the next run.
+        Pick a few things and they gather here, ready for the next delivery.
       </Empty>
     );
   }
@@ -794,7 +794,7 @@ export default function CartView({
         ? `${room} more item${room === 1 ? "" : "s"} ${
             room === 1 ? "fits" : "fit"
           } in ${naira(alone)}, from any kitchen.`
-        : `This car is full at ${naira(alone)}.`;
+        : `That is as much as fits at ${naira(alone)}.`;
 
   const names = people.map((p) => p.name);
   const groups = groupNames(cart, people)
@@ -826,7 +826,7 @@ export default function CartView({
           what another item would cost: nothing, usually. */}
       <div className="rounded-2xl bg-ink px-4 py-3.5 text-shell">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="ticket text-volt">Fee for this car</span>
+          <span className="ticket text-volt">Delivery for this order</span>
           {tier !== "" && (
             <span className="ticket text-shell/60">{tier}</span>
           )}
@@ -911,7 +911,7 @@ export default function CartView({
             </span>{" "}
             {runOnlyWhereSaid || runOnlySaid}
             {runOnlyLines.length < cart.length
-              ? ", and the whole order comes in one car, so all of it comes then. Take those out and the rest can come sooner."
+              ? ", and the whole order comes together, so all of it comes then. Take those out and the rest can come sooner."
               : goingWord !== ""
                 ? ", so that is when it comes."
                 : ", and we do not have the next day for it yet. Message us and we will say."}
@@ -1121,7 +1121,7 @@ export default function CartView({
         <span aria-hidden className="text-2xl leading-none">
           +
         </span>
-        Add from another kitchen, same car
+        Add from another kitchen, same delivery
       </Link>
 
       {theCar}

@@ -74,8 +74,11 @@ export default function FeeBands({
       </ul>
 
       <p className="mt-2 text-muted">
-        {note ??
-          "One fee for the whole order, however many restaurants are in it. It is the car, not the food, so it goes by how much room your order takes."}
+        {/* One sentence. The second half explained that the fee is for the
+            trip rather than the food, which is our reasoning about our own
+            costs: what somebody needs to know is that one order is one
+            fee, and the ladder above already shows what it costs. */}
+        {note ?? "One fee for the whole order, however many kitchens are in it."}
       </p>
 
       {children}

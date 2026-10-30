@@ -233,8 +233,8 @@ export default function GroupLink({
           <span className="font-bold text-brand-dark">Ordering with friends?</span>{" "}
           <span className="text-ink/80">
             {alone > 0
-              ? `Share this run and split the ${naira(alone)}.`
-              : "Share this run and split one delivery."}
+              ? `Share this delivery and split the ${naira(alone)}.`
+              : "Share this delivery and split it."}
           </span>
         </span>
         <span aria-hidden className="shrink-0 text-lg font-extrabold text-brand-dark">
@@ -264,8 +264,8 @@ export default function GroupLink({
           nothing, so it is said wherever the promise is actually made. */}
       <p className="text-sm text-muted">
         {splits
-          ? "Everybody orders their own food out of one car, and the delivery splits evenly between you."
-          : "Everybody orders their own food out of one car. Your share of delivery is worked out when it closes."}
+          ? "Everybody orders their own food, and the one delivery splits evenly between you."
+          : "Everybody orders their own food. Your share of the delivery is worked out when it closes."}
       </p>
 
       <div>

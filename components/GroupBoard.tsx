@@ -362,7 +362,7 @@ export default function GroupBoard({
         <section className="card space-y-2 border-2 border-brand/30 bg-brand-tint">
           <h2 className="font-bold text-brand-dark">One more step</h2>
           <p className="text-sm text-ink/75">
-            Your food is in the car. Finalise it from your cart and it asks for
+            Your food is in. Finalise it from your cart and it asks for
             your number and your block at the same time, so the others are not
             waiting on you.
           </p>

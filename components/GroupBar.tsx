@@ -91,7 +91,7 @@ export default function GroupBar() {
       {asking && (
         <Sheet title="Leave this group?" onClose={() => setAsking(false)}>
             <p className="text-sm text-muted">
-              Your food comes out of the car and the others stop paying a share for
+              Your food comes out and the others stop paying a share for
               you. Your cart stays on this phone, so you can order on your own or
               open the link again.
             </p>
