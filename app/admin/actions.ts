@@ -85,7 +85,7 @@ import {
 import { tripForBox } from "@/lib/box-day";
 import { naira, orderRef } from "@/lib/money";
 import { namedPromoters, realPromoter } from "@/lib/promoters";
-import { pushDeal, pushToPhone, tellDelivered } from "@/lib/push";
+import { pushDeal, pushDealTo, pushToPhone, tellDelivered } from "@/lib/push";
 import { recordDealSend } from "@/lib/deal-sends";
 import { freeNumber, quietUntil, type SavedCart } from "@/lib/carts";
 import { placeSkincareOrder } from "@/app/actions";
@@ -4806,9 +4806,33 @@ export async function sendDealPush(
           ? `/r/${where}${category ? `?category=${category}` : ""}`
           : "/";
 
-  const result = await pushDeal({ title, body, path });
+  /*
+   * Everybody, or the few people whose names were ticked.
+   *
+   * Not every notification is for the whole shop, and one that is sent to
+   * the whole shop anyway is how somebody comes to turn the switch off. The
+   * numbers come off the list in admin rather than being typed, so this
+   * only has to read them back.
+   */
+  const everyone = String(form.get("who") ?? "everyone") !== "picked";
+  const picked = form
+    .getAll("phones")
+    .map((one) => String(one).trim())
+    .filter(Boolean);
+  if (!everyone && picked.length === 0) {
+    return { error: "Tick at least one person, or send it to everybody.", sent: null };
+  }
+
+  const result = everyone
+    ? await pushDeal({ title, body, path })
+    : await pushDealTo(picked, { title, body, path });
   if (result.of === 0) {
-    return { error: "No phone has the app with deals switched on yet.", sent: null };
+    return {
+      error: everyone
+        ? "No phone has the app with deals switched on yet."
+        : "None of those people has the app with deals switched on.",
+      sent: null,
+    };
   }
 
   // Written down after it has gone, and never in the way of it going. The
@@ -4821,6 +4845,7 @@ export async function sendDealPush(
     path,
     sent: result.sent,
     audience: result.of,
+    everyone,
   });
 
   revalidatePath("/admin/notifications");

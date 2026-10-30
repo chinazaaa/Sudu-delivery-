@@ -27,6 +27,10 @@ export type DealSend = {
   sent: number;
   audience: number;
   sent_at: string;
+  /** Whether it went to everybody with the app, or to a few people picked
+   *  by name. Old rows have none and read as everybody, which is what they
+   *  were: there was no other kind. */
+  everyone?: boolean;
 };
 
 /** A send with what happened in the hours after it. */
@@ -229,6 +233,7 @@ export async function recordDealSend(one: {
   path: string;
   sent: number;
   audience: number;
+  everyone?: boolean;
 }): Promise<void> {
   try {
     await db().from("deal_sends").insert({
@@ -237,6 +242,7 @@ export async function recordDealSend(one: {
       path: one.path,
       sent: one.sent,
       audience: one.audience,
+      everyone: one.everyone ?? true,
     });
   } catch {
     // Deliberately silent. See above.

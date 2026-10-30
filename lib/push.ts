@@ -125,6 +125,123 @@ export async function pushDeal(message: PushMessage): Promise<{ sent: number; of
   }
 }
 
+/**
+ * The same thing, to a few people rather than to everybody.
+ *
+ * Not every notification is for the whole shop. A deal at one counter is
+ * for the people who buy from it, a word about a box is for whoever asked
+ * about boxes, and sending both to all seven phones is how a switch gets
+ * turned off. The numbers are picked in admin off a list of who has the
+ * app, so nothing here has to guess who they are.
+ *
+ * The deals switch still decides. Somebody who has turned it off is not
+ * someone an admin can put back by ticking their name: the switch is
+ * theirs, and an order of their own is the only thing that still reaches
+ * them.
+ */
+export async function pushDealTo(
+  phones: string[],
+  message: PushMessage
+): Promise<{ sent: number; of: number }> {
+  const wanted = [...new Set(phones.map((one) => one.trim()).filter(Boolean))];
+  if (wanted.length === 0) return { sent: 0, of: 0 };
+  try {
+    const { data } = await db()
+      .from("push_devices")
+      .select("token")
+      .eq("deals", true)
+      .in("phone", wanted);
+    const tokens = ((data ?? []) as { token: string }[]).map((row) => row.token);
+    return { sent: await pushTo(tokens, message), of: tokens.length };
+  } catch {
+    return { sent: 0, of: 0 };
+  }
+}
+
+/** Somebody with the app, as the list to pick from shows them. */
+export type DealPerson = {
+  phone: string;
+  /** What the shop calls them. Empty where nobody has written it down,
+   *  and then the number is the name. */
+  name: string;
+  /** How many orders they have placed, so a list of numbers reads as
+   *  people: the regular and the one who tried us once are not the same
+   *  person to write to. */
+  orders: number;
+  /** The day of their last one, as "2026-10-30". Empty where there is
+   *  none. */
+  lastOrder: string;
+};
+
+/**
+ * Everybody who could be picked, newest customer first.
+ *
+ * Only phones with the app and the deals switch on, because they are the
+ * only ones a notification can reach at all: a list offering names that
+ * cannot be written to is a list that lies about what ticking them does.
+ */
+export async function dealPeople(): Promise<DealPerson[]> {
+  try {
+    const { data } = await db()
+      .from("push_devices")
+      .select("phone")
+      .eq("deals", true);
+    const phones = [
+      ...new Set(
+        ((data ?? []) as { phone: string }[])
+          .map((row) => (row.phone ?? "").trim())
+          .filter(Boolean)
+      ),
+    ];
+    if (phones.length === 0) return [];
+
+    const [people, orders] = await Promise.all([
+      db().from("customers").select("phone, name").in("phone", phones),
+      db()
+        .from("orders")
+        .select("customer_phone, created_at")
+        .in("customer_phone", phones)
+        .order("created_at", { ascending: false })
+        .limit(2000),
+    ]);
+
+    const named = new Map(
+      ((people.data ?? []) as { phone: string; name: string }[]).map((row) => [
+        row.phone,
+        (row.name ?? "").trim(),
+      ])
+    );
+    const count = new Map<string, number>();
+    const last = new Map<string, string>();
+    for (const row of (orders.data ?? []) as {
+      customer_phone: string;
+      created_at: string;
+    }[]) {
+      const who = row.customer_phone;
+      if (!who) continue;
+      count.set(who, (count.get(who) ?? 0) + 1);
+      // The rows come newest first, so the first one seen is the last one
+      // placed.
+      if (!last.has(who)) last.set(who, (row.created_at ?? "").slice(0, 10));
+    }
+
+    return phones
+      .map((phone) => ({
+        phone,
+        name: named.get(phone) ?? "",
+        orders: count.get(phone) ?? 0,
+        lastOrder: last.get(phone) ?? "",
+      }))
+      .sort(
+        (a, b) =>
+          b.lastOrder.localeCompare(a.lastOrder) ||
+          (a.name || a.phone).localeCompare(b.name || b.phone)
+      );
+  } catch {
+    return [];
+  }
+}
+
 /** How many phones a deal would reach, for showing before one is sent. */
 export async function dealAudience(): Promise<number> {
   try {

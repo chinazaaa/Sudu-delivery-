@@ -2,7 +2,7 @@ import PageHeader from "@/components/admin/PageHeader";
 import Figure from "@/components/admin/Figure";
 import DealPush from "@/components/admin/DealPush";
 import { menuView } from "@/lib/menu";
-import { dealAudience } from "@/lib/push";
+import { dealAudience, dealPeople } from "@/lib/push";
 import { liveOccasions } from "@/lib/boxes";
 import { listCheckoutLinks } from "@/lib/checkout-links";
 import { skincareOn } from "@/lib/skincare";
@@ -32,9 +32,12 @@ export const dynamic = "force-dynamic";
  * way to take it back is to send another one.
  */
 export default async function NotificationsPage() {
-  const [menu, audience, occasions, links, settings, sends] = await Promise.all([
+  const [menu, audience, people, occasions, links, settings, sends] = await Promise.all([
     menuView(),
     dealAudience(),
+    // Everybody who could be picked by name, for a notification that is
+    // not for the whole shop.
+    dealPeople(),
     liveOccasions(),
     listCheckoutLinks().catch(() => []),
     safeSettings(),
@@ -78,6 +81,7 @@ export default async function NotificationsPage() {
               .map((one) => ({ short: one.short as string, label: one.label }))}
             skincare={skincareOn(settings)}
             audience={audience}
+            people={people}
             lastSent={lastSentLine(latest ? latest.sent_at : null)}
           />
         </div>
@@ -137,6 +141,7 @@ export default async function NotificationsPage() {
                     <span className="hint block">
                       {sendStamp(one.sent_at)} · {one.sent} phone
                       {one.sent === 1 ? "" : "s"}
+                      {one.everyone === false ? " · picked" : ""}
                     </span>
                     {/* Said under the chip rather than added into it. A
                         notification about the Liverpool boxes followed by

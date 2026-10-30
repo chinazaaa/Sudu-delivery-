@@ -17,6 +17,8 @@ import {
   type AreaPair,
 } from "@/lib/areas";
 import { runCarries } from "@/lib/run-places";
+import { dayAfter } from "@/lib/pick-a-day";
+import { runDateLabel } from "@/lib/time";
 import { ladderFor, pricesByStep, pricesByValue, stepsFor } from "@/lib/areas-shared";
 import { feeRidingAlong, type StepFee } from "@/lib/step-fee";
 import { feeAcross, type ValueBand } from "@/lib/value-bands";
@@ -24,7 +26,7 @@ import { feeAcross, type ValueBand } from "@/lib/value-bands";
 import Link from "next/link";
 import Empty from "@/components/Empty";
 import { shelfCount, useShelf } from "@/lib/skincare-cart";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Thumb from "./Thumb";
 import {
   addPerson,
@@ -204,6 +206,35 @@ export default function CartView({
     window.addEventListener(PARTY_CHANGED, read);
     return () => window.removeEventListener(PARTY_CHANGED, read);
   }, []);
+
+  /*
+   * Taking something out should not leave you standing in the footer.
+   *
+   * The page gets shorter by the height of the thing removed, and the
+   * browser keeps the scroll where it was, which on a cart of two is the
+   * bottom of the page: the last thing somebody saw after tapping Remove
+   * was our phone number and the list of services. The cart is above them
+   * and they have to scroll up to find out what they have left.
+   *
+   * Only when the page can no longer show where they were, which is what
+   * being at the very bottom after a removal means. Somebody taking one
+   * line out of a long cart keeps their place, because their place is
+   * still there.
+   */
+  const was = useRef(cart.length);
+  useEffect(() => {
+    const before = was.current;
+    was.current = cart.length;
+    if (cart.length >= before) return;
+    const id = window.requestAnimationFrame(() => {
+      const bottom =
+        window.scrollY + window.innerHeight >=
+        document.documentElement.scrollHeight - 140;
+      if (!bottom && cart.length > 0) return;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [cart.length]);
 
   useEffect(() => {
     if (group === "") {
@@ -612,6 +643,23 @@ export default function CartView({
     runOnlyNames.length === 1
       ? runOnlyNames[0]
       : `${runOnlyNames.slice(0, -1).join(", ")} and ${runOnlyNames[runOnlyNames.length - 1]}`;
+  /*
+   * The day we are next going there, said the way a day is said.
+   *
+   * "On a run" is our word for it and means nothing to somebody buying
+   * lunch. The day does: today, tomorrow, or the date. Empty where nothing
+   * is going at all, which is its own sentence.
+   */
+  const goingWord =
+    going === null
+      ? ""
+      : (going.date ?? "") === today
+        ? "today"
+        : (going.date ?? "") === dayAfter(today)
+          ? "tomorrow"
+          : (going.date ?? "") !== ""
+            ? `on ${runDateLabel(going.date ?? "")}`
+            : "";
   const runOnlyArea =
     runOnlyLines.length > 0
       ? areas.find((one) => one.id === (areaOf[runOnlyLines[0].restaurantId] ?? ""))?.name ?? ""
@@ -805,20 +853,33 @@ export default function CartView({
         </h2>
       )}
 
-      {/* Only on a run, which is the surprise people hit at checkout after
-          the food is already chosen. Said while the thing is still on this
-          screen with a button next to it. */}
-      {runOnlyLines.length > 0 && (
+      {/*
+          Where the food is, said as a day rather than as a word of ours.
+
+          This used to read "The Place and Yin Yang Express are in Ajah, so
+          they come on a run rather than today", which is the shop
+          explaining its own timetable to somebody who only wants to know
+          when their food turns up. A run is our word. "We are not going to
+          Ajah today, we are tomorrow" is the same fact in theirs, and the
+          day is a day they can plan around.
+
+          Said while the thing is still on this screen with a button next
+          to it, because the surprise people hit at checkout is the one
+          they hit after the food is already chosen.
+       */}
+      {runOnlyLines.length > 0 && goingWord !== "today" && (
         <div className="rounded-2xl border border-brand/30 bg-brand-tint px-4 py-3">
           <p className="text-sm text-brand-dark">
             <span className="font-bold">
-              {runOnlySaid} {runOnlyNames.length === 1 ? "is" : "are"} in{" "}
-              {runOnlyArea}, so {runOnlyNames.length === 1 ? "it comes" : "they come"}{" "}
-              on a run rather than today.
+              We are not going to {runOnlyArea} today
+              {goingWord !== "" ? `, we are going ${goingWord}` : ""}.
             </span>{" "}
+            {runOnlySaid} {runOnlyNames.length === 1 ? "is" : "are"} there,
             {runOnlyLines.length < cart.length
-              ? "Everything travels in one car, so the whole order waits for that run. Take it out and the rest can come sooner."
-              : "Checkout shows which run, and it is not always this week."}
+              ? " and the whole order comes in one car, so all of it comes then. Take it out and the rest can come sooner."
+              : goingWord !== ""
+                ? " so that is when it comes."
+                : " and we do not have the next day for it yet. Message us and we will say."}
           </p>
         </div>
       )}

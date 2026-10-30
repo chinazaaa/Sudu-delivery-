@@ -56,6 +56,7 @@ export default function DealPush({
   links = [],
   skincare = false,
   audience,
+  people = [],
   lastSent = "",
 }: {
   restaurants: Restaurant[];
@@ -68,6 +69,14 @@ export default function DealPush({
   /** How many phones this would reach, so the button can say what pressing
    *  it does rather than "Send it". */
   audience?: number;
+  /** Everybody who could be picked by name, for the times this is not for
+   *  the whole shop. */
+  people?: {
+    phone: string;
+    name: string;
+    orders: number;
+    lastOrder: string;
+  }[];
   /**
    * "Last one went 7 days ago", worked out on the page from the newest send
    * there is. A sentence rather than a date, because the card it stands in
@@ -95,6 +104,33 @@ export default function DealPush({
   const [body, setBody] = useState("");
 
   /*
+   * Who it goes to.
+   *
+   * Everybody, which is what this page could only ever do, or a few people
+   * ticked off the list. A deal at one counter is not news for the whole
+   * shop, and sending it to the whole shop anyway is how somebody comes to
+   * turn notifications off.
+   */
+  const [who, setWho] = useState<"everyone" | "picked">("everyone");
+  const [ticked, setTicked] = useState<string[]>([]);
+  const [look, setLook] = useState("");
+  const on = (phone: string) => ticked.includes(phone);
+  const toggle = (phone: string) =>
+    setTicked((now) =>
+      now.includes(phone) ? now.filter((one) => one !== phone) : [...now, phone]
+    );
+  const looking = look.trim().toLowerCase();
+  const shown =
+    looking === ""
+      ? people
+      : people.filter(
+          (one) =>
+            one.name.toLowerCase().includes(looking) ||
+            one.phone.includes(looking)
+        );
+  const going = who === "picked" ? ticked.length : (audience ?? 0);
+
+  /*
    * Emptying the boxes once something has gone.
    *
    * This used to keep its own list of what this browser had sent, because
@@ -111,6 +147,12 @@ export default function DealPush({
     if (state.sent === null || state.error) return;
     setTitle("");
     setBody("");
+    // And the names, for the same reason: the next notification is a
+    // different notification and should not inherit whoever the last one
+    // happened to be for.
+    setTicked([]);
+    setWho("everyone");
+    setLook("");
   }, [state]);
 
   /*
@@ -171,9 +213,13 @@ export default function DealPush({
 
   const sendLabel = pending
     ? "Sending…"
-    : audience === undefined
-      ? "Send it"
-      : `Send to ${audience} phone${audience === 1 ? "" : "s"}`;
+    : who === "picked"
+      ? ticked.length === 0
+        ? "Pick who it goes to"
+        : `Send to ${ticked.length} ${ticked.length === 1 ? "person" : "people"}`
+      : audience === undefined
+        ? "Send it"
+        : `Send to ${audience} phone${audience === 1 ? "" : "s"}`;
 
   return (
     <form action={action} className="space-y-3.5">
@@ -358,13 +404,136 @@ export default function DealPush({
           )}
         </div>
 
+      {/*
+          Who it goes to.
+
+          This page could only ever write to everybody, which is right for
+          a payday line and wrong for most things: a deal at one counter is
+          for the people who buy there, and the ones it is not for learn to
+          swipe these away. So the whole shop stays the default, one tap
+          away from a list of names.
+
+          Only where there is a list to pick from. With nobody on it the
+          control would be a question with one answer.
+       */}
+      {people.length > 0 && (
+        <div className="space-y-2.5">
+          <p className="label">Who gets it</p>
+          <input type="hidden" name="who" value={who} />
+          <div className="flex gap-2">
+            {(
+              [
+                ["everyone", `Everybody · ${audience ?? people.length}`],
+                ["picked", "Pick who"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setWho(value)}
+                aria-pressed={who === value}
+                className={`soft min-h-[44px] flex-1 px-3 text-sm font-semibold ${
+                  who === value ? "border-ink bg-wash" : "hover:border-ink"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {who === "picked" && (
+            <div className="soft p-3">
+              {/* Only worth drawing once the list is long enough to look
+                  through. On a shop with seven phones it is furniture. */}
+              {people.length > 8 && (
+                <input
+                  className="field field-admin mb-2"
+                  placeholder="Find a name or a number"
+                  value={look}
+                  onChange={(event) => setLook(event.target.value)}
+                  aria-label="Find somebody"
+                />
+              )}
+
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="hint">
+                  {ticked.length === 0
+                    ? "Nobody ticked yet"
+                    : `${ticked.length} ticked`}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="text-sm font-semibold underline underline-offset-4"
+                    onClick={() => setTicked(shown.map((one) => one.phone))}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    className="text-sm font-semibold underline underline-offset-4"
+                    onClick={() => setTicked([])}
+                  >
+                    None
+                  </button>
+                </div>
+              </div>
+
+              <div className="max-h-[320px] overflow-y-auto">
+                {shown.length === 0 && (
+                  <p className="hint py-2">Nobody by that name or number.</p>
+                )}
+                {shown.map((one) => (
+                  <label
+                    key={one.phone}
+                    className="flex min-h-[44px] items-center gap-3 border-t-[1.5px] border-rule py-2 first:border-t-0"
+                  >
+                    <input
+                      type="checkbox"
+                      className="size-[18px] shrink-0 accent-brand"
+                      checked={on(one.phone)}
+                      onChange={() => toggle(one.phone)}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold leading-[1.3]">
+                        {one.name || one.phone}
+                      </span>
+                      <span className="hint block">
+                        {one.name ? `${one.phone} · ` : ""}
+                        {one.orders === 0
+                          ? "no orders yet"
+                          : `${one.orders} order${one.orders === 1 ? "" : "s"}`}
+                        {one.lastOrder ? `, last ${one.lastOrder}` : ""}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              {/* The ticks themselves, as the form reads them. Sent as
+                  numbers rather than as names, because a name is not who
+                  somebody is to a phone. */}
+              {ticked.map((phone) => (
+                <input key={phone} type="hidden" name="phones" value={phone} />
+              ))}
+
+              <p className="hint mt-2 leading-[1.5]">
+                Only phones with the app and notifications left on are here.
+                Somebody who has switched them off cannot be put back by
+                ticking them: that switch is theirs.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
         {/* On a desk the send button is where the mouse already is, at the
             end of the form. On a phone it is on the bar at the bottom
             instead, so it is not a reach away at the end of a scroll. */}
         <button
           type="submit"
           className="btn-admin-go hidden w-full lg:flex"
-          disabled={pending}
+          disabled={pending || going === 0}
         >
           {sendLabel}
         </button>
@@ -403,7 +572,11 @@ export default function DealPush({
       {/* The bar stands above the tab bar and holds the one thing this
           screen is for. The page adds the bottom padding it needs. */}
       <div className="phone-bar">
-        <button type="submit" className="btn-admin-go min-h-[50px] w-full" disabled={pending}>
+        <button
+          type="submit"
+          className="btn-admin-go min-h-[50px] w-full"
+          disabled={pending || going === 0}
+        >
           {sendLabel}
         </button>
       </div>
