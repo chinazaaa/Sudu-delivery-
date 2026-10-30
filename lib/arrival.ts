@@ -31,6 +31,13 @@ export type ArrivalRun = {
    *  to quote the fee the checkout will charge, and a flash drop belongs to
    *  one run rather than to the shop. */
   flashFee: number | null;
+  /** Where it goes, as the run writes it: "|ajah|l|". Carried so a page
+   *  working out the soonest arrival can leave out the runs that cannot
+   *  reach this cart, which is how the cart came to quote a Sangotedo run
+   *  over a basket going to Ajah. Empty where it was not asked for. */
+  areas?: string;
+  /** The counters it stops at, where it stops at only some. Same reason. */
+  onlyPlaces?: string;
 };
 
 export type Arrival = {
@@ -146,6 +153,8 @@ export function runArrival(run: {
   deliveryWindow: string;
   label: string;
   flashFee?: number | null;
+  areas?: string;
+  onlyPlaces?: string;
 }): ArrivalRun {
   // The label carries the day word already worked out against the shop's
   // clock ("today · Lunch"), so the day is taken from it rather than worked
@@ -157,6 +166,8 @@ export function runArrival(run: {
     when: `${run.deliveryWindow}, ${day}`,
     said: `${run.deliveryWindow.charAt(0).toLowerCase()}${run.deliveryWindow.slice(1)} ${day}`,
     flashFee: run.flashFee ?? null,
+    areas: run.areas ?? "",
+    onlyPlaces: run.onlyPlaces ?? "",
   };
 }
 

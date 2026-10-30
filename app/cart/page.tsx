@@ -5,6 +5,7 @@ import HelpLine from "@/components/HelpLine";
 import ShelfNote from "@/components/ShelfNote";
 import {
   allAreas,
+  allAreaPairs,
   areaOfEach,
   stepFeeOfEach,
   valueBandsOfEach,
@@ -105,6 +106,7 @@ export default async function CartPage({
       sameDayBands={(await sameDayPricing()).bands}
       urgentExtra={(await sameDayPricing()).urgentExtra}
       areas={await allAreas()}
+      areaPairs={await allAreaPairs()}
       areaOf={await areaOfEach()}
       valueBandsOf={await valueBandsOfEach()}
       stepFeeOf={await stepFeeOfEach()}

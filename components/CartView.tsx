@@ -5,7 +5,18 @@ import Sheet from "./Sheet";
 import { useRouter } from "next/navigation";
 import type { Slot } from "@/lib/same-day";
 import { nextArrival, type ArrivalRun } from "@/lib/arrival";
-import { dearestArea, withExtra, type Area } from "@/lib/areas";
+import {
+  areasIn,
+  canGoSameDay,
+  carGoesOn,
+  dearestArea,
+  mixedExtra,
+  runCovers,
+  withExtra,
+  type Area,
+  type AreaPair,
+} from "@/lib/areas";
+import { runCarries } from "@/lib/run-places";
 import { ladderFor, pricesByStep, pricesByValue, stepsFor } from "@/lib/areas-shared";
 import { feeRidingAlong, type StepFee } from "@/lib/step-fee";
 import { feeAcross, type ValueBand } from "@/lib/value-bands";
@@ -46,6 +57,7 @@ export default function CartView({
   urgentExtra = 0,
   areas = [],
   areaOf = {},
+  areaPairs = [],
   valueBandsOf = {},
   stepFeeOf = {},
   openDaysOf = {},
@@ -80,6 +92,10 @@ export default function CartView({
   /** The areas the shop delivers from, and which one each kitchen is in. */
   areas?: Area[];
   areaOf?: Record<string, string>;
+  /** What a second stop adds, by the two areas it is between. A cart from
+   *  Ajah and Lekki is two shops to park at, and the checkout charges for
+   *  it, so the cart has to quote it too. */
+  areaPairs?: AreaPair[];
   /** The kitchens that price by what the shopping comes to. */
   valueBandsOf?: Record<string, ValueBand[]>;
   /** The kitchens priced by the cool box, so the cart quotes the
@@ -484,14 +500,22 @@ export default function CartView({
     deliverAt: null,
     returning: false,
   });
+  const kitchensIn = [...new Set(cart.map((line) => line.restaurantId))];
+  const cartAreas = areasIn(areas, kitchensIn, areaOf);
+  const dearest = dearestArea(areas, kitchensIn, areaOf);
+  /*
+   * What a second stop adds.
+   *
+   * The checkout charges for it and the cart was not quoting it, so a
+   * basket from Ajah and Lekki said six and a half on one screen and seven
+   * and a half on the next. Every area after the first is another shop to
+   * find, park at and queue in, whichever two they are.
+   */
+  const secondStop = mixedExtra(cartAreas, areaPairs);
   // Priced by the furthest kitchen in the cart, the same rule the checkout
   // quotes and the server charges by: one car fetches all of it, so the trip
   // is as long as its longest leg.
-  const ladder = withExtra(
-    bands,
-    dearestArea(areas, [...new Set(cart.map((line) => line.restaurantId))], areaOf).runExtra
-  );
-  const kitchensIn = [...new Set(cart.map((line) => line.restaurantId))];
+  const ladder = withExtra(bands, dearest.runExtra + secondStop);
   const byValue = ladderFor(kitchensIn, valueBandsOf);
   // Two errands, two fees: the market half by what the shopping comes to,
   // the restaurant half by how much of the car it fills.
@@ -519,7 +543,28 @@ export default function CartView({
    * thing they would take out. Named against the soonest arrival, which is
    * the day the cart is quoting for.
    */
-  const going = nextArrival(runs, slots, today);
+  /*
+   * Only what could really carry this cart.
+   *
+   * The soonest arrival used to be worked out against every run on the
+   * list and every window in the day, neither of which knows where the
+   * food is. A cart from Ajah was quoted tonight's Sangotedo run, which
+   * does not go that way, and a cart from Lekki was quoted a car of its
+   * own on a day no car goes to Lekki. The checkout has always asked these
+   * three questions, so the cart asks them in the same words: does the run
+   * reach where this food is, does it stop at these counters, and is
+   * everything open on the day it goes.
+   */
+  const usableRuns = runs.filter(
+    (one) =>
+      runCovers(one.areas ?? "", cartAreas) &&
+      runCarries(one.onlyPlaces ?? "", kitchensIn) &&
+      cart.every((line) => opensOn(openDaysOf[line.restaurantId], one.runDate))
+  );
+  const carDays = canGoSameDay(cartAreas)
+    ? slots.filter((one) => carGoesOn(cartAreas, one.date, opensOn))
+    : [];
+  const going = nextArrival(usableRuns, carDays, today);
   const onItsOwn = going !== null && !going.onARun;
 
   // The day the cart is quoting for: the run it would go on, or today when
@@ -573,9 +618,17 @@ export default function CartView({
       : "";
 
   const soonSlot = onItsOwn ? slots.find((one) => one.at === going.at) ?? null : null;
+  // A car of its own is priced the same way the checkout prices one: the
+  // same day ladder, lifted by what the furthest area adds to a car and by
+  // the second stop where there is one.
   const carFee =
     soonSlot && sameDayBands.length > 0
-      ? sameDayFee(countItems(cart), soonSlot.urgent, sameDayBands, urgentExtra)
+      ? sameDayFee(
+          countItems(cart),
+          soonSlot.urgent,
+          withExtra(sameDayBands, dearest.sameDayExtra + secondStop),
+          urgentExtra
+        )
       : 0;
 
   // What this run has knocked off delivery, if anything. A flash drop
