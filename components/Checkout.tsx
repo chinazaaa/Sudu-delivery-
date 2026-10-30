@@ -2362,11 +2362,12 @@ export default function Checkout({
             <summary className="cursor-pointer text-sm font-semibold text-brand">
               Sending this to somebody else?
             </summary>
+            {/* Four sentences to explain two boxes labelled "their name"
+                and "their number", under a line that already says what
+                they are for. The only thing the labels do not say is whose
+                block goes above, and that is six words. */}
             <p className="mt-2 text-xs text-muted">
-              Fill these in and it goes to them instead. You pay, and we deal
-              with you about the money. Put their block above, and their name
-              and number here so we know who to call when it is at their door.
-              Leave them blank and it comes to you.
+              Put their block above. You still pay.
             </p>
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
               <div>

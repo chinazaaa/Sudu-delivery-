@@ -961,8 +961,7 @@ export default function Checkout() {
             {giftOpen && (
               <>
                 <Text style={{ fontFamily: F.body, fontSize: 12, color: T.muted, lineHeight: 18 }}>
-                  Put their block above, and their name and number here. You
-                  pay, and we deal with you about the money.
+                  Put their block above. You still pay.
                 </Text>
                 <Field label="Their name" value={giftName} onChange={setGiftName} />
                 <Field
