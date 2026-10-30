@@ -2770,7 +2770,9 @@ export default function Checkout({
       </aside>
       </div>
 
-      <div data-actionbar className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t-2 border-ink bg-shell px-4 pb-4 pt-3 sm:bottom-0">
+      {/* The same shallower bar as the cart's: a total and a button, in
+          half the height it used to take to say them. */}
+      <div data-actionbar className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t-2 border-ink bg-shell px-4 pb-3 pt-2.5 sm:bottom-0">
         <div className="mx-auto max-w-2xl space-y-2">
           {unresolved.length > 0 && (
             <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
@@ -2830,13 +2832,13 @@ export default function Checkout({
               <span className="ticket text-muted">
                 {shared ? "So far" : "Total"}
               </span>
-              <span className="font-display text-[32px] font-black leading-none">
+              <span className="font-display text-[26px] font-black leading-none">
                 {naira(total)}
               </span>
             </span>
           <button
             type="submit"
-            className="btn-primary flex-1 border-2 border-ink py-4 text-base"
+            className="btn-primary flex-1 border-2 border-ink py-3 text-base"
             disabled={
               pending ||
               // A group brings its own car, so an empty run list is not a

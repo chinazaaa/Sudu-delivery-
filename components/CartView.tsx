@@ -1340,7 +1340,12 @@ export default function CartView({
         </Sheet>
       )}
 
-      <div data-actionbar className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t-2 border-ink bg-shell px-4 pb-4 pt-3 sm:bottom-0">
+      {/* Shallower than it was. The bar is a total and a button, and it
+          was taking a fifth of a phone to say them: thirty-two pixel
+          figures and a button at fourteen pixels of padding. The app says
+          the same two things in half the height, and the half it gives
+          back is the cart. */}
+      <div data-actionbar className="fixed inset-x-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-30 border-t-2 border-ink bg-shell px-4 pb-3 pt-2.5 sm:bottom-0">
         {problem !== "" && (
           <p className="mx-auto mb-2 max-w-2xl rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
             {problem}
@@ -1357,7 +1362,7 @@ export default function CartView({
               {countItems(cart)} item{countItems(cart) === 1 ? "" : "s"}
               {group === "" && tier !== "" ? ` · ${tier}` : ""}
             </p>
-            <p className="truncate font-display text-[32px] font-black leading-none">
+            <p className="truncate font-display text-[26px] font-black leading-none">
               {naira(cartSubtotal(cart) + (group === "" ? alone : 0))}
             </p>
           </div>
@@ -1376,7 +1381,7 @@ export default function CartView({
               <button
                 type="button"
                 onClick={() => setAsking(true)}
-                className="btn-primary shrink-0 border-2 border-ink px-7 py-3.5"
+                className="btn-primary shrink-0 border-2 border-ink px-6 py-3"
               >
                 {mine?.finalised ? "Update my food" : "Finalise my food"}
               </button>
@@ -1384,7 +1389,7 @@ export default function CartView({
           ) : (
             <Link
               href="/checkout"
-              className="btn-primary shrink-0 border-2 border-ink px-7 py-3.5"
+              className="btn-primary shrink-0 border-2 border-ink px-6 py-3"
             >
               Checkout
               <span aria-hidden>→</span>
