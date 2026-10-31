@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { db } from "./supabase";
 /**
  * A counter's own sale, passed through.
@@ -288,3 +289,39 @@ export function pairsInCart(
   if (off <= 0) return { off: 0, said: "" };
   return { off, said: [...using].join(" · ") };
 }
+
+/**
+ * Whether anything at all is on sale, for the chip on the browse page.
+ *
+ * A Deals chip in the row of aisles that leads to an empty page is worse
+ * than no chip: somebody taps it once, finds nothing, and never taps it
+ * again on the week a counter does cut a price. So the chip only exists
+ * while there is something behind it.
+ *
+ * The same answer for everybody and a cheap one: a handful of columns off
+ * the rows that have a live end date, and nothing about who is asking. The
+ * minute it is held for only ever covers a stretch where nothing changed,
+ * because admin clears this the moment anything does.
+ */
+async function readDealsOn(): Promise<boolean> {
+  try {
+    const { data } = await db()
+      .from("menu_items")
+      .select("price_food, deal_price, deal_until")
+      .eq("available", true)
+      .gt("deal_price", 0)
+      .gt("deal_until", new Date().toISOString())
+      .limit(60);
+    // The cheaper-than-usual half in code, as everywhere else: one column
+    // against another is not something the database can be asked from here.
+    return ((data ?? []) as DealRow[]).some((one) => dealLive(one));
+  } catch {
+    // No chip rather than a wrong one.
+    return false;
+  }
+}
+
+export const dealsOn = unstable_cache(readDealsOn, ["deals-on"], {
+  revalidate: 60,
+  tags: ["menu"],
+});

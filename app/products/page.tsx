@@ -4,6 +4,7 @@ import Link from "next/link";
 import { permanentRedirect } from "next/navigation";
 import { Suspense } from "react";
 import ProductGrid from "@/components/ProductGrid";
+import { dealsOn } from "@/lib/deals";
 import { optionGroupsFor } from "@/lib/menu";
 
 import { browseProducts, productFacets, shelfNames, PER_PAGE } from "@/lib/products";
@@ -119,7 +120,7 @@ export default async function ProductsPage({
   if (unfilled(asked.q)) permanentRedirect(withoutQuery(asked));
   const page = Math.max(1, Number(asked.page ?? 1) || 1);
 
-  const [{ products, total }, facets] = await Promise.all([
+  const [{ products, total }, facets, saleOn] = await Promise.all([
     browseProducts({
       query: asked.q,
       place: asked.place,
@@ -134,6 +135,7 @@ export default async function ProductsPage({
       upTo: true,
     }),
     productFacets(asked.place),
+    dealsOn(),
   ]);
 
   /*
@@ -302,6 +304,22 @@ export default async function ProductsPage({
                 <Chip href={link({ aisle: "", category: "" })} on={!picked}>
                   Anything
                 </Chip>
+                {/* Second, and only while something is actually cut.
+
+                    A sale is the one thing on this row that is not a kind
+                    of food, and it is the thing somebody is most likely to
+                    want to see first, so it sits where the eye already is
+                    rather than at the end of a row that scrolls. It leaves
+                    the page instead of filtering it, because what is on
+                    sale is a list of its own with its own sorting. */}
+                {saleOn && (
+                  <Link
+                    href="/deals"
+                    className="chip shrink-0 whitespace-nowrap border-brand bg-brand text-sm text-white"
+                  >
+                    Deals
+                  </Link>
+                )}
                 {chips.map((one) => (
                   <Chip
                     key={one}
