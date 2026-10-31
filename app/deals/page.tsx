@@ -133,8 +133,7 @@ export default async function DealsPage({
 
       {total === 0 ? (
         <Empty icon="bag" title="Nothing on sale right now" href="/products" action="Browse the menu">
-          The counters run these themselves, so there are weeks with none and
-          weeks with a dozen. Everything that is on turns up here.
+          The kitchens run these, so some weeks there are none.
         </Empty>
       ) : (
         <>
