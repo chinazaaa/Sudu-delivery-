@@ -311,11 +311,19 @@ export default async function ProductsPage({
                     want to see first, so it sits where the eye already is
                     rather than at the end of a row that scrolls. It leaves
                     the page instead of filtering it, because what is on
-                    sale is a list of its own with its own sorting. */}
+                    sale is a list of its own with its own sorting.
+
+                    Not filled in. On this row a filled chip is the one you
+                    are on, every time, and a filled Deals chip beside a
+                    page of everything reads as a page you are already
+                    looking at. Nobody taps what they think they have open.
+                    So it is an ordinary chip in the brand colour: the one
+                    word in red in a row of black ones, still plainly
+                    something to tap. */}
                 {saleOn && (
                   <Link
                     href="/deals"
-                    className="chip shrink-0 whitespace-nowrap border-brand bg-brand text-sm text-white"
+                    className="chip shrink-0 whitespace-nowrap border-brand bg-paper text-sm font-bold text-brand"
                   >
                     Deals
                   </Link>
