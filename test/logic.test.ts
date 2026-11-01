@@ -9,6 +9,7 @@ import {
   wasPrice,
 } from "../lib/deals";
 import { soundsUrgent } from "../lib/bot-match";
+import { backFromCounter } from "../lib/stages";
 import { cookingLine } from "../lib/push";
 import { otherWorthSaying } from "../lib/arrival";
 import { windowStart, worthACar } from "../lib/pick-a-day";
@@ -7590,4 +7591,22 @@ test("the counter message names the kitchens in that order", () => {
   // than to a blank or to " is making your food."
   assert.equal(cookingLine([]), "Your food is being made now.");
   assert.equal(cookingLine(["", "  "]), "Your food is being made now.");
+});
+
+test("undoing a counter tick puts the run back where the clock says", () => {
+  const now = new Date("2026-11-01T11:00:00Z");
+
+  // The case that cost somebody 2,500: ticked by mistake at eleven on a
+  // run that shuts at midday, so it goes back to taking orders and the
+  // next person pays the run's fee again.
+  assert.equal(backFromCounter("2026-11-01T12:00:00Z", now), "ordering");
+
+  // Past its cut-off it is closed and getting ready to go, which is where
+  // it was before the tick. Reopening it would be worse than the bug.
+  assert.equal(backFromCounter("2026-11-01T10:00:00Z", now), "closed");
+
+  // A cut-off nobody can read leaves it closed rather than quietly
+  // reopening a run that should not be taking anything.
+  assert.equal(backFromCounter("", now), "closed");
+  assert.equal(backFromCounter("not a date", now), "closed");
 });

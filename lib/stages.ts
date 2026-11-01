@@ -93,3 +93,30 @@ export function adminStatusWord(
 ): string {
   return status === "delivered" && settledAt ? "completed" : status;
 }
+
+/**
+ * Where a run goes back to when a tick at the counter is undone.
+ *
+ * The first thing ticked off moves a run to the counter, which is right:
+ * ticking something is standing at a till with it in your hand. But the
+ * tick itself lives in the browser of whoever is holding the phone, so
+ * taking it back tells the shop nothing, and the run stayed at the
+ * counter.
+ *
+ * That is not a cosmetic wrong stage. A run at the counter is a closed
+ * run, and a closed run prices the next order on the last minute ladder:
+ * somebody ordering two sandwiches a minute later was quoted 6,500 for
+ * delivery instead of 4,000, because of a tap that had already been
+ * taken back.
+ *
+ * So the clock decides, which is what decided it before anybody ticked
+ * anything: a run whose cut-off is still ahead is taking orders, and one
+ * whose cut-off has gone is closed and getting ready to go.
+ */
+export function backFromCounter(cutOffAt: string, now: Date = new Date()): BatchStage {
+  const shuts = new Date(cutOffAt).getTime();
+  // A cut-off nobody can read is treated as gone, which leaves the run
+  // closed rather than quietly reopening one that should not be.
+  if (!Number.isFinite(shuts)) return "closed";
+  return shuts > now.getTime() ? "ordering" : "closed";
+}

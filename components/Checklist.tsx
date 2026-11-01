@@ -22,6 +22,7 @@ export default function Checklist({
   label,
   done = false,
   arrived,
+  undone,
 }: {
   /** Anything unique to this list, so two lists never share their ticks. */
   id: string;
@@ -29,6 +30,11 @@ export default function Checklist({
    *  standing at a counter. Left off on a list that is not about being
    *  somewhere, and never called twice. */
   arrived?: () => void;
+  /** Said when the whole list is unticked again. The ticks live here, in
+   *  this browser, so a mis-tap taken back is a thing only this list
+   *  knows happened: without this the shop goes on believing the run
+   *  reached a counter it never did. */
+  undone?: () => void;
   items: {
     key: string;
     text: string;
@@ -101,6 +107,13 @@ export default function Checklist({
 
   function tickEverything(on: boolean) {
     if (on) sayWeAreHere();
+    else if (told.current) {
+      // Both halves of the same mistake. The guard goes back with it, so
+      // ticking again after an untick says so again rather than being
+      // swallowed as already told.
+      told.current = false;
+      undone?.();
+    }
     const next = on
       ? Object.fromEntries(
           items.filter((item) => item.short !== true).map((item) => [item.key, true])

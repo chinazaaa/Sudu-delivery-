@@ -80,6 +80,7 @@ import {
   deleteRun,
   moveStop,
   noMoreOrders,
+  notAtTheCounter,
   nowAtTheCounter,
 } from "../../actions";
 import Reorder from "@/components/admin/Reorder";
@@ -1642,6 +1643,13 @@ export default async function BatchPage({
                             ? nowAtTheCounter.bind(null, batch.id)
                             : undefined
                         }
+                        /* And the other way. Unticking is how a mis-tap
+                           is taken back, and without this the run stayed
+                           at a counter it never reached, which closes it
+                           and prices the next order as a car. Offered
+                           whatever the stage: the action itself checks,
+                           and only ever moves a run out of the counter. */
+                        undone={notAtTheCounter.bind(null, batch.id)}
                         items={group.lines.map((line) => ({
                           key: `${line.name}|${line.choices.join("|")}`,
                           /* The per line ticks live in the browser of

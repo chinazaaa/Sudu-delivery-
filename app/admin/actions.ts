@@ -16,7 +16,7 @@ import {
 } from "@/lib/admin-gate";
 import { batchSheet, stillOpen } from "@/lib/admin";
 import { db } from "@/lib/supabase";
-import { STAGES, stageIndex, type BatchStage } from "@/lib/stages";
+import { STAGES, backFromCounter, stageIndex, type BatchStage } from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
 import { hoursByDay, deliveryWindows, externalUrl, safeSettings, sayWindow } from "@/lib/settings";
 import { runSchedule } from "@/lib/schedule";
@@ -3614,6 +3614,44 @@ export async function nowAtTheCounter(batchId: string): Promise<void> {
   const move = new FormData();
   move.set("batch_id", batchId);
   move.set("stage", "at_counter");
+  await setBatchStage(move);
+}
+
+/**
+ * The tick was a mistake, so put the run back where it was.
+ *
+ * Ticking a counter moves the run to it, and that move closes the run:
+ * closed is what the last minute ladder reads, so the next order pays a
+ * car's fee rather than a run's. Untick it and nothing went back, because
+ * the ticks live in the browser of whoever is holding the phone and the
+ * shop never heard about either of them. A mis-tap on a run sheet quietly
+ * put 2,500 on the next person's delivery.
+ *
+ * Only ever out of the counter, and never backwards past it: a run on the
+ * road or at the hostels has genuinely been to its counters, and somebody
+ * tidying up a tick at a stop they left an hour ago must not drag it
+ * back. The clock says where it lands, because the clock is what said so
+ * before anybody ticked anything.
+ */
+export async function notAtTheCounter(batchId: string): Promise<void> {
+  await assertAdmin();
+
+  if (batchId === "") return;
+
+  const { data } = await db()
+    .from("batches")
+    .select("stage, cut_off_at")
+    .eq("id", batchId)
+    .maybeSingle();
+
+  const row = data as { stage?: BatchStage; cut_off_at?: string } | null;
+  // Exactly at the counter. Anything earlier has nothing to undo, and
+  // anything later is a run that really did get there.
+  if (!row || row.stage !== "at_counter") return;
+
+  const move = new FormData();
+  move.set("batch_id", batchId);
+  move.set("stage", backFromCounter(String(row.cut_off_at ?? "")));
   await setBatchStage(move);
 }
 
