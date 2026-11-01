@@ -55,6 +55,7 @@ export default function DealPush({
   occasions = [],
   links = [],
   skincare = false,
+  deals = false,
   audience,
   people = [],
   lastSent = "",
@@ -66,6 +67,10 @@ export default function DealPush({
   /** A basket already filled, so the notification is one tap from paying. */
   links?: { short: string; label: string }[];
   skincare?: boolean;
+  /** Whether anything is actually on sale. No sales, no option: a
+   *  notification that lands on an empty page is a notification that
+   *  teaches somebody to ignore the next one. */
+  deals?: boolean;
   /** How many phones this would reach, so the button can say what pressing
    *  it does rather than "Send it". */
   audience?: number;
@@ -371,9 +376,10 @@ export default function DealPush({
                 ))}
               </optgroup>
 
-              {skincare && (
+              {(deals || skincare) && (
                 <optgroup label="Other">
-                  <option value="skincare">Skincare</option>
+                  {deals && <option value="deals">What is on sale</option>}
+                  {skincare && <option value="skincare">Skincare</option>}
                 </optgroup>
               )}
             </select>

@@ -4832,11 +4832,13 @@ export async function sendDealPush(
     ? `/collections/${where.slice(9)}`
     : where.startsWith("link:")
       ? `/c/${where.slice(5)}`
-      : where === "skincare"
-        ? "/skincare"
-        : where
-          ? `/r/${where}${category ? `?category=${category}` : ""}`
-          : "/";
+      : where === "deals"
+        ? "/deals"
+        : where === "skincare"
+          ? "/skincare"
+          : where
+            ? `/r/${where}${category ? `?category=${category}` : ""}`
+            : "/";
 
   /*
    * Everybody, or the few people whose names were ticked.

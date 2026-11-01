@@ -5,6 +5,7 @@ import { menuView } from "@/lib/menu";
 import { dealAudience, dealPeople } from "@/lib/push";
 import { liveOccasions } from "@/lib/boxes";
 import { listCheckoutLinks } from "@/lib/checkout-links";
+import { dealsOn } from "@/lib/deals";
 import { skincareOn } from "@/lib/skincare";
 import { safeSettings } from "@/lib/settings";
 import {
@@ -32,7 +33,7 @@ export const dynamic = "force-dynamic";
  * way to take it back is to send another one.
  */
 export default async function NotificationsPage() {
-  const [menu, audience, people, occasions, links, settings, sends] = await Promise.all([
+  const [menu, audience, people, occasions, links, settings, sends, saleOn] = await Promise.all([
     menuView(),
     dealAudience(),
     // Everybody who could be picked by name, for a notification that is
@@ -42,6 +43,7 @@ export default async function NotificationsPage() {
     listCheckoutLinks().catch(() => []),
     safeSettings(),
     dealSendsWithOutcome(),
+    dealsOn(),
   ]);
 
   // The newest row is the only one the form itself needs: the card inside it
@@ -80,6 +82,7 @@ export default async function NotificationsPage() {
               .slice(0, 20)
               .map((one) => ({ short: one.short as string, label: one.label }))}
             skincare={skincareOn(settings)}
+            deals={saleOn}
             audience={audience}
             people={people}
             lastSent={lastSentLine(latest ? latest.sent_at : null)}
