@@ -27,6 +27,10 @@ import { openBatches, takesMoney } from "@/lib/batches";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira, shareRef } from "@/lib/money";
 import { shortRef } from "@/lib/links";
+import ReferralStrip from "@/components/ReferralStrip";
+import { currentCustomer } from "@/lib/customer-auth";
+import { enrolCustomer, welcomeSaid } from "@/lib/referrals";
+import { db } from "@/lib/supabase";
 import { bandsFor, isSkincareBatch } from "@/lib/skincare";
 import { COUNTERS } from "@/lib/counter";
 import { bandFor, splitFee } from "@/lib/fees";
@@ -196,6 +200,39 @@ export default async function OrderPage({
    */
   const feeSaved = isParcel ? 0 : Math.max(0, band.fee - order.fee);
   const saved = feeSaved + order.discount;
+
+  /*
+   * Their own link, where this is their own order.
+   *
+   * This page is reached by a link, so whoever is holding it is not
+   * necessarily whose order it is: a parent pays and a son eats, and
+   * both of them open it. The referral belongs to the person the order
+   * is filed under, so it is offered only when the browser is signed in
+   * as them, which placing an order already does.
+   *
+   * Made here if they have not got one, exactly as the orders page does
+   * it, so somebody who ordered before any of this existed is not left
+   * without a link on the one page they actually open.
+   */
+  const [myCode, welcome] = await Promise.all([
+    (async () => {
+      try {
+        const signedIn = await currentCustomer();
+        if (!signedIn || signedIn !== order.customer_phone) return "";
+        const { data } = await db()
+          .from("promoters")
+          .select("code")
+          .eq("phone", signedIn)
+          .maybeSingle();
+        const had = String((data as { code?: string } | null)?.code ?? "");
+        return had !== "" ? had : await enrolCustomer(signedIn, order.customer_name ?? "");
+      } catch {
+        // No strip rather than one with no link in it.
+        return "";
+      }
+    })(),
+    welcomeSaid().catch(() => ""),
+  ]);
 
   // A run that is not going out says so before anything else. Cancelled, it
   // used to read "Paid and on the run", which is the one thing it is not.
@@ -680,6 +717,20 @@ export default async function OrderPage({
           )}
         </section>
       )}
+
+      {/* Bring a friend, where it can be seen without scrolling.
+          Directly under where their food is, which is the question they
+          opened this page to answer, and above everything that is
+          detail: the items, the money, the fee ladder.
+
+          Not above it. Somebody refreshing this page wants to know when
+          their dinner lands, and anything standing over that answer is
+          the shop talking about itself first.
+
+          Only on their own order, because the link and the reward are
+          theirs: a parent reading their son's order page is not who this
+          is addressed to. */}
+      <ReferralStrip code={myCode} site={site} welcome={welcome} />
 
       {/* Offered here because this is the page somebody refreshes waiting
           for their dinner, and the app is the thing that would stop them
