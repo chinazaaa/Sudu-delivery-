@@ -85,7 +85,13 @@ import {
 import { tripForBox } from "@/lib/box-day";
 import { naira, orderRef } from "@/lib/money";
 import { namedPromoters, realPromoter } from "@/lib/promoters";
-import { pushDeal, pushDealTo, pushToPhone, tellDelivered } from "@/lib/push";
+import {
+  pushDeal,
+  pushDealTo,
+  pushToPhone,
+  tellAtCounter,
+  tellDelivered,
+} from "@/lib/push";
 import { recordDealSend } from "@/lib/deal-sends";
 import { freeNumber, quietUntil, type SavedCart } from "@/lib/carts";
 import { placeSkincareOrder } from "@/app/actions";
@@ -3806,6 +3812,32 @@ export async function setBatchStage(form: FormData): Promise<void> {
   }
 
   await db().from("batches").update(patch).eq("id", batchId);
+
+  /*
+   * The counter has the order, which is the one worth telling people.
+   *
+   * It is the moment the waiting turns from a promise into something
+   * happening, and it is the one stage where we can name the place: a run
+   * goes to several counters and each person ordered from one or two of
+   * them, so the message says theirs rather than the run's. Handled in
+   * lib/push, per order rather than per phone, because the sentence is
+   * about what that order holds.
+   */
+  if (stage === "at_counter") {
+    void (async () => {
+      try {
+        const { data } = await db()
+          .from("batches")
+          .select("kind")
+          .eq("id", batchId)
+          .maybeSingle();
+        const kind = String((data as { kind?: string } | null)?.kind ?? "");
+        await tellAtCounter(batchId, kind === "parcel");
+      } catch {
+        /* The run still reached the counter, which is the part that matters. */
+      }
+    })();
+  }
 
   // The two stages a customer is actually waiting for. Told once, to the
   // people on that run who have paid and have the app, and never awaited: a

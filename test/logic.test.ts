@@ -9,6 +9,7 @@ import {
   wasPrice,
 } from "../lib/deals";
 import { soundsUrgent } from "../lib/bot-match";
+import { cookingLine } from "../lib/push";
 import { otherWorthSaying } from "../lib/arrival";
 import { windowStart, worthACar } from "../lib/pick-a-day";
 import { easterSunday, motheringSunday, mothersDayMay, nextOf, valentines } from "../lib/feasts";
@@ -7563,4 +7564,30 @@ test("a basket is paired the same way in the browser as on the server", () => {
 
   // Nothing on offer, nothing taken off.
   assert.equal(pairsInCart(basket, []).off, 0);
+});
+
+test("the counter message names the kitchens in that order", () => {
+  // One, because most orders are from one kitchen.
+  assert.equal(cookingLine(["KFC"]), "KFC is making your food.");
+
+  // Two reads as a sentence rather than a list with a comma in it.
+  assert.equal(
+    cookingLine(["KFC", "Domino's Pizza"]),
+    "KFC and Domino's Pizza are making your food."
+  );
+
+  // Three or more: commas, then "and" before the last.
+  assert.equal(
+    cookingLine(["KFC", "Domino's Pizza", "Chicken Republic"]),
+    "KFC, Domino's Pizza and Chicken Republic are making your food."
+  );
+
+  // Two lines from one kitchen is one kitchen. Somebody who ordered a
+  // burger and chips from the same counter must not read its name twice.
+  assert.equal(cookingLine(["KFC", "KFC"]), "KFC is making your food.");
+
+  // Nothing to name falls back to a sentence that still reads, rather
+  // than to a blank or to " is making your food."
+  assert.equal(cookingLine([]), "Your food is being made now.");
+  assert.equal(cookingLine(["", "  "]), "Your food is being made now.");
 });

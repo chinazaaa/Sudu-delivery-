@@ -302,3 +302,130 @@ export async function tellDelivered(orderIds: string[]): Promise<number> {
     return 0;
   }
 }
+
+/**
+ * Who is cooking, in the customer's own order rather than the run's.
+ *
+ * "Bird's Bakery is preparing your order" is the one notification on a
+ * delivery app that is genuinely worth the buzz: it is the moment the
+ * waiting turns from a promise into something happening, and it names the
+ * place so it reads as a fact rather than as a status.
+ *
+ * We can do better than the apps that send it, because a run goes to
+ * several counters and this person ordered from one or two of them. Naming
+ * the whole run's kitchens would tell somebody waiting on a burger that a
+ * pizza place is busy, which is noise. So the names here are the names off
+ * their own lines.
+ *
+ * Nothing named falls back to the plain sentence instead of a blank or an
+ * empty "is making your food": a notification that reads oddly is worse
+ * than one that reads simply.
+ */
+export function cookingLine(kitchens: string[]): string {
+  const named = [...new Set(kitchens.map((one) => one.trim()).filter(Boolean))];
+  if (named.length === 0) return "Your food is being made now.";
+  if (named.length === 1) return `${named[0]} is making your food.`;
+  const last = named[named.length - 1];
+  const rest = named.slice(0, -1);
+  return `${rest.join(", ")} and ${last} are making your food.`;
+}
+
+/**
+ * The run has reached the counters, so tell everybody on it.
+ *
+ * One message per order rather than per phone, because the sentence is
+ * about what that order holds: two people on one run get two different
+ * kitchens named, and somebody who ordered twice gets told about each.
+ *
+ * Only orders that have been paid for, and never awaited by the tap that
+ * moved the run along: the food is being cooked whether or not a phone
+ * buzzes about it.
+ */
+export async function tellAtCounter(
+  batchId: string,
+  parcel: boolean
+): Promise<number> {
+  try {
+    const { data: rows } = await db()
+      .from("orders")
+      .select("id, customer_phone, status")
+      .eq("batch_id", batchId);
+
+    const orders = ((rows ?? []) as {
+      id: string;
+      customer_phone: string;
+      status: string;
+    }[]).filter(
+      (one) =>
+        Boolean(one.customer_phone) &&
+        !["pending", "cancelled", "refunded"].includes(one.status)
+    );
+    if (orders.length === 0) return 0;
+
+    // A parcel is not cooked, so it does not get a sentence about cooking.
+    // Same stage, different trip: see PARCEL_LABEL in lib/stages.
+    if (parcel) {
+      let sent = 0;
+      for (const order of orders) {
+        sent += await pushToPhone(order.customer_phone, {
+          title: "Collected",
+          body: "Your parcel has been picked up and is on its way.",
+          path: `/o/${order.id}`,
+        });
+      }
+      return sent;
+    }
+
+    // Which kitchens each order is from, in two reads rather than one per
+    // order: a run can carry forty of them.
+    const byOrder = new Map<string, string[]>();
+    const { data: lines } = await db()
+      .from("order_items")
+      .select("order_id, menu_item_id")
+      .in("order_id", orders.map((one) => one.id));
+
+    const items = (lines ?? []) as { order_id: string; menu_item_id: string }[];
+    const shopOf = new Map<string, string>();
+    if (items.length > 0) {
+      const { data: dishes } = await db()
+        .from("menu_items")
+        .select("id, restaurant_id")
+        .in("id", [...new Set(items.map((one) => one.menu_item_id))]);
+
+      const places = (dishes ?? []) as { id: string; restaurant_id: string }[];
+      const { data: shops } = await db()
+        .from("restaurants")
+        .select("id, name")
+        .in("id", [...new Set(places.map((one) => one.restaurant_id))]);
+
+      const named = new Map(
+        ((shops ?? []) as { id: string; name: string }[]).map((one) => [
+          one.id,
+          one.name,
+        ])
+      );
+      for (const dish of places) {
+        shopOf.set(dish.id, named.get(dish.restaurant_id) ?? "");
+      }
+    }
+
+    for (const line of items) {
+      const name = shopOf.get(line.menu_item_id) ?? "";
+      if (name === "") continue;
+      byOrder.set(line.order_id, [...(byOrder.get(line.order_id) ?? []), name]);
+    }
+
+    let sent = 0;
+    for (const order of orders) {
+      sent += await pushToPhone(order.customer_phone, {
+        title: "At the counter",
+        body: cookingLine(byOrder.get(order.id) ?? []),
+        path: `/o/${order.id}`,
+      });
+    }
+    return sent;
+  } catch {
+    // A notification is never worth failing the thing it is about.
+    return 0;
+  }
+}
