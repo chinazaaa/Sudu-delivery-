@@ -22,7 +22,7 @@ import { codeFrom } from "./promoter-applications";
  */
 
 /** What a referral is worth, off the referrer's next food. */
-export const REFERRAL_REWARD = 2000;
+export const REFERRAL_REWARD = 1000;
 
 /** How long they have to use it. Long enough not to be a trick, short
  *  enough to be a reason to order. */
@@ -118,6 +118,9 @@ export type CreditMove = {
   reason: string;
   friend: string;
   at: string;
+  /** Recorded, but nobody has approved it yet, so it is not in the
+   *  balance. */
+  waiting: boolean;
 };
 
 export type Wallet = { balance: number; moves: CreditMove[] };
@@ -179,18 +182,181 @@ export async function rewardReferrer(args: {
       reason: "referral",
       order_id: orderId,
       friend_phone: friend,
+      // Waiting on somebody. Nothing reaches the wallet until it is
+      // approved: see approveReferral.
     });
-    // Already paid for this friend, which is the index doing its job.
-    if (error) return false;
+    // Already recorded for this friend, which is the index doing its job.
+    return !error;
+  } catch {
+    return false;
+  }
+}
 
-    const now = await creditFor(referrer);
+/** One referral waiting to be looked at. */
+export type WaitingReferral = {
+  id: string;
+  /** Who earned it, and what the shop calls them. */
+  phone: string;
+  name: string;
+  /** Who they brought in. */
+  friendPhone: string;
+  friendName: string;
+  amount: number;
+  orderId: string;
+  at: string;
+};
+
+/**
+ * The referrals nobody has looked at yet.
+ *
+ * Oldest first: somebody who brought a friend in last week should not be
+ * behind somebody who did it this morning.
+ */
+export async function waitingReferrals(): Promise<WaitingReferral[]> {
+  try {
+    const { data } = await db()
+      .from("credit_moves")
+      .select("id, phone, amount, order_id, friend_phone, created_at")
+      .eq("reason", "referral")
+      .is("approved_at", null)
+      .is("rejected_at", null)
+      .order("created_at", { ascending: true })
+      .limit(100);
+
+    const rows = (data ?? []) as {
+      id: string;
+      phone: string;
+      amount: number;
+      order_id: string | null;
+      friend_phone: string | null;
+      created_at: string;
+    }[];
+    if (rows.length === 0) return [];
+
+    const numbers = [
+      ...new Set(
+        rows.flatMap((one) => [one.phone, one.friend_phone ?? ""]).filter(Boolean)
+      ),
+    ];
+    const named = new Map<string, string>();
+    const { data: who } = await db()
+      .from("customers")
+      .select("phone, name")
+      .in("phone", numbers);
+    for (const one of (who ?? []) as { phone: string; name: string }[]) {
+      named.set(one.phone, one.name ?? "");
+    }
+
+    return rows.map((one) => ({
+      id: one.id,
+      phone: one.phone,
+      name: named.get(one.phone) ?? "",
+      friendPhone: one.friend_phone ?? "",
+      friendName: named.get(one.friend_phone ?? "") ?? "",
+      amount: Number(one.amount ?? 0),
+      orderId: one.order_id ?? "",
+      at: one.created_at,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Saying yes, which is the moment the money becomes theirs.
+ *
+ * The balance moves here and nowhere else, so a referral that was never
+ * looked at is worth nothing however it was recorded. Idempotent on the
+ * approval stamp: pressing it twice pays once, because the second update
+ * matches no row.
+ */
+export async function approveReferral(id: string): Promise<boolean> {
+  if (!id) return false;
+  try {
+    const { data } = await db()
+      .from("credit_moves")
+      .update({ approved_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("reason", "referral")
+      .is("approved_at", null)
+      .is("rejected_at", null)
+      .select("phone, amount")
+      .maybeSingle();
+
+    const row = data as { phone: string; amount: number } | null;
+    if (!row) return false;
+
+    const now = await creditFor(row.phone);
     await db()
       .from("customers")
-      .update({ credit: now + REFERRAL_REWARD })
-      .eq("phone", referrer);
+      .update({ credit: now + Math.max(0, Number(row.amount ?? 0)) })
+      .eq("phone", row.phone);
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Saying no, with the reason kept.
+ *
+ * The row stays rather than being deleted, because the index on the
+ * friend's number is what stops the same introduction being claimed
+ * twice, and because somebody will ask why.
+ */
+export async function rejectReferral(id: string, said: string): Promise<boolean> {
+  if (!id) return false;
+  try {
+    const { error } = await db()
+      .from("credit_moves")
+      .update({
+        rejected_at: new Date().toISOString(),
+        rejected_said: said.trim().slice(0, 200),
+      })
+      .eq("id", id)
+      .eq("reason", "referral")
+      .is("approved_at", null)
+      .is("rejected_at", null);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The order it was earned on has gone, so the referral goes with it.
+ *
+ * Recording on delivery already keeps out the friend who paid and never
+ * ate, but a refund can land afterwards: the food was wrong, something
+ * was missing, the whole order came back. An introduction that ended in
+ * the shop handing the money back is not an introduction the shop pays
+ * for.
+ *
+ * Only ever one still waiting. A referral somebody has approved is money
+ * that may already have been spent on another order, and taking that
+ * back quietly would leave somebody short at a checkout with no
+ * explanation. That one is a conversation, so it is left standing and
+ * said plainly on the admin list instead.
+ */
+export async function withdrawReferralFor(
+  orderId: string,
+  said: string
+): Promise<void> {
+  if (!orderId) return;
+  try {
+    await db()
+      .from("credit_moves")
+      .update({
+        rejected_at: new Date().toISOString(),
+        rejected_said: said.trim().slice(0, 200),
+      })
+      .eq("order_id", orderId)
+      .eq("reason", "referral")
+      .is("approved_at", null)
+      .is("rejected_at", null);
+  } catch {
+    /* It stays on the waiting list, where somebody will see the order
+       it points at and say no by hand. */
   }
 }
 
@@ -233,18 +399,24 @@ export async function walletFor(phone: string): Promise<Wallet> {
       creditFor(phone),
       db()
         .from("credit_moves")
-        .select("amount, reason, friend_phone, created_at")
+        .select("amount, reason, friend_phone, created_at, approved_at, rejected_at")
         .eq("phone", phone)
         .order("created_at", { ascending: false })
         .limit(50),
     ]);
 
-    const rows = (data ?? []) as {
+    const rows = ((data ?? []) as {
       amount: number;
       reason: string;
       friend_phone: string | null;
       created_at: string;
-    }[];
+      approved_at: string | null;
+      rejected_at: string | null;
+    }[])
+      // A referral somebody said no to is not on their page. Telling
+      // them a friend counted and then taking it off the list again is
+      // worse than never having shown it.
+      .filter((one) => one.rejected_at === null);
 
     // First names, and only for the people they brought in. They did the
     // introducing; they do not own anybody's phone book.
@@ -269,9 +441,85 @@ export async function walletFor(phone: string): Promise<Wallet> {
         reason: one.reason,
         friend: one.friend_phone ? (named.get(one.friend_phone) ?? "A friend") : "",
         at: one.created_at,
+        /* Recorded but not theirs yet. Shown, because a friend who has
+           ordered is the news; said as waiting, because a balance that
+           does not match the list is the thing that gets messaged
+           about. */
+        waiting: one.approved_at === null,
       })),
     };
   } catch {
     return { balance: 0, moves: [] };
+  }
+}
+
+/**
+ * Food has arrived, so whoever sent them has earned something.
+ *
+ * Delivered rather than paid. Paying is a promise and delivering is the
+ * thing itself, and the gap between them is where the cheap version of
+ * this gets gamed: order, pay, claim the friend, cancel. An order that
+ * was handed over actually happened.
+ *
+ * Only on their first. The friend who brought them in is credited for
+ * bringing them in, once; every meal after that is the shop's own doing.
+ *
+ * Nothing reaches a wallet here. It is recorded and waits for somebody to
+ * look at it, because two people on one phone, or a name nobody
+ * recognises, is easier to catch by eye than to write a rule for.
+ */
+export async function noteReferrals(orderIds: string[]): Promise<void> {
+  const ids = [...new Set(orderIds.filter(Boolean))];
+  if (ids.length === 0) return;
+
+  for (const orderId of ids) {
+    try {
+      const { data } = await db()
+        .from("orders")
+        .select("customer_phone, status")
+        .eq("id", orderId)
+        .maybeSingle();
+      const order = data as { customer_phone: string; status: string } | null;
+      if (!order?.customer_phone || order.status !== "delivered") continue;
+
+      // Their first delivered order, counted off the orders rather than
+      // remembered: a column that has to be kept in step is one that drifts.
+      const { count } = await db()
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("customer_phone", order.customer_phone)
+        .eq("status", "delivered");
+      if ((count ?? 0) !== 1) continue;
+
+      const { data: who } = await db()
+        .from("customers")
+        .select("promoter_code")
+        .eq("phone", order.customer_phone)
+        .maybeSingle();
+      const code = String(
+        (who as { promoter_code?: string } | null)?.promoter_code ?? ""
+      ).trim();
+      if (code === "") continue;
+
+      // Only a customer's own code earns a wallet. A recruited promoter
+      // is paid cash per order as they always have been, and paying both
+      // would be paying twice for one friend.
+      const { data: sender } = await db()
+        .from("promoters")
+        .select("phone, is_customer")
+        .eq("code", code)
+        .maybeSingle();
+      const sent = sender as { phone?: string; is_customer?: boolean } | null;
+      if (!sent?.is_customer || !sent.phone) continue;
+
+      await rewardReferrer({
+        referrer: sent.phone,
+        friend: order.customer_phone,
+        orderId,
+      });
+    } catch {
+      /* A referral nobody recorded is one somebody can add by hand. An
+         order that would not mark delivered is a worse problem. */
+    }
   }
 }

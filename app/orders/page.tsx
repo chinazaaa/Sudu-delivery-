@@ -96,7 +96,7 @@ export default async function OrdersPage({
           <p className="max-w-[460px] text-[17px] leading-relaxed text-ink/80 sm:text-lg">
             {back
               ? "We already know this number, and your PIN is what proves it is yours. If you have never been sent one, ask below and it goes to your number."
-              : "We sent your PIN on WhatsApp with your first order. Put it in to see every order, follow today's run, and order the same thing again in one tap."}
+              : "We sent your PIN on WhatsApp with your first order. Put it in to see every order, follow today's delivery, and order the same thing again in one tap."}
           </p>
         </div>
         <div className="rounded-2xl border-2 border-ink bg-paper p-5 shadow-[6px_6px_0_#e5321d] sm:p-7 lg:shadow-[10px_10px_0_#e5321d]">
@@ -287,7 +287,7 @@ export default async function OrdersPage({
                         )}
                       </span>
                       <span className="font-display text-[clamp(2rem,8vw,3.25rem)] font-black uppercase leading-[0.9]">
-                        {dayWord(order.batch.run_date)} run
+                        {dayWord(order.batch.run_date)}
                         {order.hostel ? ` → ${order.hostel}` : ""}
                       </span>
                       <span className="text-rail-text">
@@ -310,7 +310,7 @@ export default async function OrdersPage({
                       href={`/o/${shortRef(order)}`}
                       className="btn-quiet w-full py-2.5 text-sm"
                     >
-                      Move it to another run
+                      Move it to another day
                     </Link>
                   )}
                 </li>
@@ -328,7 +328,10 @@ export default async function OrdersPage({
 
           {past.length > 0 && (
             <section className="space-y-3">
-              <h2 className="ticket text-muted">Past runs</h2>
+              {/* Orders, not runs. A run is how the shop arranges itself
+                  and means nothing to the person reading their own
+                  history. */}
+              <h2 className="ticket text-muted">Past orders</h2>
               <ul className="space-y-3">
                 {past.map((order) => (
                   <li
@@ -489,7 +492,7 @@ function RepeatCard() {
       <span>
         <span className="block font-bold">Order something new</span>
         <span className="block text-sm text-muted">
-          Every menu in one list, ready for the next run.
+          Every menu in one list, ready for the next delivery.
         </span>
       </span>
       <span className="shrink-0 text-sm font-extrabold text-brand">Browse</span>

@@ -54,7 +54,10 @@ export default function ReferralCard({
         href={message}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn-primary block w-full text-center"
+        /* No `block` on it: .btn is an inline-flex that centres its own
+           label, and overriding the display threw the words to the top of
+           the pill with the red sitting empty underneath. */
+        className="btn-primary w-full"
       >
         Share on WhatsApp
       </a>

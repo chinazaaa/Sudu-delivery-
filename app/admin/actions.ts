@@ -41,8 +41,8 @@ import { closeGroup } from "@/lib/groups";
 import { isPaid, moveOrder, placeOrder, NOT_ORDERS_SQL } from "@/lib/orders";
 import {
   enrolCustomer,
-  rewardReferrer,
-  REFERRAL_REWARD,
+  noteReferrals,
+  withdrawReferralFor,
 } from "@/lib/referrals";
 import { splitDayCosts } from "@/lib/day-costs";
 import { followRun, followRuns } from "@/lib/run-follow";
@@ -210,18 +210,12 @@ export async function markPaid(form: FormData): Promise<void> {
   })();
 
   /*
-   * Their own link, and whoever sent them.
+   * Their own link.
    *
-   * Both hang off the same moment: an order that has been paid for. A
-   * code is worth having once somebody has actually eaten our food, and a
-   * referral is worth paying for once the friend has actually paid, not
-   * when they placed something they may never pay for.
-   *
-   * Only ever on their first paid order. The friend who brought them in
-   * is credited for bringing them in, once, not for every meal they ever
-   * buy afterwards: that is recruitment, and it happened once. The unique
-   * index on the friend's number means a second call here pays nothing,
-   * so a double tap in admin cannot pay twice.
+   * Handed out when an order is paid for, which is the moment somebody
+   * has bought our food and has something to recommend. What their link
+   * earns is settled later and elsewhere: see noteReferrals, which waits
+   * for the food to actually arrive.
    */
   void (async () => {
     try {
@@ -231,54 +225,11 @@ export async function markPaid(form: FormData): Promise<void> {
         .eq("id", id)
         .maybeSingle();
       const row = data as { customer_phone: string; customer_name: string } | null;
-      if (!row?.customer_phone) return;
-
-      await enrolCustomer(row.customer_phone, row.customer_name ?? "");
-
-      // Their first, counted off the orders rather than remembered: a
-      // column that has to be kept in step is a column that drifts.
-      const { count } = await db()
-        .from("orders")
-        .select("id", { count: "exact", head: true })
-        .eq("customer_phone", row.customer_phone)
-        .not("status", "in", NOT_ORDERS_SQL)
-        .neq("status", "pending");
-      if ((count ?? 0) !== 1) return;
-
-      const { data: who } = await db()
-        .from("customers")
-        .select("promoter_code")
-        .eq("phone", row.customer_phone)
-        .maybeSingle();
-      const code = String((who as { promoter_code?: string } | null)?.promoter_code ?? "").trim();
-      if (code === "") return;
-
-      // Only a customer's own code pays a wallet. A recruited promoter is
-      // paid cash per order, as they always have been, and paying both
-      // would be paying twice for one friend.
-      const { data: sender } = await db()
-        .from("promoters")
-        .select("phone, is_customer")
-        .eq("code", code)
-        .maybeSingle();
-      const sent = sender as { phone?: string; is_customer?: boolean } | null;
-      if (!sent?.is_customer || !sent.phone) return;
-
-      const paid = await rewardReferrer({
-        referrer: sent.phone,
-        friend: row.customer_phone,
-        orderId: id,
-      });
-      if (!paid) return;
-
-      await pushToPhone(sent.phone, {
-        title: `₦${REFERRAL_REWARD.toLocaleString()} for you`,
-        body: `${(row.customer_name ?? "Someone").split(" ")[0]} ordered with your link. It comes off your next food.`,
-        path: "/orders",
-      });
+      if (row?.customer_phone) {
+        await enrolCustomer(row.customer_phone, row.customer_name ?? "");
+      }
     } catch {
-      /* A wallet that did not move is ours to fix. An order that would
-         not save because of one is not. */
+      /* They get one the next time anybody asks. */
     }
   })();
 
@@ -364,6 +315,8 @@ export async function markDelivered(form: FormData): Promise<void> {
     .select("batch_id")
     .maybeSingle();
   void tellDelivered([id]);
+  // And whoever sent them, if this is their first delivered order.
+  void noteReferrals([id]);
   await followRun((data as { batch_id: string | null } | null)?.batch_id);
   revalidatePath("/admin", "layout");
   revalidatePath("/orders");
@@ -488,10 +441,13 @@ export async function markRefundPaid(form: FormData): Promise<void> {
 /** Refunds are same-night and in full. There are no partial refunds here. */
 export async function refundOrder(form: FormData): Promise<void> {
   await assertAdmin();
-  await db()
-    .from("orders")
-    .update({ status: "refunded" })
-    .eq("id", String(form.get("order_id")));
+  const id = String(form.get("order_id"));
+  await db().from("orders").update({ status: "refunded" }).eq("id", id);
+  // An introduction that ended in the shop handing the money back is not
+  // an introduction the shop pays for. Only one still waiting: an
+  // approved one may already have been spent, and taking that back
+  // quietly would leave somebody short at a checkout with no reason why.
+  void withdrawReferralFor(id, "The order was refunded.");
   revalidatePath("/admin", "layout");
 }
 
@@ -524,6 +480,8 @@ export async function cancelOrder(form: FormData): Promise<void> {
     .eq("id", id)
     .select("batch_id")
     .maybeSingle();
+
+  void withdrawReferralFor(id, "The order was cancelled.");
 
   // A cancelled order is no longer something the run is waiting on, so a run
   // whose only outstanding order this was can finish now.
@@ -4046,7 +4004,10 @@ export async function setBatchStage(form: FormData): Promise<void> {
       .eq("status", "paid")
       .select("id");
 
-    void tellDelivered(((moved ?? []) as { id: string }[]).map((row) => row.id));
+    const justDone = ((moved ?? []) as { id: string }[]).map((row) => row.id);
+    void tellDelivered(justDone);
+    // And whoever sent any of them, for their first delivered order.
+    void noteReferrals(justDone);
   }
 
   revalidatePath("/admin", "layout");

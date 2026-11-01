@@ -9,7 +9,7 @@ import {
   wasPrice,
 } from "../lib/deals";
 import { soundsUrgent } from "../lib/bot-match";
-import { creditToUse, shareText } from "../lib/referrals";
+import { REFERRAL_REWARD, creditToUse, shareText } from "../lib/referrals";
 import { backFromCounter, stillShopping } from "../lib/stages";
 import { cookingLine } from "../lib/push";
 import { otherWorthSaying } from "../lib/arrival";
@@ -7635,8 +7635,13 @@ test("the share message carries the link, which is the whole mechanism", () => {
   assert.ok(shareText("tolu", "https://sudu.store").includes("/s/tolu"));
 
   // And what it is worth, because a link with no reason attached is a
-  // link nobody sends.
-  assert.ok(shareText("tolu", "https://sudu.store").includes("2,000"));
+  // link nobody sends. Read off the constant: the reward is a number the
+  // shop changes, and a test that hardcodes it only ever catches that.
+  assert.ok(
+    shareText("tolu", "https://sudu.store").includes(
+      REFERRAL_REWARD.toLocaleString()
+    )
+  );
 });
 
 test("a trip that has left is not on tonight's shopping list", () => {
