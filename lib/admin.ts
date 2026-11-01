@@ -2081,6 +2081,7 @@ export async function waitingCounts(): Promise<Record<string, number>> {
       carrying,
       unhappy,
       toPutRight,
+      introduced,
     ] = await Promise.all([
       // Money owed.
       db().from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
@@ -2151,6 +2152,15 @@ export async function waitingCounts(): Promise<Record<string, number>> {
         .from("run_notes")
         .select("id", { count: "exact", head: true })
         .is("done_at", null),
+      // Referrals waiting to be looked at. Nothing reaches a wallet until
+      // somebody says yes, so a number nobody sees is a scheme that pays
+      // nobody and quietly stops being worth telling friends about.
+      db()
+        .from("credit_moves")
+        .select("id", { count: "exact", head: true })
+        .eq("reason", "referral")
+        .is("approved_at", null)
+        .is("rejected_at", null),
     ]);
 
     const out: Record<string, number> = {};
@@ -2166,6 +2176,7 @@ export async function waitingCounts(): Promise<Record<string, number>> {
     put("/admin/parcels", carrying.count);
     put("/admin/reviews", unhappy.count);
     put("/admin/runs", toPutRight.count);
+    put("/admin/referrals", introduced.count);
 
     return out;
   } catch {

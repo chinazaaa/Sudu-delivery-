@@ -107,6 +107,10 @@ export const GROUPS: Group[] = [
       // looking for ChatGPT on a page that could never know about it.
       { href: "/admin/sources", label: "Sources" },
       { href: "/admin/promoters", label: "Promoter" },
+      // Beside the promoter, because it is the same idea done by the
+      // customers themselves: who brought somebody in, and what the shop
+      // owes them for it.
+      { href: "/admin/referrals", label: "Referrals" },
       { href: "/admin/reviews", label: "Reviews" },
       { href: "/admin/google", label: "Google reviews" },
     ],

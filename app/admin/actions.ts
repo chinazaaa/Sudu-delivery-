@@ -40,8 +40,10 @@ import {
 import { closeGroup } from "@/lib/groups";
 import { isPaid, moveOrder, placeOrder, NOT_ORDERS_SQL } from "@/lib/orders";
 import {
+  approveReferral,
   enrolCustomer,
   noteReferrals,
+  rejectReferral,
   withdrawReferralFor,
 } from "@/lib/referrals";
 import { splitDayCosts } from "@/lib/day-costs";
@@ -6793,4 +6795,61 @@ export async function setCardSent(form: FormData): Promise<void> {
 
   revalidatePath(`/admin/batch/${id}`);
   revalidatePath("/admin", "layout");
+}
+
+
+/**
+ * Saying yes to a referral, which is the moment the money becomes theirs.
+ *
+ * Nothing reaches a wallet without this. The reward is recorded when the
+ * friend's food arrives and sits waiting until somebody has looked at the
+ * two numbers and the two names, because two accounts on one phone is
+ * easier to spot by eye than to write a rule against.
+ */
+export async function approveReferralMove(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("move_id") ?? "");
+  if (id === "") return;
+
+  const paid = await approveReferral(id);
+  if (paid) {
+    // Told, because a reward nobody hears about is a reward that does not
+    // bring the next friend in.
+    try {
+      const { data } = await db()
+        .from("credit_moves")
+        .select("phone, amount")
+        .eq("id", id)
+        .maybeSingle();
+      const row = data as { phone: string; amount: number } | null;
+      if (row?.phone) {
+        void pushToPhone(row.phone, {
+          title: `₦${Number(row.amount ?? 0).toLocaleString()} for you`,
+          body: "Your friend's order arrived. It comes off your next food.",
+          path: "/orders",
+        });
+      }
+    } catch {
+      /* The money is theirs either way. */
+    }
+  }
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/orders");
+}
+
+/**
+ * Saying no, with the reason kept.
+ *
+ * The row stays rather than being deleted: the index on the friend's
+ * number is what stops one introduction being claimed twice, and somebody
+ * will ask why.
+ */
+export async function rejectReferralMove(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("move_id") ?? "");
+  if (id === "") return;
+  await rejectReferral(id, String(form.get("said") ?? ""));
+  revalidatePath("/admin", "layout");
+  revalidatePath("/orders");
 }
