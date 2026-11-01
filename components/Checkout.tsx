@@ -16,6 +16,7 @@ import {
   usePeople,
 } from "@/lib/cart";
 import { feeFor, sameDayFee, splitFee, type Band } from "@/lib/fees";
+import { creditToUse } from "@/lib/referrals";
 import {
   areasIn,
   canGoSameDay,
@@ -139,6 +140,7 @@ export default function Checkout({
   offers,
   hostels,
   pairDeals = [],
+  credit = 0,
   promoters,
   sentBy = "",
   sentByName = "",
@@ -196,6 +198,9 @@ export default function Checkout({
   hostels: string[];
   /** Buy one get one free, as the counters are running it today. */
   pairDeals?: PairDeal[];
+  /** What this customer has in their referral wallet, from the server.
+   *  Nought for anybody not signed in, which is the usual case. */
+  credit?: number;
   /** Who somebody could say they heard about the shop from. Empty means
    *  nobody is promoting, and then the question is not worth asking. */
   promoters: { code: string; name: string }[];
@@ -640,6 +645,14 @@ export default function Checkout({
   // matters is how long it was open.
   const [openedAt] = useState(() => Date.now());
   const [applied, setApplied] = useState<{ code: string; discount: number } | null>(null);
+  /*
+   * Their referral wallet, and whether they want it on this order.
+   *
+   * Off until they say so. It is their money and they may be saving it
+   * for a bigger order, and a box that spends somebody's balance because
+   * they did not notice it is the kind of help nobody asks for twice.
+   */
+  const [useCredit, setUseCredit] = useState(false);
   // What the link they arrived on is worth on this cart. Asked of the server
   // rather than assumed, because whether it applies at all depends on whose
   // first order this is and on what else is already on the order.
@@ -1120,10 +1133,22 @@ export default function Checkout({
   // One offer to a checkout: a typed code takes the slot if there is one,
   // and the link's own code only fills it when nothing else has.
   const linkOff = !applied && perk.kind === "applied" ? perk.discount : 0;
-  const total = Math.max(
+  /*
+   * What the wallet pays for, which is food and never the trip.
+   *
+   * The fee is what holds the car up and the shop does not discount it,
+   * so the balance comes off the food and no further: an order cannot
+   * cost less than nothing, and what will not fit stays in the wallet
+   * for the next one. The server works the same sum out again from its
+   * own copy of the balance, so this is what to expect rather than what
+   * is charged.
+   */
+  const foodAfter = Math.max(
     0,
-    subtotal - paired.off + charged - (applied?.discount ?? 0) - linkOff
+    subtotal - paired.off - (applied?.discount ?? 0) - linkOff
   );
+  const creditOff = useCredit ? creditToUse(credit, foodAfter) : 0;
+  const total = Math.max(0, foodAfter + charged - creditOff);
 
   const collect: "leader" | "each" = people.some(
     (person) =>
@@ -1751,6 +1776,9 @@ export default function Checkout({
 
       <input type="hidden" name="cart" value={JSON.stringify(toServerLines(cart))} />
       <input type="hidden" name="coupon" value={applied?.code ?? ""} />
+      {/* Asked for, not trusted: the server reads their balance off its own
+          copy and spends no more than is there. */}
+      <input type="hidden" name="use_credit" value={useCredit ? "on" : ""} />
       <input type="hidden" name="batch_id" value={batchId} />
       <input type="hidden" name="group_mode" value={groupOn ? mode : ""} />
       <input type="hidden" name="payment_method" value={method} />
@@ -2780,6 +2808,33 @@ export default function Checkout({
             {perk.note} is already on this order, so it is that rather than
             the discount on the link. Only one offer applies at a time.
           </p>
+        )}
+        {/* Their own money, offered rather than spent for them. Beside the
+            other lines that take money off, because that is what it is. */}
+        {credit > 0 && (
+          <label className="flex items-start justify-between gap-3 rounded-xl bg-mint/10 px-3 py-2.5">
+            <span className="min-w-0">
+              <span className="block text-sm font-bold">
+                Use your {naira(credit)} credit
+              </span>
+              <span className="block text-xs text-muted">
+                Earned by bringing friends in. It comes off the food, and
+                whatever does not fit stays for next time.
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              className="mt-0.5 size-5 shrink-0 accent-mint"
+              checked={useCredit}
+              onChange={(event) => setUseCredit(event.target.checked)}
+            />
+          </label>
+        )}
+        {creditOff > 0 && (
+          <div className="flex justify-between font-semibold text-mint">
+            <span>Your credit</span>
+            <span>−{naira(creditOff)}</span>
+          </div>
         )}
         <div className="flex items-baseline justify-between border-t-2 border-dashed border-line pt-3">
           <span className="text-lg font-bold">

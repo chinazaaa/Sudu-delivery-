@@ -16,7 +16,7 @@ import { takesMoney } from "@/lib/batches";
 import { dayWord } from "@/lib/time";
 import { deleteMyData, forgetMe } from "@/app/actions";
 import ReferralCard from "@/components/ReferralCard";
-import { walletFor } from "@/lib/referrals";
+import { enrolCustomer, walletFor } from "@/lib/referrals";
 import { db } from "@/lib/supabase";
 import DeleteMyData from "@/components/DeleteMyData";
 import ActionButton from "@/components/ActionButton";
@@ -137,15 +137,30 @@ export default async function OrdersPage({
      orders, and a referral scheme behind a second door is one nobody
      finds. */
   const [myCode, wallet] = await Promise.all([
+    /*
+     * Their code, made here if they have not got one.
+     *
+     * Codes are handed out when an order is paid for, which is the moment
+     * somebody has eaten our food and has something to recommend. That
+     * leaves everybody who ordered before the scheme existed with no code
+     * and no card, which is most of the shop: the people most worth
+     * asking to bring a friend are the ones who have been ordering
+     * longest.
+     *
+     * So the page makes one if it is missing and they have ordered. It
+     * runs once per person, because the second visit finds the code it
+     * made on the first.
+     */
     (async () => {
       try {
         const got = await db()
           .from("promoters")
           .select("code")
           .eq("phone", phone)
-          .eq("is_customer", true)
           .maybeSingle();
-        return String((got.data as { code?: string } | null)?.code ?? "");
+        const had = String((got.data as { code?: string } | null)?.code ?? "");
+        if (had !== "") return had;
+        return await enrolCustomer(phone, "");
       } catch {
         // No card rather than a card with no link in it.
         return "";

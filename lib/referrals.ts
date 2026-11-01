@@ -59,14 +59,32 @@ export async function enrolCustomer(
     const had = (mine as { code?: string } | null)?.code;
     if (had) return had;
 
+    /*
+     * Their name, looked up where the caller has not got one.
+     *
+     * A code is made out of a name, and a blank one makes "promoter",
+     * then "promoter2", then "promoter3": a row of codes that are not
+     * anybody's and that nobody would say out loud. The shop already
+     * knows what this number is called.
+     */
+    let called = name.trim();
+    if (called === "") {
+      const { data: who } = await db()
+        .from("customers")
+        .select("name")
+        .eq("phone", phone)
+        .maybeSingle();
+      called = String((who as { name?: string } | null)?.name ?? "").trim();
+    }
+
     const { data: all } = await db().from("promoters").select("code");
     const taken = ((all ?? []) as { code: string }[]).map((one) => one.code);
-    const code = codeFrom(name, taken);
+    const code = codeFrom(called, taken);
 
     await db().from("promoters").insert({
       code,
       handle: code.toLowerCase(),
-      name: name.trim() || "A friend",
+      name: called || "A friend",
       phone,
       // Nothing per order: the reward is the voucher, and a rate here as
       // well would be paying twice for one friend.

@@ -61,6 +61,7 @@ import {
 import { feeAcross } from "./value-bands";
 import { feeRidingAlong, type StepFee } from "./step-fee";
 import { realPromoter } from "./promoters";
+import { creditFor, creditToUse, spendCredit } from "./referrals";
 import { containersIn, pctOf } from "./containers";
 import { key as priceKey, linePrice, type AsItem, type ChosenOption } from "./pricing";
 import { freeFromPairs, pairQualifies, sellingNow, type DealRow } from "./deals";
@@ -136,6 +137,10 @@ export type PlaceOrderInput = {
   autoCoupon?: string;
   /** A discount code typed at checkout. */
   coupon?: string;
+  /** They ticked the box to spend their referral wallet on this order.
+   *  How much is spent is never taken from the browser: the balance is
+   *  read here, and no more than is in it is ever taken. */
+  useCredit?: boolean;
   /** The order whose join link they opened, so their food rides along with it. */
   joinOrderId?: string;
   /** Start a shared delivery that friends can add to for the next fifteen
@@ -705,6 +710,27 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           ? await startSharedGroup({ batch, phone, name, hostel })
           : null;
 
+  /*
+   * What their referral wallet pays towards this order.
+   *
+   * Read here rather than taken from the browser: the box at the checkout
+   * is a request, and this is the answer. Never more than is in the
+   * wallet, and never more than the food comes to, because the fee is
+   * what holds the car up and the shop does not discount it. Whatever
+   * will not fit stays in the wallet for the next order.
+   *
+   * Not on a split group, where one order is several bills and a balance
+   * belongs to one of them: that needs its own answer and does not have
+   * one yet.
+   */
+  const spending =
+    input.useCredit && input.groupMode !== "split"
+      ? creditToUse(
+          await creditFor(phone).catch(() => 0),
+          Math.max(0, countFood(priced.lines) - (earned?.discount ?? 0))
+        )
+      : 0;
+
   const result =
     input.groupMode === "split"
       ? await placeSplitGroup({
@@ -736,6 +762,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           sharedGroupId,
           gift,
           boxId: input.boxId,
+          creditOff: spending,
           // A promotion is the price, so it wins over the ladder and over the
           // same day pricing alike. A share worked out by a group that has
           // closed still wins over it: by then the money is decided.
@@ -837,6 +864,18 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
         });
 
   if (!result.ok) return result;
+
+  /*
+   * And out of the wallet, written against the order that spent it.
+   *
+   * After the order rather than before: a balance taken off an order
+   * that then failed to save is money gone with nothing to show for it,
+   * and the wallet is the one part of this nobody else can see to check.
+   * Awaited, because the order page reads the balance back.
+   */
+  if (spending > 0) {
+    await spendCredit({ phone, amount: spending, orderId: result.orderId });
+  }
 
   if (earned) await useCoupon(earned.coupon.code);
   // A promotion counts its uses too, because the cap on how many orders it is
@@ -1354,6 +1393,9 @@ async function placeSingleOrder(args: {
   sameDayFee: number | null;
   /** The promotion that priced this delivery, for counting its use. */
   promotionCode?: string | null;
+  /** How much of their referral wallet this order spends, worked out on
+   *  the server from the server's own copy of the balance. */
+  creditOff?: number;
   /** A share handed down by a shared delivery that has just closed. */
   fixedFee?: number;
   /** Who is being fed, when that is not the person paying. */
@@ -1433,7 +1475,13 @@ async function placeSingleOrder(args: {
     box_id: args.boxId ?? null,
     subtotal_food: countFood(lines),
     fee,
-    discount: args.coupon?.discount ?? 0,
+    /*
+     * A code and a wallet are both money off, and an order carries one
+     * number for that. Which part came from where is in credit_moves,
+     * written against this order the moment it is made, so the balance
+     * and the order can always be told apart afterwards.
+     */
+    discount: (args.coupon?.discount ?? 0) + (args.creditOff ?? 0),
     coupon_code: args.coupon?.coupon.code ?? args.promotionCode ?? null,
     // The shared delivery first. It is the one somebody was sent a link to and
     // is waiting to see this order appear in.

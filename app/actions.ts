@@ -127,6 +127,9 @@ export async function submitOrder(
     joinOrderId: String(form.get("join_order_id") ?? "") || undefined,
     shareDelivery: String(form.get("share_delivery") ?? "") === "on",
     deliverAt: String(form.get("deliver_at") ?? "") || undefined,
+    // They ticked the box to spend their referral wallet. How much is
+    // worked out from the balance on the server, never from here.
+    useCredit: String(form.get("use_credit") ?? "") === "on",
   });
 
   if (!result.ok) return { error: result.error };

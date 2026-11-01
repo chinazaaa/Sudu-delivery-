@@ -10,6 +10,8 @@ import {
   sameDayPricing,
 } from "@/lib/settings";
 import { liveOffers } from "@/lib/coupons";
+import { currentCustomer } from "@/lib/customer-auth";
+import { creditFor } from "@/lib/referrals";
 import { hostelNames } from "@/lib/hostels";
 import { namedPromoters } from "@/lib/promoters";
 import { WHO_COOKIE } from "@/lib/came-from";
@@ -200,6 +202,13 @@ export default async function CheckoutPage({
       hostels={await hostelNames()}
       // Buy one get one free, as the counters are running it today.
       pairDeals={await livePairDeals()}
+      /* What they have earned by bringing people in, offered on this
+         order rather than spent for them. Nought when nobody is signed
+         in, which costs one cookie check. */
+      credit={await (async () => {
+        const who = await currentCustomer().catch(() => null);
+        return who ? await creditFor(who).catch(() => 0) : 0;
+      })()}
       // Asked on the one form a first order has to pass through. Whoever
       // they name is theirs for life, so there is no second chance at it.
       promoters={promoters}
