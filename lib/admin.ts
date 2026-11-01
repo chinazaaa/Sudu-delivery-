@@ -183,9 +183,21 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
      */
     .filter((one) => one.id === batchId || stillShopping(one.stage))
     .map((one) => one.id);
-  // A parcel or a box day is its own trip and keeps its own sheet.
+  /*
+   * A parcel or a box day is its own trip and keeps its own sheet. So is
+   * a trip that has already gone.
+   *
+   * Sharing a counter only saves a journey while both trips still have
+   * one to make. This afternoon's run was on the road with its food
+   * bought and its bags handed over, and its sheet had tonight's shopping
+   * on it: three counters to visit and forty-eight thousand still to
+   * spend, on a run that was finished, against takings that were only
+   * ever its own. The profit line read minus thirty-four thousand for an
+   * evening that had made money.
+   */
   const driving =
-    (batch.kind ?? "run") === "run" || batch.kind === "same_day"
+    ((batch.kind ?? "run") === "run" || batch.kind === "same_day") &&
+    stillShopping(batch.stage)
       ? [...new Set([batchId, ...sameEvening])]
       : [batchId];
 
