@@ -16,7 +16,7 @@ import { takesMoney } from "@/lib/batches";
 import { dayWord } from "@/lib/time";
 import { deleteMyData, forgetMe } from "@/app/actions";
 import ReferralCard from "@/components/ReferralCard";
-import { enrolCustomer, walletFor } from "@/lib/referrals";
+import { enrolCustomer, walletFor, welcomeSaid } from "@/lib/referrals";
 import { db } from "@/lib/supabase";
 import DeleteMyData from "@/components/DeleteMyData";
 import ActionButton from "@/components/ActionButton";
@@ -136,7 +136,7 @@ export default async function OrdersPage({
      of its own: this is the page somebody already opens to look at their
      orders, and a referral scheme behind a second door is one nobody
      finds. */
-  const [myCode, wallet] = await Promise.all([
+  const [myCode, wallet, welcome] = await Promise.all([
     /*
      * Their code, made here if they have not got one.
      *
@@ -167,6 +167,9 @@ export default async function OrdersPage({
       }
     })(),
     walletFor(phone).catch(() => ({ balance: 0, moves: [] })),
+    // What their link gives whoever uses it, off the welcome the shop
+    // has set rather than written into the message.
+    welcomeSaid().catch(() => ""),
   ]);
 
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
@@ -324,7 +327,12 @@ export default async function OrdersPage({
 
           {/* Above the history, because it is a thing to do rather than a
               record of what was done. */}
-          <ReferralCard code={myCode} wallet={wallet} site={site} />
+          <ReferralCard
+            code={myCode}
+            wallet={wallet}
+            site={site}
+            welcome={welcome}
+          />
 
           {past.length > 0 && (
             <section className="space-y-3">

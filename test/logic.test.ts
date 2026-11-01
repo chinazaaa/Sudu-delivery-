@@ -7630,20 +7630,26 @@ test("a referral wallet only ever comes off the food", () => {
   assert.equal(creditToUse(2000, -1), 0);
 });
 
-test("the share message carries the link, which is the whole mechanism", () => {
-  // Nothing to copy and nothing to type: the link is the code.
-  assert.ok(shareText("tolu", "https://sudu.store").includes("/s/tolu"));
+test("the share message is written for the person receiving it", () => {
+  const said = shareText("tolu", "https://sudu.store", "₦500 off your delivery");
 
-  // And what it is worth, because a link with no reason attached is a
-  // link nobody sends. Read off the constant: the reward is a number the
-  // shop changes, and a test that hardcodes it only ever catches that.
-  assert.ok(
-    shareText("tolu", "https://sudu.store").includes(
-      REFERRAL_REWARD.toLocaleString()
-    )
-  );
+  // The link is the whole mechanism: nothing to copy, nothing to type.
+  assert.ok(said.includes("/s/tolu"));
+
+  // Their side, because a message that only says what the sender gets is
+  // a favour being asked, and nobody forwards one of those.
+  assert.ok(said.includes("₦500 off your delivery"));
+
+  // And not a word about what the sender earns. That is between them and
+  // the shop, and putting it here only makes the friend feel used.
+  assert.ok(!said.includes(REFERRAL_REWARD.toLocaleString()));
+
+  // No welcome set and it still reads as a sentence, offering nothing
+  // rather than a number nobody will honour.
+  const bare = shareText("tolu", "https://sudu.store");
+  assert.ok(bare.includes("/s/tolu"));
+  assert.ok(!bare.includes("Get  on"));
 });
-
 test("a trip that has left is not on tonight's shopping list", () => {
   // Still to buy: these share a journey with whatever else goes tonight.
   assert.equal(stillShopping("ordering"), true);

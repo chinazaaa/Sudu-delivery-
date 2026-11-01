@@ -21,15 +21,20 @@ export default function ReferralCard({
   code,
   wallet,
   site,
+  welcome = "",
 }: {
   code: string;
   wallet: Wallet;
   site: string;
+  /** What the friend gets for using the link, as the shop has it set. */
+  welcome?: string;
 }) {
   if (code === "") return null;
 
   const link = `${site}/s/${code.toLowerCase()}`;
-  const message = `https://wa.me/?text=${encodeURIComponent(shareText(code, site))}`;
+  const message = `https://wa.me/?text=${encodeURIComponent(
+    shareText(code, site, welcome)
+  )}`;
   const brought = wallet.moves.filter((one) => one.reason === "referral");
 
   return (
@@ -38,9 +43,13 @@ export default function ReferralCard({
         <h2 className="font-display text-2xl font-black uppercase leading-none">
           Bring a friend
         </h2>
+        {/* Their side first, because that is what makes the link worth
+            sending: a message that only says what the sender gets is a
+            favour being asked, and nobody forwards one of those. */}
         <p className="mt-1 text-[15px] leading-relaxed text-ink/75">
-          Send them your link. When they pay for their first order you get{" "}
-          {naira(REFERRAL_REWARD)} off your own food. No limit on how many.
+          {welcome === "" ? "" : `Your link gives them ${welcome} on their first order. `}
+          When their food arrives you get {naira(REFERRAL_REWARD)} off your
+          own. No limit on how many.
         </p>
       </div>
 

@@ -28,13 +28,30 @@ export const REFERRAL_REWARD = 1000;
  *  enough to be a reason to order. */
 export const REWARD_DAYS = 60;
 
-/** What the share message says. One line, their link, nothing else: it is
- *  pasted into a chat, not read as a page. */
-export function shareText(code: string, site: string): string {
-  return (
-    `I order food to PAU with Sudu. Use my link and I get ₦${REFERRAL_REWARD.toLocaleString()} ` +
-    `off my next one: ${site}/s/${code.toLowerCase()}`
-  );
+/**
+ * What the share message says.
+ *
+ * Written for the person receiving it, which the first version was not:
+ * "use my link and I get a thousand off" is somebody asking a favour, and
+ * a favour is a thing you do once for a good friend and never for a
+ * stranger. Nothing in it was any use to the person being asked.
+ *
+ * They do get something. A promoter's link has always carried a welcome
+ * off the new customer's first delivery, and a customer's link is the
+ * same link, so it carries it too. It simply was not mentioned.
+ *
+ * So the offer comes first and the asking disappears: what the sender
+ * earns is between them and the shop, and putting it in a message to
+ * their friend only makes the friend feel used.
+ *
+ * One line, because it is pasted into a chat rather than read as a page.
+ */
+export function shareText(code: string, site: string, perk = ""): string {
+  const link = `${site}/s/${code.toLowerCase()}`;
+  const said = perk.trim();
+  return said === ""
+    ? `Sudu delivers food to PAU from KFC, Domino's and the rest. My link: ${link}`
+    : `Get ${said} on your first Sudu order, food to PAU from KFC, Domino's and the rest: ${link}`;
 }
 
 /**
@@ -521,5 +538,41 @@ export async function noteReferrals(orderIds: string[]): Promise<void> {
       /* A referral nobody recorded is one somebody can add by hand. An
          order that would not mark delivered is a worse problem. */
     }
+  }
+}
+
+/**
+ * What a new customer gets for using somebody's link, in words.
+ *
+ * Read off the coupon the shop has actually set rather than written into
+ * the message, so changing the welcome in admin changes what every
+ * customer's link promises. Empty where there is no welcome on, which
+ * leaves the share message offering nothing rather than offering a
+ * number nobody will honour.
+ */
+export async function welcomeSaid(): Promise<string> {
+  try {
+    const { safeSettings } = await import("./settings");
+    const code = (await safeSettings()).promoter_perk_code.trim();
+    if (code === "") return "";
+
+    const { data } = await db()
+      .from("coupons")
+      .select("amount, applies_to, active")
+      .eq("code", code)
+      .maybeSingle();
+    const perk = data as
+      | { amount: number; applies_to: string; active: boolean }
+      | null;
+    if (!perk?.active) return "";
+
+    const amount = Math.max(0, Number(perk.amount ?? 0));
+    if (amount <= 0) return "";
+    const naira = `₦${amount.toLocaleString()}`;
+    return perk.applies_to === "order"
+      ? `${naira} off your food`
+      : `${naira} off your delivery`;
+  } catch {
+    return "";
   }
 }
