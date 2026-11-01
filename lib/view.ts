@@ -216,3 +216,33 @@ export function carLabel(batch: {
 
   return `${runDateLabel(batch.run_date)} · ${SLOT_LABEL[batch.slot]}`;
 }
+
+/**
+ * The same trip, said to the person waiting for it.
+ *
+ * carLabel above is the shop talking to itself, and it is right to: "A car
+ * of its own · around 6pm" is exactly what somebody in admin needs to see.
+ * It was also being dropped straight into the message that asks a customer
+ * for money, which came out as "your A car of its own · around 6pm, Sunday,
+ * 1 Nov order #1065 comes to ₦48,650".
+ *
+ * Nobody outside this building knows what a car of its own is, and nobody
+ * needs to: from where they are sitting a car and a run are the same
+ * promise, which is food on a day at a time. So every kind reads the same
+ * way, "Sunday night", and the exact time lives in the arrival line and on
+ * the order page where it is already said properly.
+ */
+export function whenSaid(batch: {
+  kind?: string | null;
+  run_date: string;
+  slot: BatchSlot;
+  deliver_at?: string | null;
+}): string {
+  // A parcel has no day until one is agreed, and guessing is how "today"
+  // became a promise nobody made.
+  if ((batch.kind ?? "run") === "parcel" && !batch.deliver_at) {
+    return "the agreed day";
+  }
+  const day = runDateLabel(batch.run_date);
+  return `${day} ${SLOT_LABEL[batch.slot]}`;
+}

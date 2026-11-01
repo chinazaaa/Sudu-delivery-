@@ -8,7 +8,7 @@ import {
   openGroupFor,
   startSharedGroup,
 } from "./groups";
-import { feeFor, sameDayFee, splitFee, tripFee, type Band } from "./fees";
+import { feeFor, isCar, sameDayFee, splitFee, tripFee, type Band } from "./fees";
 import { feeOnTrip } from "./trip-fee";
 import { carGoesOn } from "./areas";
 import {
@@ -979,8 +979,30 @@ export async function quote(args: {
     ridingCount === 0 ? priced.lines : drivingLines(priced.lines, byBox)
   );
 
+  /*
+   * A car of its own, however the order got onto one.
+   *
+   * This asked only whether a time had been handed in, which is how the
+   * website's checkout says "a car". An order put straight onto a car
+   * that already exists hands in a batch id and no time, and so was
+   * priced on the run ladder: a car of its own charged as though it were
+   * sharing a trip that is not happening. Turning a left behind cart into
+   * an order does exactly that, and it came out at four thousand against
+   * the six and a half the same cart had been quoted at the checkout an
+   * hour earlier.
+   *
+   * The batch knows what it is. lib/fees has said so since the same bug
+   * was fixed for moves and for discount codes; this was the last place
+   * still working it out from the input instead of from the trip.
+   *
+   * Urgency only ever comes from the customer picking an urgent slot. A
+   * car they were put on is the shop arranging itself, and billing
+   * somebody extra for that is billing them for our convenience.
+   */
+  const onACar = args.sameDay ? true : isCar(batch);
+
   let fee: number;
-  if (args.sameDay) {
+  if (onACar) {
     if (!where.sameDay) {
       const far = where.all.find((one) => !one.sameDay);
       return {
@@ -989,7 +1011,12 @@ export async function quote(args: {
           "It goes on a run, so pick one and everything travels together.",
       };
     }
-    fee = sameDayFee(carrying, args.sameDay.urgent, where.sameDayBands, where.urgentExtra);
+    fee = sameDayFee(
+      carrying,
+      args.sameDay?.urgent === true,
+      where.sameDayBands,
+      where.urgentExtra
+    );
   } else if (where.valueBands.length > 0) {
     // A market trip is one trip and two bags, and the container ladder
     // would call it eleven containers. Two errands, two fees, added.

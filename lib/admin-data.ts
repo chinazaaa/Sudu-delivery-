@@ -3,7 +3,7 @@ import { WINDOW_DAYS } from "./other-money";
 import { activeBands } from "./settings";
 import { feeFor } from "./fees";
 import { containersIn } from "./containers";
-import { carLabel } from "./view";
+import { carLabel, whenSaid } from "./view";
 import { isGone, isPaid, linesFor, NOT_ORDERS_SQL, type OrderLine } from "./orders";
 import { SLOT_LABEL } from "./config";
 import { shareRef } from "./money";
@@ -20,7 +20,11 @@ export type FeedOrder = Order & {
   /** Containers and delivery on that person's other orders in the same run. */
   otherItems: number;
   otherFee: number;
+  /** What the shop calls this trip, for the boards: "A car of its own". */
   batchLabel: string;
+  /** And what the customer is told it is: "Sunday night", whichever kind
+   *  of trip it turns out to be. Messages use this one. See whenSaid. */
+  batchSaid: string;
   /** Which shop this order's trip belongs to: a run, a skincare drop, a car
    *  of its own or a parcel. */
   batchKind: string;
@@ -177,9 +181,11 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       ),
       otherFee: siblings.reduce((sum, other) => sum + other.fee, 0),
       lines: lines.filter((line) => line.order_id === order.id),
-      batchLabel: batch
-        ? carLabel(batch)
-        : "Unknown run",
+      // What the shop calls it, for the boards.
+      batchLabel: batch ? carLabel(batch) : "Unknown run",
+      // And what the customer is told, for the messages. See whenSaid.
+      batchSaid: batch ? whenSaid(batch) : "",
+
       batchStage: batch?.stage ?? "ordering",
       batchKind: batch?.kind ?? "run",
       runDate: batch?.run_date ?? "",
