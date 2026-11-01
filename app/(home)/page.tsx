@@ -7,6 +7,9 @@ import { cheapestBoxes } from "@/lib/box-view";
 import { naira } from "@/lib/money";
 import { shelfPhotos } from "@/lib/shelf-photo";
 import Home from "@/components/Home";
+import LiveOrderStrip from "@/components/LiveOrderStrip";
+import { currentCustomer } from "@/lib/customer-auth";
+import { liveOrderFor } from "@/lib/live-order";
 import { openBatches, carsOnOffer } from "@/lib/batches";
 import { menuView } from "@/lib/menu";
 import { listSlides } from "@/lib/slides";
@@ -48,6 +51,18 @@ export default async function HomePage() {
   // Somebody opening the site is enough to close a group whose time is up, so
   // a car does not sit open because everybody in it put their phone away.
   sweepGroups();
+
+  /*
+   * Whether this browser has food on the way.
+   *
+   * Two small reads, and only for somebody signed in: placing an order
+   * signs this browser in, so the people who have something to follow are
+   * exactly the people this asks about. Everybody else is one cookie
+   * check, and anything that goes wrong reads as nothing in flight.
+   */
+  const live = await currentCustomer()
+    .then((phone) => (phone ? liveOrderFor(phone) : null))
+    .catch(() => null);
 
   const [menu, batches, slides, settings, bands] = await Promise.all([
     menuView(),
@@ -352,7 +367,11 @@ export default async function HomePage() {
     .flatMap((row) => door[row.key]);
 
   return (
-    <Home
+    <>
+      {/* Above the shop rather than inside it: a line of news, and
+          everything that was on this page is where it was, one row down. */}
+      <LiveOrderStrip order={live} />
+      <Home
       // What the shop's own Google profile says, as the shop typed it in.
       // Nothing is fetched: every part of this hides itself when it is not
       // set, so the page can never show a rating nobody gave.
@@ -454,6 +473,7 @@ export default async function HomePage() {
       // The boxes by name, so a search for "care" finds the care package
       // rather than reporting that nothing matches.
       packs={packs}
-    />
+      />
+    </>
   );
 }

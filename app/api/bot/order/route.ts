@@ -5,7 +5,7 @@ import { narration } from "@/lib/messages";
 import { payableAccounts } from "@/lib/banks";
 import { safeSettings } from "@/lib/settings";
 import { normalisePhone } from "@/lib/phone";
-import { customerDetails } from "@/lib/customer-auth";
+import { customerDetails, signInCustomer } from "@/lib/customer-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -144,6 +144,23 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     if (!placed.ok) return NextResponse.json({ error: placed.error });
+
+    /*
+     * This browser now knows whose it is, as the checkout's does.
+     *
+     * Placing an order proves the number as well as any PIN: they typed
+     * it, they got the order, and they are about to be asked to pay for
+     * it. The website's own checkout has signed people in on exactly that
+     * reasoning for as long as it has existed, and the chat, which is the
+     * same browser on the same site, did not. So somebody who ordered
+     * through the chat was a stranger again the moment they closed it,
+     * and their own order page asked them for a PIN they can only get by
+     * messaging a person.
+     *
+     * Never awaited by the order. A cookie that would not set is somebody
+     * signing in later, not an order that fails.
+     */
+    void signInCustomer(phone).catch(() => {});
 
     const order = await getOrder(placed.orderId);
     if (!order) return NextResponse.json({ error: "The order was placed but cannot be read back." });
