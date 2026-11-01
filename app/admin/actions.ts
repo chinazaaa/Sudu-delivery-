@@ -1129,13 +1129,20 @@ export async function setDayCosts(form: FormData): Promise<void> {
 
   const { data } = await db()
     .from("batches")
-    .select("id, kind, status")
+    .select("id, kind, status, settled_at")
     .eq("run_date", day)
     .neq("status", "cancelled");
 
-  const batches = ((data ?? []) as { id: string; kind?: string | null }[]).filter(
-    (one) => (one.kind ?? "run") === "run" || one.kind === "same_day"
-  );
+  const batches = ((data ?? []) as {
+    id: string;
+    kind?: string | null;
+    settled_at?: string | null;
+  }[])
+    .filter((one) => (one.kind ?? "run") === "run" || one.kind === "same_day")
+    // Settled books are closed books. See setRunCosts, where the same
+    // rule is written out: a run that has been settled keeps the fare it
+    // was settled with, whatever is typed on the day afterwards.
+    .filter((one) => !one.settled_at);
   if (batches.length === 0) return;
 
   // How many bags each is carrying, which is what the fare is shared out
@@ -1229,11 +1236,31 @@ export async function setRunCosts(form: FormData): Promise<void> {
       ? await (async () => {
           const { data } = await db()
             .from("batches")
-            .select("id, kind, status")
+            .select("id, kind, status, settled_at")
             .eq("run_date", day)
             .neq("status", "cancelled");
-          return ((data ?? []) as { id: string; kind?: string | null }[])
+          return ((data ?? []) as {
+            id: string;
+            kind?: string | null;
+            settled_at?: string | null;
+          }[])
             .filter((one) => (one.kind ?? "run") === "run" || one.kind === "same_day")
+            /*
+             * And whose books are still open.
+             *
+             * Settling is the shop saying in its own words that a night is
+             * over: the bags are handed out, the counters are paid and the
+             * profit is a number somebody has read. Sharing a fare onto it
+             * afterwards rewrites an account that was closed. One typed on
+             * tonight's run took a thousand off this afternoon's, hours
+             * after it was settled, and the only sign was tonight's box
+             * redisplaying its own share and looking as though nothing had
+             * saved.
+             *
+             * A settled run keeps whatever fare it was settled with, and
+             * the whole of tonight's belongs to what is still going.
+             */
+            .filter((one) => one.id === id || !one.settled_at)
             .map((one) => one.id);
         })()
       : [id];
