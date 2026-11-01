@@ -15,6 +15,9 @@ import { STAGE_LABEL } from "@/lib/stages";
 import { takesMoney } from "@/lib/batches";
 import { dayWord } from "@/lib/time";
 import { deleteMyData, forgetMe } from "@/app/actions";
+import ReferralCard from "@/components/ReferralCard";
+import { walletFor } from "@/lib/referrals";
+import { db } from "@/lib/supabase";
 import DeleteMyData from "@/components/DeleteMyData";
 import ActionButton from "@/components/ActionButton";
 
@@ -128,6 +131,30 @@ export default async function OrdersPage({
      could see was the arrangement behind them. */
   const standing = await myPlans(phone).catch(() => []);
   const today = lagosToday();
+
+  /* Their own link and what it has earned. Read here rather than on a page
+     of its own: this is the page somebody already opens to look at their
+     orders, and a referral scheme behind a second door is one nobody
+     finds. */
+  const [myCode, wallet] = await Promise.all([
+    (async () => {
+      try {
+        const got = await db()
+          .from("promoters")
+          .select("code")
+          .eq("phone", phone)
+          .eq("is_customer", true)
+          .maybeSingle();
+        return String((got.data as { code?: string } | null)?.code ?? "");
+      } catch {
+        // No card rather than a card with no link in it.
+        return "";
+      }
+    })(),
+    walletFor(phone).catch(() => ({ balance: 0, moves: [] })),
+  ]);
+
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 
   return (
     <div className="space-y-4">
@@ -279,6 +306,10 @@ export default async function OrdersPage({
           {/* Under the live orders, where somebody lands once they have the
               answer they came for. */}
           {live.length > 0 && <RepeatCard />}
+
+          {/* Above the history, because it is a thing to do rather than a
+              record of what was done. */}
+          <ReferralCard code={myCode} wallet={wallet} site={site} />
 
           {past.length > 0 && (
             <section className="space-y-3">

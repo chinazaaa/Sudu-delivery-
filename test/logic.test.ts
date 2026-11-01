@@ -9,6 +9,7 @@ import {
   wasPrice,
 } from "../lib/deals";
 import { soundsUrgent } from "../lib/bot-match";
+import { creditToUse, shareText } from "../lib/referrals";
 import { backFromCounter } from "../lib/stages";
 import { cookingLine } from "../lib/push";
 import { otherWorthSaying } from "../lib/arrival";
@@ -7609,4 +7610,31 @@ test("undoing a counter tick puts the run back where the clock says", () => {
   // reopening a run that should not be taking anything.
   assert.equal(backFromCounter("", now), "closed");
   assert.equal(backFromCounter("not a date", now), "closed");
+});
+
+test("a referral wallet only ever comes off the food", () => {
+  // The ordinary case: plenty of food, the whole balance goes on it.
+  assert.equal(creditToUse(2000, 18000), 2000);
+
+  // More in the wallet than the food comes to. It takes what the order
+  // can carry and the rest stays, rather than evaporating on a small
+  // order or paying for somebody's delivery.
+  assert.equal(creditToUse(20000, 4600), 4600);
+
+  // Nothing to spend, and nothing to spend it on.
+  assert.equal(creditToUse(0, 18000), 0);
+  assert.equal(creditToUse(2000, 0), 0);
+
+  // A balance that has somehow gone negative is not a bill.
+  assert.equal(creditToUse(-5000, 18000), 0);
+  assert.equal(creditToUse(2000, -1), 0);
+});
+
+test("the share message carries the link, which is the whole mechanism", () => {
+  // Nothing to copy and nothing to type: the link is the code.
+  assert.ok(shareText("tolu", "https://sudu.store").includes("/s/tolu"));
+
+  // And what it is worth, because a link with no reason attached is a
+  // link nobody sends.
+  assert.ok(shareText("tolu", "https://sudu.store").includes("2,000"));
 });

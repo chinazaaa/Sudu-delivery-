@@ -33,6 +33,11 @@ import {
 } from "@/lib/batches";
 import { closeGroup } from "@/lib/groups";
 import { isPaid, moveOrder, placeOrder, NOT_ORDERS_SQL } from "@/lib/orders";
+import {
+  enrolCustomer,
+  rewardReferrer,
+  REFERRAL_REWARD,
+} from "@/lib/referrals";
 import { splitDayCosts } from "@/lib/day-costs";
 import { followRun, followRuns } from "@/lib/run-follow";
 import { newRunnerToken } from "@/lib/runner";
@@ -195,6 +200,79 @@ export async function markPaid(form: FormData): Promise<void> {
       });
     } catch {
       /* Nothing said is better than an order that would not save. */
+    }
+  })();
+
+  /*
+   * Their own link, and whoever sent them.
+   *
+   * Both hang off the same moment: an order that has been paid for. A
+   * code is worth having once somebody has actually eaten our food, and a
+   * referral is worth paying for once the friend has actually paid, not
+   * when they placed something they may never pay for.
+   *
+   * Only ever on their first paid order. The friend who brought them in
+   * is credited for bringing them in, once, not for every meal they ever
+   * buy afterwards: that is recruitment, and it happened once. The unique
+   * index on the friend's number means a second call here pays nothing,
+   * so a double tap in admin cannot pay twice.
+   */
+  void (async () => {
+    try {
+      const { data } = await db()
+        .from("orders")
+        .select("customer_phone, customer_name")
+        .eq("id", id)
+        .maybeSingle();
+      const row = data as { customer_phone: string; customer_name: string } | null;
+      if (!row?.customer_phone) return;
+
+      await enrolCustomer(row.customer_phone, row.customer_name ?? "");
+
+      // Their first, counted off the orders rather than remembered: a
+      // column that has to be kept in step is a column that drifts.
+      const { count } = await db()
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("customer_phone", row.customer_phone)
+        .not("status", "in", NOT_ORDERS_SQL)
+        .neq("status", "pending");
+      if ((count ?? 0) !== 1) return;
+
+      const { data: who } = await db()
+        .from("customers")
+        .select("promoter_code")
+        .eq("phone", row.customer_phone)
+        .maybeSingle();
+      const code = String((who as { promoter_code?: string } | null)?.promoter_code ?? "").trim();
+      if (code === "") return;
+
+      // Only a customer's own code pays a wallet. A recruited promoter is
+      // paid cash per order, as they always have been, and paying both
+      // would be paying twice for one friend.
+      const { data: sender } = await db()
+        .from("promoters")
+        .select("phone, is_customer")
+        .eq("code", code)
+        .maybeSingle();
+      const sent = sender as { phone?: string; is_customer?: boolean } | null;
+      if (!sent?.is_customer || !sent.phone) return;
+
+      const paid = await rewardReferrer({
+        referrer: sent.phone,
+        friend: row.customer_phone,
+        orderId: id,
+      });
+      if (!paid) return;
+
+      await pushToPhone(sent.phone, {
+        title: `₦${REFERRAL_REWARD.toLocaleString()} for you`,
+        body: `${(row.customer_name ?? "Someone").split(" ")[0]} ordered with your link. It comes off your next food.`,
+        path: "/orders",
+      });
+    } catch {
+      /* A wallet that did not move is ours to fix. An order that would
+         not save because of one is not. */
     }
   })();
 
