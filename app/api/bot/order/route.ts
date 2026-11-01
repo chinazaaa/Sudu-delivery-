@@ -44,7 +44,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     };
 
     const phone = normalisePhone(String(body.phone ?? ""));
-    const name = String(body.name ?? "").trim();
+    let name = String(body.name ?? "").trim();
     let hostel = String(body.hostel ?? "").trim();
 
     /*
@@ -61,9 +61,20 @@ export async function POST(request: Request): Promise<NextResponse> {
      * trust the order already runs on, since the number is what the whole
      * order is filed under.
      */
-    if (hostel === "" && phone) {
+    /*
+     * The name comes from the same record, for the same reason.
+     *
+     * This filled in the block and not the name, and the chat does not
+     * ask a returning customer for either: it offers what the shop
+     * already has and they say yes. So an order from somebody we know
+     * arrived with a hostel this filled in and a name nobody had asked
+     * for, and was turned away for being incomplete, at the last tap,
+     * having shown them a total. Both halves of one record, read once.
+     */
+    if ((hostel === "" || name === "") && phone) {
       const saved = await customerDetails(phone);
-      hostel = String(saved?.hostel ?? "").trim();
+      if (hostel === "") hostel = String(saved?.hostel ?? "").trim();
+      if (name === "") name = String(saved?.name ?? "").trim();
     }
     const batchId = String(body.batchId ?? "");
     const deliverAt = String(body.deliverAt ?? "").trim();
@@ -79,8 +90,27 @@ export async function POST(request: Request): Promise<NextResponse> {
      * off a list: there is no batch to name because the checkout makes the
      * car when it takes the order.
      */
-    if (name === "" || hostel === "" || (batchId === "" && deliverAt === "")) {
-      return NextResponse.json({ error: "Something is missing from this order." });
+    /*
+     * Which piece is missing, in the message itself.
+     *
+     * "Something is missing from this order" is the shop telling somebody
+     * their order failed and refusing to say why, on the screen where
+     * they have already chosen their food and read a total. Tapping Try
+     * again sends exactly the same thing and fails exactly the same way,
+     * which is what it did. Each of these says what to do next, and the
+     * one nobody can fix from the chat says so and points at a person.
+     */
+    if (name === "") {
+      return NextResponse.json({ error: "We still need a name for this order." });
+    }
+    if (hostel === "") {
+      return NextResponse.json({ error: "We still need to know which block this goes to." });
+    }
+    if (batchId === "" && deliverAt === "") {
+      return NextResponse.json({
+        error:
+          "We could not hold a delivery for this order. Continue on WhatsApp and we will place it for you.",
+      });
     }
 
     const lines = Array.isArray(body.lines)
