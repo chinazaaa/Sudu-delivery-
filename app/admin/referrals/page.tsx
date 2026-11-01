@@ -1,7 +1,7 @@
 import PageHeader from "@/components/admin/PageHeader";
 import { formatPhone } from "@/lib/phone";
 import { naira } from "@/lib/money";
-import { waitingReferrals } from "@/lib/referrals";
+import { referrers, waitingReferrals } from "@/lib/referrals";
 import { approveReferralMove, rejectReferralMove } from "@/app/admin/actions";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,10 @@ export const dynamic = "force-dynamic";
  * between them is the thing to look for.
  */
 export default async function ReferralsPage() {
-  const waiting = await waitingReferrals();
+  const [waiting, people] = await Promise.all([
+    waitingReferrals(),
+    referrers(),
+  ]);
 
   return (
     <div className="pb-[76px] lg:pb-0">
@@ -101,6 +104,48 @@ export default async function ReferralsPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Who is actually doing this, under the thing that needs doing.
+          The promoter page is for people the shop recruited and pays in
+          cash; this is the same idea done by customers, and all it is
+          about is who brought whom in and what is sitting in a wallet. */}
+      {people.length > 0 && (
+        <section className="mt-[18px] space-y-3">
+          <h2 className="ticket text-muted">Who has brought somebody in</h2>
+          <ul className="space-y-2">
+            {people.map((one) => (
+              <li
+                key={one.phone}
+                className="card flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
+              >
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-bold leading-tight">
+                    {one.name || formatPhone(one.phone)}
+                  </span>
+                  <span className="hint">
+                    {one.code === "" ? formatPhone(one.phone) : `/s/${one.code}`}
+                  </span>
+                </span>
+                <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                  <span>
+                    <span className="font-bold">{one.brought}</span> in
+                  </span>
+                  {one.waiting > 0 && (
+                    <span className="text-brand-dark">
+                      {one.waiting} waiting
+                    </span>
+                  )}
+                  <span className="text-muted">{naira(one.earned)} earned</span>
+                  {/* What is left is the number that matters at a
+                      checkout, and the one that is not the same as what
+                      they earned the moment they spend any of it. */}
+                  <span className="font-bold">{naira(one.balance)} left</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );

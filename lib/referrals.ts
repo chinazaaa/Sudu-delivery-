@@ -581,3 +581,98 @@ export async function welcomeSaid(): Promise<string> {
     return "";
   }
 }
+
+/** A customer who has a link of their own, and how it is doing. */
+export type Referrer = {
+  code: string;
+  name: string;
+  phone: string;
+  /** Approved and paid into their wallet. */
+  brought: number;
+  earned: number;
+  /** Recorded and waiting on somebody. */
+  waiting: number;
+  /** What is left in the wallet, unspent. */
+  balance: number;
+};
+
+/**
+ * Everybody who has brought somebody in, best first.
+ *
+ * The promoter page is for people the shop recruited: a rate, bank
+ * details, a payout ledger, a PIN for a dashboard. A customer has none of
+ * that and never will, so listing them together was twenty rows of empty
+ * columns between the few people who are actually owed money.
+ *
+ * What a customer referral is actually about is this: who brought whom
+ * in, what was approved, and what is still sitting in a wallet. Anybody
+ * who has brought nobody in is left out: a code exists for every
+ * customer in the shop and a list of them is a list of customers, which
+ * is a page that already exists.
+ */
+export async function referrers(): Promise<Referrer[]> {
+  try {
+    const { data: rows } = await db()
+      .from("credit_moves")
+      .select("phone, amount, approved_at, rejected_at")
+      .eq("reason", "referral")
+      .is("rejected_at", null)
+      .limit(1000);
+
+    const moves = (rows ?? []) as {
+      phone: string;
+      amount: number;
+      approved_at: string | null;
+    }[];
+    if (moves.length === 0) return [];
+
+    const byPhone = new Map<string, { brought: number; earned: number; waiting: number }>();
+    for (const one of moves) {
+      const got = byPhone.get(one.phone) ?? { brought: 0, earned: 0, waiting: 0 };
+      if (one.approved_at) {
+        got.brought += 1;
+        got.earned += Math.max(0, Number(one.amount ?? 0));
+      } else {
+        got.waiting += 1;
+      }
+      byPhone.set(one.phone, got);
+    }
+
+    const numbers = [...byPhone.keys()];
+    const [{ data: who }, { data: codes }] = await Promise.all([
+      db().from("customers").select("phone, name, credit").in("phone", numbers),
+      db().from("promoters").select("phone, code").in("phone", numbers),
+    ]);
+
+    const named = new Map(
+      ((who ?? []) as { phone: string; name: string; credit: number }[]).map((one) => [
+        one.phone,
+        one,
+      ])
+    );
+    const coded = new Map(
+      ((codes ?? []) as { phone: string; code: string }[]).map((one) => [
+        one.phone,
+        one.code,
+      ])
+    );
+
+    return numbers
+      .map((phone) => {
+        const sums = byPhone.get(phone)!;
+        const person = named.get(phone);
+        return {
+          code: coded.get(phone) ?? "",
+          name: person?.name ?? "",
+          phone,
+          brought: sums.brought,
+          earned: sums.earned,
+          waiting: sums.waiting,
+          balance: Math.max(0, Number(person?.credit ?? 0)),
+        };
+      })
+      .sort((a, b) => b.brought - a.brought || b.waiting - a.waiting);
+  } catch {
+    return [];
+  }
+}

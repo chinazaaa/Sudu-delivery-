@@ -1720,7 +1720,30 @@ export type PromoterRow = Promoter & {
 
 /** Per-promoter order counts, so commission is calculable (brief §13). */
 export async function promoterRows(): Promise<PromoterRow[]> {
-  const { data: promoters } = await db().from("promoters").select("*").order("code");
+  /*
+   * The people the shop recruited, not every customer who has ordered.
+   *
+   * A customer's referral is the same machinery pointed at a different
+   * job: a link, an attribution, a reward. What makes this page a page
+   * is the rest of it, which none of that uses: a rate per order, bank
+   * details, a payout ledger, a nudge template, a PIN for a dashboard
+   * somebody logs into. Twenty customers listed among them is twenty
+   * rows of empty columns between the handful of people who actually
+   * have a payout owing.
+   *
+   * Customer referrals have a page of their own under Referrals, which
+   * shows the thing they are actually about: who brought whom in, and
+   * whether it has been approved.
+   *
+   * Asked so it survives a database without the column: no column means
+   * nobody is a customer promoter, which is the old world.
+   */
+  const askRows = (apart: boolean) => {
+    const query = db().from("promoters").select("*");
+    return apart ? query.eq("is_customer", false).order("code") : query.order("code");
+  };
+  let { data: promoters, error: wrong } = await askRows(true);
+  if (wrong) ({ data: promoters } = await askRows(false));
   const { data: orders } = await db()
     .from("orders")
     .select("status, customer_phone")
