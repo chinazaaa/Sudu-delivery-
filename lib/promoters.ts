@@ -301,12 +301,33 @@ export async function promoterEarnings(code: string): Promise<PromoterEarnings |
  * how they sign in stay out of it.
  */
 export async function namedPromoters(): Promise<{ code: string; name: string }[]> {
-  const { data, error } = await db()
-    .from("promoters")
-    .select("code, name")
-    .eq("active", true)
-    .order("name");
+  /*
+   * Recruited promoters only, which is what this list has always meant.
+   *
+   * Every customer now gets a promoter row of their own, so they can
+   * bring a friend in on a link and earn against their own food. They are
+   * not people to be picked out of "where did you hear about us": that
+   * list is a short row of names the shop works with, and filling it with
+   * every customer who has ever ordered puts strangers' full names in
+   * front of each other on a checkout.
+   *
+   * A customer's link still works exactly as it did. It carries the code
+   * itself, so nobody has to find their friend in a dropdown, and the
+   * attribution is the same either way.
+   *
+   * Asked in a way that survives a database without the column yet: no
+   * column means no customer promoters, which is the old world and the
+   * old answer.
+   */
+  const ask = (apart: boolean) => {
+    const query = db().from("promoters").select("code, name").eq("active", true);
+    return apart ? query.eq("is_customer", false).order("name") : query.order("name");
+  };
+
+  let { data, error } = await ask(true);
+  if (error) ({ data, error } = await ask(false));
   if (error) return [];
+
   return ((data ?? []) as { code: string; name: string }[]).filter(
     (one) => one.name.trim() !== ""
   );
