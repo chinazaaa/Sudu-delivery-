@@ -447,28 +447,37 @@ function Chip({
 }
 
 /**
- * Ordering the same thing again.
+ * The way back to the menu.
  *
- * Drawn in two places on this page and so written once: above the list when
- * nothing is on its way, and under the live orders when something is.
- * Somebody with food on the road opened this page to find out where it is,
- * and a card about ordering again standing over that answer pushed it off
- * the screen. Wanting it again is a thing you decide after you have been
- * fed.
+ * This card used to offer the same thing again, which every order in the
+ * list below it already offers, on its own line, with its own button. Two
+ * doors to one room, and the bigger of the two was the one nobody needed:
+ * somebody who wants last week's dinner taps Order again on last week's
+ * dinner.
+ *
+ * What the page had no door to at all was the shop. A page of finished
+ * orders is where somebody lands when they are hungry and have not
+ * decided yet, and the only way on from it was the tab bar.
+ *
+ * Drawn in two places and so written once: above the list when nothing is
+ * on its way, and under the live orders when something is. Somebody with
+ * food on the road opened this page to find out where it is, and a card
+ * about ordering standing over that answer pushed it off the screen.
+ * Deciding on dinner is a thing you do after you have been fed.
  */
 function RepeatCard() {
   return (
     <Link
-      href="/reorder"
+      href="/products"
       className="flex items-center justify-between gap-3 rounded-2xl border border-black/10 bg-paper px-4 py-3"
     >
       <span>
-        <span className="block font-bold">Order the same thing again</span>
+        <span className="block font-bold">Order something new</span>
         <span className="block text-sm text-muted">
-          Rebuilt at today&apos;s prices, ready for the next run.
+          Every menu in one list, ready for the next run.
         </span>
       </span>
-      <span className="shrink-0 text-sm font-extrabold text-brand">Open</span>
+      <span className="shrink-0 text-sm font-extrabold text-brand">Browse</span>
     </Link>
   );
 }

@@ -16,7 +16,13 @@ import {
 } from "@/lib/admin-gate";
 import { batchSheet, stillOpen } from "@/lib/admin";
 import { db } from "@/lib/supabase";
-import { STAGES, backFromCounter, stageIndex, type BatchStage } from "@/lib/stages";
+import {
+  STAGES,
+  backFromCounter,
+  stageIndex,
+  stillShopping,
+  type BatchStage,
+} from "@/lib/stages";
 import { type BatchSlot } from "@/lib/config";
 import { hoursByDay, deliveryWindows, externalUrl, safeSettings, sayWindow } from "@/lib/settings";
 import { runSchedule } from "@/lib/schedule";
@@ -1129,7 +1135,7 @@ export async function setDayCosts(form: FormData): Promise<void> {
 
   const { data } = await db()
     .from("batches")
-    .select("id, kind, status, settled_at")
+    .select("id, kind, status, settled_at, stage")
     .eq("run_date", day)
     .neq("status", "cancelled");
 
@@ -1137,12 +1143,12 @@ export async function setDayCosts(form: FormData): Promise<void> {
     id: string;
     kind?: string | null;
     settled_at?: string | null;
+    stage?: string | null;
   }[])
     .filter((one) => (one.kind ?? "run") === "run" || one.kind === "same_day")
-    // Settled books are closed books. See setRunCosts, where the same
-    // rule is written out: a run that has been settled keeps the fare it
-    // was settled with, whatever is typed on the day afterwards.
-    .filter((one) => !one.settled_at);
+    // One drive, one fare, and a trip that has left is its own drive. See
+    // setRunCosts, where the same rule is written out at length.
+    .filter((one) => !one.settled_at && stillShopping(one.stage));
   if (batches.length === 0) return;
 
   // How many bags each is carrying, which is what the fare is shared out
@@ -1236,31 +1242,43 @@ export async function setRunCosts(form: FormData): Promise<void> {
       ? await (async () => {
           const { data } = await db()
             .from("batches")
-            .select("id, kind, status, settled_at")
+            .select("id, kind, status, settled_at, stage")
             .eq("run_date", day)
             .neq("status", "cancelled");
           return ((data ?? []) as {
             id: string;
             kind?: string | null;
             settled_at?: string | null;
+            stage?: string | null;
           }[])
             .filter((one) => (one.kind ?? "run") === "run" || one.kind === "same_day")
             /*
-             * And whose books are still open.
+             * And only the ones that have not left yet.
              *
-             * Settling is the shop saying in its own words that a night is
-             * over: the bags are handed out, the counters are paid and the
-             * profit is a number somebody has read. Sharing a fare onto it
-             * afterwards rewrites an account that was closed. One typed on
-             * tonight's run took a thousand off this afternoon's, hours
-             * after it was settled, and the only sign was tonight's box
-             * redisplaying its own share and looking as though nothing had
-             * saved.
+             * A fare is shared because she goes to the market once: a run
+             * and a car of its own being shopped for at the same time are
+             * one drive and one keke. Two trips on one date are not that.
+             * The driver goes out, drops at the school and comes back for
+             * the next lot, which is two journeys and two fares, and
+             * halving one of them between them is the shop paying itself
+             * with money it spent.
              *
-             * A settled run keeps whatever fare it was settled with, and
-             * the whole of tonight's belongs to what is still going.
+             * On the road is the line, the same one the run sheet draws.
+             * Before it the shopping is still to be done and a journey can
+             * be shared; after it the trip has happened and the next one
+             * stands on its own.
+             *
+             * Settled is the firmer version of the same thing: the bags
+             * are out, the counters are paid and the profit is a number
+             * somebody has read. Three thousand typed on tonight's run
+             * took a thousand off this afternoon's, hours after it was
+             * closed, and the only sign was tonight's box redisplaying
+             * its own two thirds as though the save had failed.
              */
-            .filter((one) => one.id === id || !one.settled_at)
+            .filter(
+              (one) =>
+                one.id === id || (!one.settled_at && stillShopping(one.stage))
+            )
             .map((one) => one.id);
         })()
       : [id];
