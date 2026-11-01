@@ -26,9 +26,19 @@ html {
 
 body {
   @apply bg-shell font-sans text-ink antialiased;
-  /* Nothing here is meant to scroll sideways; a single wide element used to
-     take the whole page with it. */
-  overflow-x: hidden;
+  /*
+   * Nothing here is meant to scroll sideways; a single wide element used
+   * to take the whole page with it.
+   *
+   * clip rather than hidden, which is the same promise without the side
+   * effect. `overflow-x: hidden` makes the body a scrolling box, and once
+   * it is one every `position: fixed` child anchors to it instead of to
+   * the window: admin's bottom bar came to rest in the middle of any page
+   * long enough to show it, with the rest of the page carrying on
+   * underneath. clip stops the sideways scroll and creates no scroll
+   * container, so fixed goes back to meaning fixed.
+   */
+  overflow-x: clip;
 }
 
 /*
