@@ -120,3 +120,29 @@ export function backFromCounter(cutOffAt: string, now: Date = new Date()): Batch
   if (!Number.isFinite(shuts)) return "closed";
   return shuts > now.getTime() ? "ordering" : "closed";
 }
+
+/**
+ * Whether this trip's shopping is still ahead of it.
+ *
+ * The run sheet puts every run and car going out on one date into one
+ * shopping list, which is right: a scheduled run and a car of its own on
+ * one night are two promises and one drive, and kept apart the sheet sent
+ * her to Burger King twice for what is one visit.
+ *
+ * It had nothing to say about a trip that has already gone. The afternoon
+ * run was on the road with its food bought and handed over, and the night
+ * run's sheet still listed its meal box under what to buy at KFC: an item
+ * that was eaten two hours ago, on the list she is shopping from, with a
+ * tick box beside it.
+ *
+ * On the road is the line. Up to there the food is still to be fetched
+ * and sharing a counter saves a journey; past it the boot is shut and the
+ * trip has nothing left to buy.
+ */
+export function stillShopping(stage: BatchStage | string | null | undefined): boolean {
+  const at = STAGES.indexOf(String(stage ?? "ordering") as BatchStage);
+  // A stage nobody can read is treated as still to go, which at worst
+  // shows one line too many rather than hiding one that must be bought.
+  if (at === -1) return true;
+  return at < stageIndex("on_the_road");
+}

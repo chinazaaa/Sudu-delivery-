@@ -10,7 +10,7 @@ import {
 } from "../lib/deals";
 import { soundsUrgent } from "../lib/bot-match";
 import { creditToUse, shareText } from "../lib/referrals";
-import { backFromCounter } from "../lib/stages";
+import { backFromCounter, stillShopping } from "../lib/stages";
 import { cookingLine } from "../lib/push";
 import { otherWorthSaying } from "../lib/arrival";
 import { windowStart, worthACar } from "../lib/pick-a-day";
@@ -7637,4 +7637,23 @@ test("the share message carries the link, which is the whole mechanism", () => {
   // And what it is worth, because a link with no reason attached is a
   // link nobody sends.
   assert.ok(shareText("tolu", "https://sudu.store").includes("2,000"));
+});
+
+test("a trip that has left is not on tonight's shopping list", () => {
+  // Still to buy: these share a journey with whatever else goes tonight.
+  assert.equal(stillShopping("ordering"), true);
+  assert.equal(stillShopping("closed"), true);
+  assert.equal(stillShopping("at_counter"), true);
+
+  // Gone. The afternoon run's meal box was on the night run's KFC list
+  // with a tick box beside it, two hours after somebody ate it.
+  assert.equal(stillShopping("on_the_road"), false);
+  assert.equal(stillShopping("at_drop"), false);
+  assert.equal(stillShopping("handed_out"), false);
+
+  // A stage nobody can read shows one line too many rather than hiding
+  // one that has to be bought.
+  assert.equal(stillShopping(""), true);
+  assert.equal(stillShopping(null), true);
+  assert.equal(stillShopping("something new"), true);
 });

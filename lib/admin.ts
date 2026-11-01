@@ -6,7 +6,7 @@ import { feeFor } from "./fees";
 import { activeBands } from "./settings";
 import { getBatch } from "./batches";
 import { lagosToday, runDateLabel } from "./time";
-import type { BatchStage } from "./stages";
+import { stillShopping, type BatchStage } from "./stages";
 import { carLabel } from "./view";
 import { counterKey } from "./runner";
 import { DEFAULT_MARKUP, lineCost, markupOf } from "./cost-price";
@@ -163,14 +163,25 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
    */
   const alsoGoing = await db()
     .from("batches")
-    .select("id, kind, status")
+    .select("id, kind, status, stage")
     .eq("run_date", batch.run_date)
     .neq("status", "cancelled");
   const sameEvening = ((alsoGoing.data ?? []) as {
     id: string;
     kind?: string | null;
+    stage?: string | null;
   }[])
     .filter((one) => (one.kind ?? "run") === "run" || one.kind === "same_day")
+    /*
+     * And still to be shopped for.
+     *
+     * A trip that has already left shares no journey with this one: its
+     * food is bought, its bags are handed over, and the only thing
+     * putting it on tonight's list achieves is a tick box beside
+     * somebody's dinner from two hours ago. This batch itself always
+     * stays, whatever stage it has reached, because it is the sheet.
+     */
+    .filter((one) => one.id === batchId || stillShopping(one.stage))
     .map((one) => one.id);
   // A parcel or a box day is its own trip and keeps its own sheet.
   const driving =
