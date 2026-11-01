@@ -568,10 +568,15 @@ export async function welcomeSaid(): Promise<string> {
 
     const amount = Math.max(0, Number(perk.amount ?? 0));
     if (amount <= 0) return "";
+    /*
+     * Said without a "your" in it, because it is read in two sentences
+     * facing opposite ways: the message tells the friend what they get,
+     * and the card tells the sender what their link gives somebody else.
+     * One phrase carrying "your" was right in the message and wrong on
+     * the card, which read "gives them ₦500 off your delivery".
+     */
     const naira = `₦${amount.toLocaleString()}`;
-    return perk.applies_to === "order"
-      ? `${naira} off your food`
-      : `${naira} off your delivery`;
+    return perk.applies_to === "order" ? `${naira} off food` : `${naira} off delivery`;
   } catch {
     return "";
   }

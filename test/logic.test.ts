@@ -7631,14 +7631,14 @@ test("a referral wallet only ever comes off the food", () => {
 });
 
 test("the share message is written for the person receiving it", () => {
-  const said = shareText("tolu", "https://sudu.store", "₦500 off your delivery");
+  const said = shareText("tolu", "https://sudu.store", "₦500 off delivery");
 
   // The link is the whole mechanism: nothing to copy, nothing to type.
   assert.ok(said.includes("/s/tolu"));
 
   // Their side, because a message that only says what the sender gets is
   // a favour being asked, and nobody forwards one of those.
-  assert.ok(said.includes("₦500 off your delivery"));
+  assert.ok(said.includes("₦500 off delivery"));
 
   // And not a word about what the sender earns. That is between them and
   // the shop, and putting it here only makes the friend feel used.
