@@ -7,6 +7,7 @@ import { useActionState, useEffect, useState } from "react";
 import { submitOrder, type SubmitState } from "@/app/actions";
 import {
   cartSubtotal,
+  choicesSaid,
   countItems,
   groupNames,
   toServerLines,
@@ -1035,23 +1036,51 @@ export default function Checkout({
    * always an answer, and the customer with market shopping in their cart
    * was the only one never told a car of its own existed.
    */
-  const feeOnRun = (flash: number | null): number =>
+  const feeOnRun = (flash: number | null, ladder: Band[] = bands): number =>
     byValue.length > 0
       ? feeAcross({
           marketFood: cartSubtotal(marketHalf),
           restaurantFee: (() => {
             const containers = restHalf.length === 0 ? 0 : countItems(restHalf);
-            return containers === 0 ? 0 : feeFor(containers, flash, bands);
+            return containers === 0 ? 0 : feeFor(containers, flash, ladder);
           })(),
           bands: byValue,
-        }) + area.runExtra
+        }) + farExtra
       : ridesAlong(
           feeFor(
             ridingHalf.length === 0 ? itemCount : countItems(drivingHalf),
             flash,
-            bands
+            ladder
           )
         );
+
+  /**
+   * What this cart costs delivered at a given time, for the boxes below.
+   *
+   * The same three answers the real fee is worked out from, in the same
+   * order: an offer if one covers that time, nothing at all when somebody
+   * is riding on a friend's delivery, then the ladder for whichever way it
+   * comes. Asked twice on a day with two ways so the two can be written
+   * beside each other, which is the whole point of showing them as boxes:
+   * a sooner time and what it costs, together, rather than a figure that
+   * moves at the bottom of the page after you have chosen.
+   */
+  const feeWhen = (car: (typeof carWindows)[number] | null): number => {
+    const covered = pickOffer(offers, {
+      restaurantIds: [...new Set(cart.map((line) => line.restaurantId))],
+      itemIds: cart.map((line) => line.itemId),
+      lineChoices: cart.map((line) => line.choices),
+      items: itemCount,
+      batchId,
+      deliverAt: car ? car.at : null,
+      returning: false,
+    });
+    if (covered) return covered.fee;
+    if (shared) return 0;
+    return car
+      ? sameDayFee(itemCount, car.urgent, sameDayBands, urgentExtra)
+      : feeOnRun(selected?.flashFee ?? null, runBands);
+  };
 
   // Naming friends to carry food for is a different thing from being in a
   // shared delivery, and doing both at once is two answers to one question.
@@ -1468,57 +1497,105 @@ export default function Checkout({
             day that really has both, which is why it is not another
             permanent dropdown on a page that is already long.
         */}
-        {bothWays.run !== null && bothWays.cars.length > 0 && (
-          <div className="space-y-1.5">
-            <label className="label text-shell/70" htmlFor="when-how">
-              What time
-            </label>
-            <select
-              id="when-how"
-              /* text-ink, because this sits on the dark card and a select
-                 with no colour of its own inherits the card's: a white box
-                 with white words in it. */
-              className="field text-ink"
-              value={deliverAt === "" ? "run" : `car:${deliverAt}`}
-              onChange={(event) => {
-                const picked = event.target.value;
-                          if (picked === "run") {
-                  if (bothWays.run) setBatchId(bothWays.run.id);
-                  setDeliverAt("");
-                  return;
-                }
-                // The car rides on that day's run as far as the books are
-                // concerned, so the order sits with the rest of the day's
-                // work rather than on whichever run the page happened to
-                // be showing before.
-                if (bothWays.run) setBatchId(bothWays.run.id);
-                setDeliverAt(picked.slice(4));
-              }}
-            >
-              {/*
-                  Times, and nothing else.
+        {bothWays.run !== null && bothWays.cars.length > 0 && (() => {
+          /*
+              Boxes, soonest first, each with its own price on it.
 
-                  These read "On the run" and "A car of its own", which are
-                  the shop's two words for its own arrangements. Nobody
-                  ordering lunch knows what a run is, or needs to: there
-                  are two times on a day that has two, and the only
-                  question is which one suits. The fee follows the choice
-                  and is written out underneath, where the money is.
-               */}
-              <option value="run">
-                {said(bothWays.run.deliveryWindow || bothWays.run.label)}
-              </option>
-              {bothWays.cars.map((car) => (
-                <option key={car.at} value={`car:${car.at}`}>
-                  {said(car.window || car.label)}
-                </option>
-              ))}
-            </select>
-            {/* The two options say what they are, and the total at the
-                bottom changes when you pick. A paragraph explaining a
-                dropdown is a paragraph nobody reads. */}
-          </div>
-        )}
+              This was a dropdown of two times, which hides the second
+              answer behind a tap and gives no reason to open it: both
+              options read as a time, the cheaper one was showing, and
+              what the dearer one cost only appeared in the total after
+              you had already chosen it.
+
+              Side by side the question answers itself. A sooner time
+              with what it adds, against the ordinary one at no extra,
+              and whichever you tap is the one you meant.
+
+              The words are the customer's, not the shop's. "Skip the
+              wait" and "Standard" are what the choice is from where they
+              are sitting; a run and a car of its own are how we arrange
+              it, which is ours to know and no use to them.
+
+              A sooner box only exists where it is properly sooner: see
+              worthACar in lib/pick-a-day. A car at three against a run at
+              three buys nothing and is not offered, so there is never a
+              box here that is only dearer.
+           */
+          const onRun = feeWhen(null);
+          const boxes = [
+            ...bothWays.cars.map((car) => {
+              const costs = feeWhen(car);
+              const adds = costs - onRun;
+              return {
+                key: car.at,
+                title: "Skip the wait",
+                when: said(car.window || car.label),
+                /* What it adds, not what it costs: the figure beside the
+                   ordinary one is the decision being made. Blank where it
+                   adds nothing, which an offer can do. */
+                adds: adds > 0 ? `+${naira(adds)}` : "",
+                on: deliverAt === car.at,
+                pick: () => {
+                  // The car rides on that day's run as far as the books
+                  // are concerned, so the order sits with the rest of the
+                  // day's work rather than on whichever run the page
+                  // happened to be showing before.
+                  if (bothWays.run) setBatchId(bothWays.run.id);
+                  setDeliverAt(car.at);
+                },
+              };
+            }),
+            {
+              key: "run",
+              title: "Standard",
+              when: said(bothWays.run.deliveryWindow || bothWays.run.label),
+              adds: "",
+              on: deliverAt === "",
+              pick: () => {
+                if (bothWays.run) setBatchId(bothWays.run.id);
+                setDeliverAt("");
+              },
+            },
+          ];
+
+          return (
+            <div className="space-y-1.5">
+              <span className="label block text-shell/70">What time</span>
+              <div
+                role="radiogroup"
+                aria-label="What time"
+                className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1"
+              >
+                {boxes.map((box) => (
+                  <button
+                    key={box.key}
+                    type="button"
+                    role="radio"
+                    aria-checked={box.on}
+                    onClick={box.pick}
+                    className={`min-h-[64px] shrink-0 rounded-xl border-2 px-3.5 py-2 text-left ${
+                      box.on
+                        ? "border-volt bg-volt/15 text-shell"
+                        : "border-shell/25 bg-transparent text-shell/80"
+                    }`}
+                  >
+                    <span className="block text-[15px] font-bold leading-tight">
+                      {box.title}
+                    </span>
+                    <span className="block text-xs leading-snug opacity-80">
+                      {box.when}
+                    </span>
+                    {box.adds !== "" && (
+                      <span className="block text-xs font-semibold leading-snug">
+                        {box.adds}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Under the whole control, calendar and all. Between the dropdown
             and the date box it was describing the day above it while the
@@ -1929,7 +2006,10 @@ export default function Checkout({
                       <li key={line.key}>
                         {line.qty}× {line.name}
                         {line.choices.length > 0 && (
-                          <span className="text-muted"> · {line.choices.join(", ")}</span>
+                          <span className="text-muted">
+                            {" · "}
+                            {choicesSaid(line.choices, line.choiceFees, naira).join(", ")}
+                          </span>
                         )}
                       </li>
                     ))}

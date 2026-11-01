@@ -40,24 +40,35 @@ export default function CartBar() {
      * From sm up there is no tab bar, so this is the cart until a laptop,
      * where the header's own pill takes over.
      */
-    <div className="fixed inset-x-4 bottom-4 z-30 hidden sm:block lg:hidden">
+    /*
+     * A pill the width of its own words, not a bar the width of the page.
+     *
+     * This was a full-width card with a button bolted on the end, which is
+     * a lot of furniture to say there are three things in a cart. Shrunk to
+     * its contents and centred, it sits over the middle of the list and
+     * leaves both edges of whatever is underneath readable.
+     *
+     * The figure says what it is. It is the food and nothing else: the fee
+     * depends on the day and the block, neither of which has been chosen
+     * yet, so a bare number here reads as a total and then grows by four
+     * thousand at the checkout.
+     */
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 hidden px-4 sm:block lg:hidden">
       <Link
         href="/cart"
-        className="mx-auto flex max-w-2xl items-center justify-between gap-3 rounded-2xl border-2 border-ink bg-brand py-2.5 pl-[18px] pr-2.5 text-white shadow-hard"
+        className="pointer-events-auto mx-auto flex w-fit max-w-full items-center gap-3 rounded-full border-2 border-ink bg-ink py-2.5 pl-5 pr-2.5 text-white shadow-hard"
       >
         <span className="flex min-w-0 flex-col">
-          <span className="ticket truncate text-[11px] text-white/90">
-            {count} item{count === 1 ? "" : "s"}
-            {from !== "" ? ` · ${from}` : ""}
-          </span>
+          <span className="truncate font-bold leading-tight">View cart</span>
           {subtotal > 0 && (
-            <span className="truncate text-lg font-bold leading-tight">
-              {naira(subtotal)}
+            <span className="truncate text-xs leading-snug text-white/70">
+              {naira(subtotal)} of food
+              {from !== "" ? ` · ${from}` : ""}
             </span>
           )}
         </span>
-        <span className="flex min-h-11 shrink-0 items-center rounded-full bg-ink px-[18px] font-bold text-white">
-          View cart
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand font-bold">
+          {count}
         </span>
       </Link>
     </div>

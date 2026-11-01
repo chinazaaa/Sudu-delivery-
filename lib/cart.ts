@@ -16,6 +16,14 @@ export type CartLine = {
   /** Base plus options, for display only. The server prices the real order. */
   unitPrice: number;
   choices: string[];
+  /** What each of those choices adds, in the same order as `choices`.
+   *
+   *  A choice is only half a fact without it. Picking a Monster on a
+   *  Chicken Republic combo adds 1,150 and picking the Coke adds nothing,
+   *  and with only the names on the line the price moves with no reason on
+   *  screen for why. Absent on a cart saved before this existed, which
+   *  reads as nothing said rather than as free. */
+  choiceFees?: number[];
   qty: number;
   /** Who this is for in a group order. */
   forName: string;
@@ -24,6 +32,30 @@ export type CartLine = {
    *  absent on a cart saved before this existed, which reads as a whole one. */
   containerPct?: number;
 };
+
+/**
+ * A line's choices, each with what it added.
+ *
+ * "Caramel (+₦550)", not "Caramel", wherever a line is read back: the cart,
+ * the checkout and the order. The ones that add nothing stay bare, because
+ * "(+₦0)" is noise on the majority of choices, which are a flavour or a
+ * size that costs the same.
+ *
+ * Falls back to the bare names whenever the prices are missing or do not
+ * line up, which is every cart saved before they were carried. Half an
+ * answer is better than a wrong one with a figure in it.
+ */
+export function choicesSaid(
+  choices: string[],
+  fees: number[] | undefined,
+  money: (amount: number) => string
+): string[] {
+  if (!fees || fees.length !== choices.length) return choices;
+  return choices.map((name, at) => {
+    const adds = Number(fees[at] ?? 0);
+    return adds > 0 ? `${name} (+${money(adds)})` : name;
+  });
+}
 
 const KEY = "sudu_cart_v1";
 const PEOPLE_KEY = "sudu_people_v2";

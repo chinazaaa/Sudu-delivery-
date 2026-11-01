@@ -32,6 +32,7 @@ import {
   addPerson,
   clearPeople,
   cartSubtotal,
+  choicesSaid,
   countItems,
   toServerLines,
   groupNames,
@@ -1028,7 +1029,13 @@ export default function CartView({
                     {line.restaurantName}
                   </Link>
                   )}
-                  {line.choices.length > 0 && ` · ${line.choices.join(", ")}`}
+                  {/* Each choice with what it added, because a choice
+                      without its price is half a fact: a Monster on a
+                      combo adds 1,150 and the Coke beside it adds
+                      nothing, and the line total moved with neither of
+                      those written anywhere. */}
+                  {line.choices.length > 0 &&
+                    ` · ${choicesSaid(line.choices, line.choiceFees, naira).join(", ")}`}
                   {people.length > 0 && !inParty && ` · for ${line.forName || "you"}`}
                   {" · "}
                   {/* Beside the counter rather than under it in display

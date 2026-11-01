@@ -145,6 +145,7 @@ export default function AddToCart({
         imageUrl: item.imageUrl,
         unitPrice,
         choices: chosen.map((o) => o.name),
+        choiceFees: chosen.map((o) => o.priceDelta),
         containerPct: item.containerPct,
       },
       qty,
