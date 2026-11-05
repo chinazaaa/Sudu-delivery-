@@ -203,11 +203,17 @@ export function offerBadge(offer: LiveOffer): string {
 /** The same offer said properly, for the banner on a restaurant's page. */
 export function offerLine(offer: LiveOffer): string {
   if (offer.fee === 0) return "Delivery is free.";
-  const taper =
-    offer.includedItems !== null && offer.extraPerItem > 0
-      ? ` for up to ${offer.includedItems} item${offer.includedItems === 1 ? "" : "s"}, then ${naira(offer.extraPerItem)} each`
-      : ", however much you order";
-  return `Delivery is ${naira(offer.fee)}${taper}.`;
+  /*
+   * The price, and not the ladder behind it.
+   *
+   * This used to spell out "for up to 3 items, then ₦500 each", which
+   * turned an offer into terms and conditions in the one line somebody
+   * reads before deciding whether to care. It is the right arithmetic and
+   * the wrong place for it: the checkout has the cart in front of it and
+   * says what this order actually costs, where the number is a fact
+   * rather than a clause.
+   */
+  return `Delivery is ${naira(offer.fee)}.`;
 }
 
 /**
