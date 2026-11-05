@@ -506,6 +506,11 @@ export function seasonCovers(
  * front page the checkout then raises is worse than a plain one.
  *
  * Nothing matching leaves the ladder's own headline alone.
+ *
+ * The basket test is made here rather than trusted to the caller. An
+ * offer on four counters is not a fact about a day, and quoting it on a
+ * page with no cart on it would tell somebody buying from a fifth that
+ * delivery is two thousand right up until the checkout says otherwise.
  */
 export function blanketFee(
   offers: LiveOffer[],
@@ -516,6 +521,7 @@ export function blanketFee(
 ): number {
   let fee = headline;
   for (const offer of offers) {
+    if (!asksNothing(offer)) continue;
     if (opts.sameDay && !offer.sameDay) continue;
     if (!dayMatches(offer.onDays, onDay, now)) continue;
     if (!seasonCovers(offer.startsAt, offer.expiresAt, onDay, now)) continue;

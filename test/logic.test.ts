@@ -7886,3 +7886,58 @@ test("the floor quoted with no cart follows the day and the offers that ask noth
   assert.equal(asksNothing({ ...plain, runs: ["b1"] }), false);
   assert.equal(asksNothing({ ...plain, firstOrderOnly: true }), false);
 });
+
+test("an offer on particular counters is never quoted on a page with no cart", () => {
+  // The shop's real shape: two thousand delivery, but only from four of
+  // the counters. Somebody buying from a fifth pays the ladder, so a day
+  // chip or a ticket saying two thousand would be a figure the checkout
+  // refuses to honour.
+  const narrow = {
+    code: "FRIDAY",
+    note: "Fridays",
+    fee: 2000,
+    includedItems: null,
+    extraPerItem: 0,
+    places: ["dominos", "dodo", "panarottis", "coldstone"],
+    items: [],
+    choice: "",
+    sameDay: false,
+    runs: [],
+    onDays: "fri",
+    startsAt: null,
+    expiresAt: null,
+    firstOrderOnly: false,
+    minEach: 1000,
+  };
+  const thursdayEvening = new Date("2026-11-05T18:21:00+01:00");
+
+  // Friday, the offer's own day, and still the ladder: there is no cart
+  // here to say which counter it is from.
+  assert.equal(blanketFee([narrow], 4000, "2026-11-06", {}, thursdayEvening), 4000);
+  // The same offer with the counters taken off is a fact about the day.
+  assert.equal(
+    blanketFee([{ ...narrow, places: [] }], 4000, "2026-11-06", {}, thursdayEvening),
+    2000
+  );
+  // One narrow and one open together: only the open one is quoted.
+  assert.equal(
+    blanketFee(
+      [narrow, { ...narrow, code: "ALLDAY", places: [], fee: 3000 }],
+      4000,
+      "2026-11-06",
+      {},
+      thursdayEvening
+    ),
+    3000
+  );
+  // A dish, a size, a run or a first order are each as narrow as a
+  // counter, and kept out for the same reason.
+  for (const narrower of [
+    { ...narrow, places: [], items: ["bbq-beef"] },
+    { ...narrow, places: [], choice: "Medium" },
+    { ...narrow, places: [], runs: ["b1"] },
+    { ...narrow, places: [], firstOrderOnly: true },
+  ]) {
+    assert.equal(blanketFee([narrower], 4000, "2026-11-06", {}, thursdayEvening), 4000);
+  }
+});
