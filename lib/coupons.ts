@@ -200,10 +200,20 @@ export async function liveOffers(): Promise<LiveOffer[]> {
   }
 
   const now = new Date();
+  /*
+   * Only what could never apply is dropped here.
+   *
+   * The dates and the days are both about the day the food arrives, and
+   * this is asked without a cart, so neither can be settled yet: an
+   * offer that starts tomorrow has to survive being asked about today or
+   * it never reaches the checkout to be judged against tomorrow's run.
+   * One already over is the exception, since every delivery still to be
+   * made is after now. pickOffer does the real test.
+   */
   const live = offers.filter(
     (coupon) =>
       coupon.applies_to === "fee" &&
-      inSeason(coupon, now, { anyDay: true }) &&
+      !(coupon.expires_at && new Date(coupon.expires_at) <= now) &&
       !(coupon.max_uses !== null && coupon.used >= coupon.max_uses)
   );
   if (live.length === 0) return [];
@@ -261,6 +271,8 @@ export async function liveOffers(): Promise<LiveOffer[]> {
     // Carried through rather than tested here: only the cart knows which
     // day the food lands on.
     onDays: (coupon as { on_days?: string | null }).on_days ?? "",
+    startsAt: coupon.starts_at,
+    expiresAt: coupon.expires_at,
     fee: coupon.amount,
     includedItems: coupon.included_items,
     extraPerItem: coupon.extra_per_item ?? 0,

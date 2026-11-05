@@ -11,7 +11,7 @@ import {
 import { soundsUrgent } from "../lib/bot-match";
 import { REFERRAL_REWARD, creditToUse, shareText } from "../lib/referrals";
 import { daysSaid, onItsDay } from "../lib/coupons";
-import { dayMatches, dayOfDate } from "../lib/offers";
+import { dayMatches, dayOfDate, seasonCovers } from "../lib/offers";
 import { backFromCounter, stillShopping } from "../lib/stages";
 import { cookingLine } from "../lib/push";
 import { otherWorthSaying } from "../lib/arrival";
@@ -7736,4 +7736,34 @@ test("a day-pinned offer is judged by the day the food arrives", () => {
   assert.equal(dayOfDate("2026-11-07"), "sat");
   assert.equal(dayOfDate(""), "");
   assert.equal(dayOfDate("not a date"), "");
+});
+
+test("an offer's dates cover the day the food arrives, not the day it is", () => {
+  const thursday = new Date("2026-11-05T18:21:00+01:00");
+
+  // Onize's weekend: ends Sunday 8 November at midnight.
+  const ends = "2026-11-08T23:59:59+01:00";
+
+  // Sunday's delivery is inside it; the Saturday after is not, even
+  // though it is being asked about while the offer is still running.
+  assert.equal(seasonCovers(null, ends, "2026-11-08", thursday), true);
+  assert.equal(seasonCovers(null, ends, "2026-11-14", thursday), false);
+
+  // Black Friday week: an order placed before it begins, for a delivery
+  // inside it, is covered. One for the day before is not.
+  const from = "2026-11-23T00:00:00+01:00";
+  const to = "2026-11-27T23:59:59+01:00";
+  assert.equal(seasonCovers(from, to, "2026-11-25", thursday), true);
+  assert.equal(seasonCovers(from, to, "2026-11-22", thursday), false);
+  assert.equal(seasonCovers(from, to, "2026-11-28", thursday), false);
+
+  // No dates at all is every day there has ever been.
+  assert.equal(seasonCovers(null, null, "2026-11-25", thursday), true);
+
+  // Nothing to go on falls back to the clock.
+  assert.equal(seasonCovers(from, to, null, thursday), false);
+  assert.equal(seasonCovers(null, ends, null, thursday), true);
+
+  // A date nobody can read is not a reason to refuse an offer.
+  assert.equal(seasonCovers("not a date", null, "2026-11-25", thursday), true);
 });

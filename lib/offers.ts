@@ -41,6 +41,11 @@ export type LiveOffer = {
    *  day somebody orders: a Friday offer is a promise about when the
    *  food turns up, and charging more for ordering ahead is backwards. */
   onDays?: string;
+  /** When the promotion itself runs between, carried along for the same
+   *  reason as the days: the run it covers is the one the food lands on,
+   *  not the one the clock is on while somebody orders. */
+  startsAt?: string | null;
+  expiresAt?: string | null;
   /** Whether it reaches a same day car at all. Off is the safe answer: a
    *  flat price that replaces a car somebody has to themselves is driving at
    *  a loss rather than discounting. */
@@ -105,6 +110,16 @@ export function pickOffer(
      * one thing a shop with a cut-off actually wants them to do.
      */
     if (!dayMatches(offer.onDays, context.onDay)) continue;
+    /*
+     * And the same for the dates it runs between.
+     *
+     * A promotion for Black Friday week is a promise about the food
+     * arriving that week. Read off the clock instead, it refused an
+     * order placed the day before it began for a delivery inside it,
+     * and honoured one placed on its last evening for a delivery a
+     * fortnight later. Both are the ordering-ahead bug, one at each end.
+     */
+    if (!seasonCovers(offer.startsAt, offer.expiresAt, context.onDay)) continue;
     if (offer.places.length > 0) {
       if (cart.length === 0 || cart.some((id) => !offer.places.includes(id))) continue;
     }
@@ -443,4 +458,38 @@ export function dayMatches(
       .toLowerCase();
 
   return wanted.includes(day);
+}
+
+/**
+ * Whether the dates an offer runs between cover the day the food lands.
+ *
+ * The delivery day is taken at its first minute in Lagos, which is the
+ * reading that makes both ends behave: an offer ending at midnight on
+ * Sunday covers a Sunday delivery and nothing after it, and one starting
+ * on Monday covers a Monday delivery and nothing before it.
+ *
+ * No delivery day falls back to now, for anything asking without a cart
+ * in front of it.
+ */
+export function seasonCovers(
+  startsAt: string | null | undefined,
+  expiresAt: string | null | undefined,
+  onDay: string | null | undefined,
+  now: Date = new Date()
+): boolean {
+  const said = String(onDay ?? "").slice(0, 10);
+  const at = /^\d{4}-\d{2}-\d{2}$/.test(said)
+    ? new Date(`${said}T00:00:00+01:00`)
+    : now;
+  if (!Number.isFinite(at.getTime())) return true;
+
+  if (startsAt) {
+    const from = new Date(startsAt);
+    if (Number.isFinite(from.getTime()) && from > at) return false;
+  }
+  if (expiresAt) {
+    const to = new Date(expiresAt);
+    if (Number.isFinite(to.getTime()) && to <= at) return false;
+  }
+  return true;
 }
