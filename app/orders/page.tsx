@@ -247,7 +247,7 @@ export default async function OrdersPage({
       {orders.length > 0 && live.length === 0 && <RepeatCard />}
 
       {orders.length === 0 ? (
-        <Empty icon="bag" title="No orders yet" href="/" action="Browse the menu">
+        <Empty icon="bag" title="No orders yet" href="/products" action="Browse the menu">
           Everything you order shows up here, with where it has got to and a
           button to order the same thing again.
         </Empty>

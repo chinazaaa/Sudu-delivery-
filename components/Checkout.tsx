@@ -1132,6 +1132,32 @@ export default function Checkout({
       ? feeShares.reduce((sum, one) => sum + one, 0)
       : fee;
 
+  /*
+   * What the ladder would have charged, struck through beside the figure.
+   *
+   * Without it two thousand reads as what delivery costs here, so
+   * somebody ordering for the first time learns the wrong price, and the
+   * week the offer ends the shop looks as though it has put its fees up.
+   *
+   * Only on the ordinary ladders, and only for one person's fee. A cart
+   * with market shopping in it is priced two ways at once and a single
+   * struck figure would be a guess at which, and a fee already split
+   * between a group is not the one the ladder would have quoted.
+   */
+  const chargedWas = (() => {
+    if (!promotion || shared || shares.length > 1 || byValue.length > 0) return 0;
+    const ladderWould = sameDay
+      ? sameDayFee(itemCount, sameDay.urgent, sameDayBands, urgentExtra)
+      : ridesAlong(
+          feeFor(
+            ridingHalf.length === 0 ? itemCount : countItems(drivingHalf),
+            selected?.flashFee ?? null,
+            bands
+          )
+        );
+    return ladderWould > charged ? ladderWould : 0;
+  })();
+
   /** What the cool box added on top of the rest, for the breakdown to say
    *  out loud. Nought on a cart with nothing riding along. */
   const ridesAlongAdds = Math.max(0, charged - beforeRiding);
@@ -1329,7 +1355,7 @@ export default function Checkout({
 
   if (cart.length === 0) {
     return (
-      <Empty icon="cart" title="Your cart is empty" href="/" action="Browse the menu">
+      <Empty icon="cart" title="Your cart is empty" href="/products" action="Browse the menu">
         Pick a few things and they gather here, ready for the next delivery.
       </Empty>
     );
@@ -2738,11 +2764,18 @@ export default function Checkout({
             )}
           </span>
           <span>
-            {shared && !sameDay
-              ? "worked out when the group closes"
-              : charged === 0
-                ? "Free"
-                : naira(charged)}
+            {shared && !sameDay ? (
+              "worked out when the group closes"
+            ) : (
+              <>
+                {chargedWas > 0 && (
+                  <span className="pr-1.5 font-semibold text-muted line-through">
+                    {naira(chargedWas)}
+                  </span>
+                )}
+                {charged === 0 ? "Free" : naira(charged)}
+              </>
+            )}
           </span>
         </div>
         {/* Two errands on one trip. The rungs answer nothing here: what the
