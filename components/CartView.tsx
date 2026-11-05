@@ -546,20 +546,6 @@ export default function CartView({
     { batchId: nextRunId, deliverAt: null, returning: false }
   );
 
-  // What delivery on this cart actually costs, promotions and all. Working
-  // it off the ladder alone said four thousand over a cart that an offer
-  // prices at two, which is the shop quoting a number it is not going to
-  // charge. The same function decides it here, at the checkout and on the
-  // server, so all three agree.
-  const promotion = pickOffer(offers, {
-    restaurantIds: [...new Set(cart.map((line) => line.restaurantId))],
-    itemIds: cart.map((line) => line.itemId),
-    lineChoices: cart.map((line) => line.choices),
-    items: countItems(cart),
-    batchId: nextRunId,
-    deliverAt: null,
-    returning: false,
-  });
   const kitchensIn = [...new Set(cart.map((line) => line.restaurantId))];
   const cartAreas = areasIn(areas, kitchensIn, areaOf);
   const dearest = dearestArea(areas, kitchensIn, areaOf);
@@ -631,6 +617,30 @@ export default function CartView({
   // the soonest thing is a car of its own.
   const goingOn =
     (going?.runId ? runs.find((one) => one.id === going.runId)?.runDate : "") || today;
+  /*
+   * What delivery on this cart actually costs, promotions and all.
+   *
+   * Worked out off the ladder alone it said four thousand over a cart an
+   * offer prices at two, which is the shop quoting a number it is not
+   * going to charge. The same function decides it here, at the checkout
+   * and on the server, so all three agree.
+   *
+   * Asked after the day is known, because that is what a day-pinned
+   * offer is judged against. The cart is quoting for whatever is going
+   * soonest, so on a Thursday evening with nothing left today it quotes
+   * for tomorrow, and a Friday offer is tomorrow's.
+   */
+  const promotion = pickOffer(offers, {
+    restaurantIds: kitchensIn,
+    itemIds: cart.map((line) => line.itemId),
+    lineChoices: cart.map((line) => line.choices),
+    items: countItems(cart),
+    batchId: going?.runId || nextRunId,
+    deliverAt: null,
+    onDay: goingOn,
+    returning: false,
+  });
+
   const shutLines = cart.filter(
     (line) => !opensOn(openDaysOf[line.restaurantId], goingOn)
   );
