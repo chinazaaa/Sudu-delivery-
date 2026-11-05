@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { daysSaid } from "@/lib/coupons";
+import { daysSaid, offerTrouble } from "@/lib/coupons";
 import PageHeader from "@/components/admin/PageHeader";
 import ActionButton from "@/components/ActionButton";
 import CopyText from "@/components/CopyText";
@@ -369,6 +369,15 @@ export default async function CouponsAdmin({
                     })}`}
                   {coupon.note && ` · ${coupon.note}`}
                 </p>
+                {/* The arithmetic nobody does while glancing down a list.
+                    Everything in it is already on the card above; what
+                    was missing was somebody working out that the date had
+                    gone. */}
+                {offerTrouble(coupon) !== "" && (
+                  <p className="soft mt-1.5 border-brand bg-brand-tint px-2.5 py-1.5 text-[13px] font-semibold text-brand-dark">
+                    {offerTrouble(coupon)}
+                  </p>
+                )}
               </div>
 
               {/* The board's switch, which is also the control: the state is

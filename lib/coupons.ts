@@ -1155,3 +1155,47 @@ export async function offerNudge(): Promise<Nudge | null> {
           })),
   };
 }
+
+/**
+ * An offer that is switched on and cannot apply, said out loud.
+ *
+ * The Friday promotion sat in the list looking healthy: on, automatic,
+ * ₦2,000, Fridays. Its expiry was five days gone, so it had quietly
+ * stopped working, and the only thing that said so was a customer's cart
+ * reading four thousand on the evening the flyer went out.
+ *
+ * Nothing here is new information: the dates are already on the card.
+ * What was missing is the arithmetic, which is the bit nobody does while
+ * glancing down a list.
+ *
+ * Only for offers that are switched on. One that is off is off on
+ * purpose, and the page already says so.
+ */
+export function offerTrouble(
+  coupon: {
+    active: boolean;
+    starts_at?: string | null;
+    expires_at: string | null;
+    max_uses: number | null;
+    used: number;
+  },
+  now: Date = new Date()
+): string {
+  if (!coupon.active) return "";
+
+  const said = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-NG", { day: "numeric", month: "short" });
+
+  if (coupon.expires_at) {
+    const ends = new Date(coupon.expires_at);
+    if (Number.isFinite(ends.getTime()) && ends <= now) {
+      return `Ended ${said(coupon.expires_at)}. It is switched on but has not applied since.`;
+    }
+  }
+
+  if (coupon.max_uses !== null && coupon.used >= coupon.max_uses) {
+    return `All ${coupon.max_uses} uses are gone. It is switched on but cannot apply again.`;
+  }
+
+  return "";
+}

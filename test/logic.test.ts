@@ -10,7 +10,7 @@ import {
 } from "../lib/deals";
 import { soundsUrgent } from "../lib/bot-match";
 import { REFERRAL_REWARD, creditToUse, shareText } from "../lib/referrals";
-import { daysSaid, onItsDay } from "../lib/coupons";
+import { daysSaid, offerTrouble, onItsDay } from "../lib/coupons";
 import { dayMatches, dayOfDate, seasonCovers } from "../lib/offers";
 import { backFromCounter, stillShopping } from "../lib/stages";
 import { cookingLine } from "../lib/push";
@@ -7766,4 +7766,38 @@ test("an offer's dates cover the day the food arrives, not the day it is", () =>
 
   // A date nobody can read is not a reason to refuse an offer.
   assert.equal(seasonCovers("not a date", null, "2026-11-25", thursday), true);
+});
+
+test("an offer switched on and unable to apply says so", () => {
+  const now = new Date("2026-11-05T18:00:00+01:00");
+  const fine = { active: true, expires_at: null, max_uses: null, used: 0 };
+
+  // The one that actually happened: on, automatic, correct days, and an
+  // expiry five days gone. Nothing on the page said a word.
+  assert.match(
+    offerTrouble({ ...fine, expires_at: "2026-10-31 22:59:59+00" }, now),
+    /^Ended 31 Oct\./
+  );
+
+  // Spent is the other way an offer dies quietly.
+  assert.match(
+    offerTrouble({ ...fine, max_uses: 50, used: 50 }, now),
+    /^All 50 uses are gone\./
+  );
+  assert.equal(offerTrouble({ ...fine, max_uses: 50, used: 49 }, now), "");
+
+  // A healthy offer says nothing, and neither does one still to start:
+  // waiting is not the same as broken, and the card already prints the
+  // date it begins.
+  assert.equal(offerTrouble(fine, now), "");
+  assert.equal(
+    offerTrouble({ ...fine, starts_at: "2026-12-01T00:00:00+01:00" }, now),
+    ""
+  );
+
+  // Switched off is off on purpose, and the page says so already.
+  assert.equal(
+    offerTrouble({ ...fine, active: false, expires_at: "2026-10-31 22:59:59+00" }, now),
+    ""
+  );
 });
