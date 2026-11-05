@@ -36,6 +36,7 @@ import { cookies } from "next/headers";
 import { WHO_COOKIE } from "@/lib/came-from";
 import { promoterCalledName } from "@/lib/promoters";
 import LinkPerk from "@/components/LinkPerk";
+import { liveOffers } from "@/lib/coupons";
 import "./globals.css";
 import { openSeasons } from "@/lib/boxes";
 
@@ -255,13 +256,33 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // switched off, run out or had its amount changed. Both together: the
   // coupon and the name are two different tables and neither waits on the
   // other, only on the cookie that has already been read.
+  /*
+   * And not while a better offer is already running.
+   *
+   * One offer applies to an order. A promoter's welcome is a small thing
+   * off the first delivery, and the shop's own promotions are usually
+   * bigger and beat it, so the strip was announcing ₦500 off to somebody
+   * the checkout was about to give a ₦2,000 delivery: the right answer
+   * and the wrong promise, on the page they land on, before they have
+   * seen a price.
+   *
+   * So the strip stands down whenever an automatic offer is live. It is
+   * not a switch anybody has to remember: the day the promotion ends the
+   * welcome is the best thing on offer again and the strip comes back by
+   * itself.
+   *
+   * Both asked at once, and only for somebody who arrived on a link,
+   * which is the only person this draws anything for.
+   */
   const sentBy = jar.get(WHO_COOKIE)?.value ?? "";
-  const [perk, perkFrom] = sentBy
+  const [welcome, perkFrom, running] = sentBy
     ? await Promise.all([
         publicOffer(settings.promoter_perk_code),
         promoterCalledName(sentBy),
+        liveOffers().catch(() => []),
       ])
-    : [null, ""];
+    : [null, "", []];
+  const perk = running.length > 0 ? null : welcome;
 
   // The square goes to the one address that asks the phone which store it
   // wants. A printed code is scanned by both kinds of phone, and one that
