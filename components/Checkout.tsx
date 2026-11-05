@@ -1243,10 +1243,23 @@ export default function Checkout({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heardFrom, batchId, itemCount, phone]);
 
-  // A group already has its car, picked when the link was made, so nobody in
-  // one is asked again. Everybody else picks here.
+  /*
+   * Whether a car of its own is on offer to this person at all.
+   *
+   * A group already has its car, picked when the link was made, so nobody
+   * in one is asked again. Everybody else picks here.
+   *
+   * Read off the day picker's own list of car days rather than off
+   * today's and tomorrow's. Those two are cut back to what "how soon can
+   * this get here" needs, and one of the things that empties them is a
+   * counter being shut TODAY. The picker offers a fortnight, so a cart
+   * from a counter that happens to be closed this afternoon had every car
+   * day in it killed: tapping next Monday set the day and the guard below
+   * wiped it in the same breath, and the chip read as a broken button.
+   * Whether a car can go next Monday is a question about next Monday.
+   */
   const offersSameDay =
-    sameDaySlots.length > 0 && !adding && !joining && party === "";
+    carWindows.length > 0 && !adding && !joining && party === "";
 
   // Adding to an order, joining a friend and being in a group are all a run by
   // definition, so a default of "today" would price them wrongly and silently.
@@ -1456,20 +1469,34 @@ export default function Checkout({
      * priced off its own ladder and by the hour somebody picks, so it is
      * left alone rather than guessed at.
      */
+    /*
+     * What that day costs, under the chip naming it.
+     *
+     * A day carried by a run is priced off the run, and a day with no run
+     * on it off the car that would go instead, which is dearer. Both say
+     * so, because the price is the whole reason somebody moves a day and
+     * a car day quietly costing thousands more is the kind of surprise
+     * that gets found at the total.
+     */
     const feeOnDate = (date: string, runId: string | null) => {
-      if (!runId) return "";
-      const run = openable.find((one) => one.id === runId) ?? null;
+      const run = runId ? (openable.find((one) => one.id === runId) ?? null) : null;
+      const car = runId ? null : (carWindows.find((one) => one.date === date) ?? null);
+      if (!run && !car) return "";
       const offer = pickOffer(offers, {
         restaurantIds: [...new Set(cart.map((line) => line.restaurantId))],
         itemIds: cart.map((line) => line.itemId),
         lineChoices: cart.map((line) => line.choices),
         items: itemCount,
-        batchId: runId,
-        deliverAt: null,
+        batchId: runId ?? batchId,
+        deliverAt: car ? car.at : null,
         onDay: date,
         returning: false,
       });
-      const costs = offer ? offer.fee : feeOnRun(run?.flashFee ?? null, runBands);
+      const costs = offer
+        ? offer.fee
+        : car
+          ? sameDayFee(itemCount, car.urgent, sameDayBands, urgentExtra)
+          : feeOnRun(run?.flashFee ?? null, runBands);
       return costs === 0 ? "free" : naira(costs);
     };
 

@@ -1,6 +1,5 @@
 import { unstable_cache } from "next/cache";
 import {
-  asksNothing,
   choiceCombinations,
   choiceLabels,
   choiceSets,
@@ -1203,19 +1202,21 @@ export function offerTrouble(
 }
 
 /**
- * The promotions that ask nothing of the basket.
+ * Every automatic promotion, for pages with no cart on them.
  *
- * What a page with no cart on it can quote: the front page ticket and the
- * bot both name a day and a fee, and the fee has to be one the checkout
- * will still honour. Cached for a minute because the front page asks on
- * every visit and a promotion switched on a minute ago is not an
- * emergency.
+ * The same list liveOffers gives, cached for a minute because the front
+ * page asks on every visit and a promotion switched on a minute ago is
+ * not an emergency. Nothing is filtered out here on purpose: whether a
+ * counter-pinned offer may be shown depends on what the figure claims to
+ * be, and only the caller knows that. A field saying "from" is a floor
+ * and may reach for it (floorFee); one that reads as the price may not
+ * (blanketFee).
  */
-async function readAsksNothing(): Promise<LiveOffer[]> {
-  return (await liveOffers()).filter(asksNothing);
+async function readOpenOffers(): Promise<LiveOffer[]> {
+  return await liveOffers();
 }
 
-export const openOffers = unstable_cache(readAsksNothing, ["open-offers"], {
+export const openOffers = unstable_cache(readOpenOffers, ["open-offers"], {
   revalidate: 60,
   tags: ["coupons"],
 });

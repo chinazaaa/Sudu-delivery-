@@ -58,6 +58,7 @@ export default function Home({
   iceItemId = "",
   fees = [],
   arrivalFee = 0,
+  arrivalWas = 0,
   areaExtras = [],
   award = "",
   where = "",
@@ -105,6 +106,11 @@ export default function Home({
   /** What the thing in the ticket actually costs: the run ladder for a run,
    *  the same day ladder for a car of its own. */
   arrivalFee?: number;
+  /** The ladder with nothing taken off, where a promotion beats it. Shown
+   *  struck through beside the figure, so two thousand reads as today
+   *  rather than as what delivery normally costs. Zero means no promotion
+   *  and nothing to strike. */
+  arrivalWas?: number;
   /** What going further out adds, named. Empty where everything is one
    *  area, which is what it was before areas existed. */
   areaExtras?: { name: string; extra: number }[];
@@ -408,6 +414,7 @@ export default function Home({
                     lastMinute={lastMinute}
                     from={runFrom}
                     feeFrom={arrivalFee || (fees[0]?.fee ?? 0)}
+                    feeWas={arrivalWas}
                   />
                 </div>
               )}

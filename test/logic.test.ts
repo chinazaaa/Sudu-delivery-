@@ -11,7 +11,7 @@ import {
 import { soundsUrgent } from "../lib/bot-match";
 import { REFERRAL_REWARD, creditToUse, shareText } from "../lib/referrals";
 import { daysSaid, offerTrouble, onItsDay } from "../lib/coupons";
-import { asksNothing, blanketFee, dayMatches, dayOfDate, seasonCovers } from "../lib/offers";
+import { asksNothing, blanketFee, dayMatches, dayOfDate, floorFee, seasonCovers } from "../lib/offers";
 import { backFromCounter, stillShopping } from "../lib/stages";
 import { cookingLine } from "../lib/push";
 import { otherWorthSaying } from "../lib/arrival";
@@ -7940,4 +7940,63 @@ test("an offer on particular counters is never quoted on a page with no cart", (
   ]) {
     assert.equal(blanketFee([narrower], 4000, "2026-11-06", {}, thursdayEvening), 4000);
   }
+});
+
+test("a field that says from reaches the floor, and carries the ladder struck through", () => {
+  const narrow = {
+    code: "FRIDAY",
+    note: "Fridays",
+    fee: 2000,
+    includedItems: null,
+    extraPerItem: 0,
+    places: ["dominos", "dodo", "panarottis", "coldstone"],
+    items: [],
+    choice: "",
+    sameDay: false,
+    runs: [],
+    onDays: "fri",
+    startsAt: null,
+    expiresAt: null,
+    firstOrderOnly: false,
+    minEach: 1000,
+  };
+  const thursdayEvening = new Date("2026-11-05T18:21:00+01:00");
+
+  // Four counters is still the cheapest delivery going on Friday, and a
+  // ticket labelled "fee from" is quoting a floor. The ladder comes with
+  // it so two thousand reads as today rather than as normal.
+  const fri = floorFee([narrow], 4000, "2026-11-06", {}, thursdayEvening);
+  assert.equal(fri.fee, 2000);
+  assert.equal(fri.was, 4000);
+
+  // Saturday is not the offer's day, so there is nothing to strike.
+  const sat = floorFee([narrow], 4000, "2026-11-07", {}, thursdayEvening);
+  assert.equal(sat.fee, 4000);
+  assert.equal(sat.was, null);
+
+  // A first order only offer is not a floor: nobody ordering again can
+  // choose their way to it, so quoting it would be a price nobody pays.
+  const once = floorFee(
+    [{ ...narrow, firstOrderOnly: true }],
+    4000,
+    "2026-11-06",
+    {},
+    thursdayEvening
+  );
+  assert.equal(once.fee, 4000);
+  assert.equal(once.was, null);
+
+  // A run-pinned offer counts on the run being named and nowhere else.
+  const pinned = { ...narrow, runs: ["b1"] };
+  assert.equal(floorFee([pinned], 4000, "2026-11-06", { runId: "b1" }, thursdayEvening).fee, 2000);
+  assert.equal(floorFee([pinned], 4000, "2026-11-06", { runId: "b2" }, thursdayEvening).fee, 4000);
+  assert.equal(floorFee([pinned], 4000, "2026-11-06", {}, thursdayEvening).fee, 4000);
+
+  // A car of its own only takes an offer written to reach one.
+  assert.equal(floorFee([narrow], 6500, "2026-11-06", { sameDay: true }, thursdayEvening).fee, 6500);
+
+  // The ladder is never struck through by an offer that does not beat it.
+  const dearer = floorFee([{ ...narrow, fee: 6500 }], 4000, "2026-11-06", {}, thursdayEvening);
+  assert.equal(dearer.fee, 4000);
+  assert.equal(dearer.was, null);
 });

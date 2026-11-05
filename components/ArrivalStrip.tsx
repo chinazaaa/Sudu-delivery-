@@ -30,6 +30,7 @@ export default function ArrivalStrip({
   lastMinute = false,
   from = "",
   feeFrom = 0,
+  feeWas = 0,
 }: {
   said: string;
   /** Where the car leaves from, and what it costs at the first band. Both
@@ -37,6 +38,8 @@ export default function ArrivalStrip({
    *  will not charge. */
   from?: string;
   feeFrom?: number;
+  /** The ladder before a promotion took it down, or zero. */
+  feeWas?: number;
   /** The other way of getting it here, when there is one. */
   also?: { said: string; sooner: boolean } | null;
   /** When the run in the sentence above stops taking orders. Empty where
@@ -103,6 +106,15 @@ export default function ArrivalStrip({
                 unit nobody uses reads as a second number to work out. */}
             {feeFrom > 0 ? naira(feeFrom) : "see fees"}
           </span>
+          {/* The ladder struck through, where a promotion beat it.
+              Without it two thousand reads as what delivery costs here,
+              and the week the promotion ends the shop looks as though it
+              has put its prices up. */}
+          {feeWas > feeFrom && feeFrom > 0 && (
+            <span className="block text-[11px] font-semibold leading-tight text-shell/50 line-through">
+              {naira(feeWas)}
+            </span>
+          )}
         </span>
       </span>
 

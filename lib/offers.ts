@@ -530,6 +530,43 @@ export function blanketFee(
   return fee;
 }
 
+/**
+ * The cheapest delivery anybody could reach on a day, and the ladder's own
+ * price beside it.
+ *
+ * A field labelled "from" is a floor, not a price, and a floor is allowed
+ * to be reachable by choosing what to buy: a promotion on four counters
+ * genuinely is the cheapest delivery going that day, and hiding it quotes
+ * the shop's own offer four thousand too dear on the first thing anybody
+ * sees. What a floor may never be is unreachable, so a first order only
+ * offer stays out, and a run-pinned one counts only on the run being
+ * named.
+ *
+ * `was` is the ladder with nothing taken off, and is only set where the
+ * offer actually beats it: a price struck through tells somebody new that
+ * two thousand is today rather than normal, which a bare figure cannot.
+ */
+export function floorFee(
+  offers: LiveOffer[],
+  headline: number,
+  onDay?: string | null,
+  opts: { sameDay?: boolean; runId?: string } = {},
+  now: Date = new Date()
+): { fee: number; was: number | null } {
+  let fee = headline;
+  for (const offer of offers) {
+    // Gated on who you are rather than on what you buy: nobody can
+    // choose their way to it, so it is not a floor.
+    if (offer.firstOrderOnly) continue;
+    if (offer.runs.length > 0 && !(opts.runId && offer.runs.includes(opts.runId))) continue;
+    if (opts.sameDay && !offer.sameDay) continue;
+    if (!dayMatches(offer.onDays, onDay, now)) continue;
+    if (!seasonCovers(offer.startsAt, offer.expiresAt, onDay, now)) continue;
+    if (offer.fee < fee) fee = offer.fee;
+  }
+  return { fee, was: fee < headline ? headline : null };
+}
+
 /** Whether an offer asks nothing of the basket, so its fee can be quoted
  *  with no cart in front of it. */
 export function asksNothing(offer: LiveOffer): boolean {

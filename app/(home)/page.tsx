@@ -24,7 +24,7 @@ import {
 import { toBatchView } from "@/lib/view";
 import { bandTable } from "@/lib/fees";
 import { openOffers } from "@/lib/coupons";
-import { blanketFee } from "@/lib/offers";
+import { floorFee } from "@/lib/offers";
 import { collectedFrom, everywhere, parseAreas } from "@/lib/areas";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { nextArrival, otherWorthSaying, runArrival } from "@/lib/arrival";
@@ -273,6 +273,16 @@ export default async function HomePage() {
   const sameDayLadder = sameDayOn ? await sameDayPricing() : null;
   const sameDayFirst = sameDayLadder?.bands[0]?.fee ?? 0;
   const sameDayFrom = counterSlots.length > 0 ? sameDayFirst : 0;
+
+  // The floor on the day the ticket names, and the ladder behind it.
+  const arrival = floorFee(
+    openers,
+    decided?.onARun === false || decidedRun?.lastMinute === true
+      ? sameDayFirst
+      : (bands[0]?.fee ?? 0),
+    decidedRun?.runDate ?? null,
+    { sameDay: decided?.onARun === false, runId: decidedRun?.id }
+  );
   const soonest = counterSlots.some((one) => one.day === "today") ? "today" : "tomorrow";
 
   // The other counter, on the same terms: a line only while it is on and
@@ -461,22 +471,19 @@ export default async function HomePage() {
        * follow it.
        */
       /*
-       * And the promotion on the day it names, where there is one.
+       * And the promotion on the day it names, where one beats the ladder.
        *
-       * A Friday offer makes the ticket's own figure wrong on the Friday
-       * it is quoting: four thousand over a checkout about to charge two
-       * is the same lie as the one above, told the other way round. Only
-       * promotions that ask nothing of the basket count, since there is
-       * no basket here yet.
+       * The ticket's own label is "fee from", and from is a floor: on a
+       * day delivery starts at two thousand, four is the shop quoting its
+       * own offer four thousand too dear on the first thing anybody sees.
+       * A promotion reachable by choosing a counter counts here for that
+       * reason, where it would not in a figure claiming to be the price.
+       *
+       * The ladder goes with it, struck through, so somebody arriving
+       * today reads two thousand as today rather than as normal.
        */
-      arrivalFee={blanketFee(
-        openers,
-        decided?.onARun === false || decidedRun?.lastMinute === true
-          ? sameDayFirst
-          : (bands[0]?.fee ?? 0),
-        decidedRun?.runDate ?? null,
-        { sameDay: decided?.onARun === false }
-      )}
+      arrivalFee={arrival.fee}
+      arrivalWas={arrival.was ?? 0}
       fees={bandTable(null, bands).map((row, at, all) => ({
         label: row.label,
         fee: row.fee,
