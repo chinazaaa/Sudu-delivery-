@@ -45,7 +45,7 @@ export default async function ReorderPage({
           <Empty
             icon="repeat"
             title="Nothing to bring back yet"
-            href="/products"
+            href="/"
             action="Browse the menu"
           >
             Order once and it waits here for you. One tap puts the whole thing

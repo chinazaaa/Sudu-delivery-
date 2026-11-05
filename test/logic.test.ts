@@ -10,7 +10,7 @@ import {
 } from "../lib/deals";
 import { soundsUrgent } from "../lib/bot-match";
 import { REFERRAL_REWARD, creditToUse, shareText } from "../lib/referrals";
-import { daysSaid, leftToRun, offerTrouble, onItsDay } from "../lib/coupons";
+import { daysSaid, offerTrouble, onItsDay } from "../lib/coupons";
 import { asksNothing, blanketFee, dayMatches, dayOfDate, floorFee, seasonCovers } from "../lib/offers";
 import { backFromCounter, stillShopping } from "../lib/stages";
 import { cookingLine } from "../lib/push";
@@ -7999,26 +7999,4 @@ test("a field that says from reaches the floor, and carries the ladder struck th
   const dearer = floorFee([{ ...narrow, fee: 6500 }], 4000, "2026-11-06", {}, thursdayEvening);
   assert.equal(dearer.fee, 4000);
   assert.equal(dearer.was, null);
-});
-
-test("how long a delivery offer has, said the way a counter's sale says it", () => {
-  const now = new Date("2026-11-05T21:30:00+01:00");
-  // The same wording as a price cut's deadline, because the two sit in one
-  // list and two ways of writing one fact read as two kinds of fact.
-  assert.equal(leftToRun("2026-11-08 22:59:59+00", now), "3 days left");
-  assert.equal(leftToRun("2026-11-06 20:00:00+00", now), "23 hours left");
-  assert.equal(leftToRun("2026-11-05 21:00:00+00", now), "30 minutes left");
-
-  // Singular where there is one of it, and an hour short of a day is still
-  // said in hours: "1 day left" on something with twenty-three hours on it
-  // reads as longer than it is.
-  assert.equal(leftToRun("2026-11-06 20:29:00+00", now), "23 hours left");
-  assert.equal(leftToRun("2026-11-06 21:00:00+00", now), "1 day left");
-
-  // Already over, and never ending, both say nothing rather than a
-  // countdown that has run out.
-  assert.equal(leftToRun("2026-11-01 00:00:00+00", now), "");
-  assert.equal(leftToRun(null, now), "");
-  assert.equal(leftToRun("", now), "");
-  assert.equal(leftToRun("not a date", now), "");
 });

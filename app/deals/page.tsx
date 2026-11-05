@@ -5,8 +5,6 @@ import ProductGrid from "@/components/ProductGrid";
 import { optionGroupsFor } from "@/lib/menu";
 import { browseProducts, productFacets } from "@/lib/products";
 import { safeSettings } from "@/lib/settings";
-import { deliveryOffers } from "@/lib/coupons";
-import DeliveryOffers from "@/components/DeliveryOffers";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +46,7 @@ export default async function DealsPage({
       ? asked.sort
       : "";
 
-  const [{ products, total }, facets, settings, fares] = await Promise.all([
+  const [{ products, total }, facets, settings] = await Promise.all([
     browseProducts({
       deals: true,
       place: asked.place,
@@ -58,10 +56,6 @@ export default async function DealsPage({
     }),
     productFacets(asked.place),
     safeSettings(),
-    /* The other half of the bill. A sale page that only knows about the
-       counters' own price cuts answers half the question somebody came
-       here with. */
-    deliveryOffers().catch(() => []),
   ]);
 
   /*
@@ -112,18 +106,6 @@ export default async function DealsPage({
     products.some((item) => item.restaurantId === one.id)
   );
 
-  /* Narrowed by the kitchen chip like everything else on the page: an
-     offer that does not reach the counter being looked at is not an
-     answer to the question being asked. An offer on every kitchen always
-     stands. */
-  const onOffer = asked.place
-    ? fares.filter(
-        (one) =>
-          one.places.length === 0 ||
-          one.places.some((place) => place.id === asked.place)
-      )
-    : fares;
-
   const link = (change: Partial<Asked>) => {
     const now = new URLSearchParams();
     for (const [key, value] of Object.entries({ ...asked, ...change })) {
@@ -148,8 +130,6 @@ export default async function DealsPage({
           lasts, and each one says how long it has.
         </p>
       </header>
-
-      <DeliveryOffers offers={onOffer} />
 
       {total === 0 ? (
         <Empty icon="bag" title="Nothing on sale right now" href="/products" action="Browse the menu">
