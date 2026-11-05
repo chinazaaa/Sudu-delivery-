@@ -10,6 +10,8 @@ import {
   type OfferContext,
 } from "./offers";
 import { db } from "./supabase";
+import { activeBands } from "./settings";
+import { headlineFee, type Band } from "./fees";
 import { naira } from "./money";
 import { SLOT_LABEL, type BatchSlot } from "./config";
 import { runDateLabel } from "./time";
@@ -1039,7 +1041,9 @@ export async function menuChoices(): Promise<
  * Slug first, because that is what the rest of the site links with, falling
  * back to the id so a restaurant without one is still reachable.
  */
-async function placeLinks(ids: string[]): Promise<{ name: string; href: string }[]> {
+async function placeLinks(
+  ids: string[]
+): Promise<{ id: string; name: string; href: string }[]> {
   if (ids.length === 0) return [];
   try {
     const { data, error } = await db()
@@ -1056,11 +1060,13 @@ async function placeLinks(ids: string[]): Promise<{ name: string; href: string }
         .in("id", ids)
         .eq("active", true);
       return (plain ?? []).map((row) => ({
+        id: row.id as string,
         name: row.name as string,
         href: row.id as string,
       }));
     }
     return (data ?? []).map((row) => ({
+      id: row.id as string,
       name: row.name as string,
       href: (row.slug as string | null) || (row.id as string),
     }));
@@ -1220,3 +1226,90 @@ export const openOffers = unstable_cache(readOpenOffers, ["open-offers"], {
   revalidate: 60,
   tags: ["coupons"],
 });
+
+/** A delivery promotion, said for the sale page. */
+export type DeliveryOffer = {
+  code: string;
+  /** What it charges, and what the ladder would have. `was` is zero where
+   *  the offer does not actually beat the ladder, and then nothing is
+   *  struck out. */
+  fee: number;
+  was: number;
+  /** "Fridays", "Saturdays and Sundays", or empty for every day. */
+  days: string;
+  /** "2 days left", said the way the counters' own sales say it. Empty
+   *  where it has no end on it. */
+  left: string;
+  /** The counters it covers. Empty means every one of them. */
+  places: { id: string; name: string; href: string }[];
+  firstOrderOnly: boolean;
+};
+
+/**
+ * The delivery promotions, for the sale page.
+ *
+ * The sale page is where somebody goes to see what is cheap today, and
+ * until now it only knew about the counters' own price cuts. A delivery
+ * offer is the same question answered about the other half of the bill,
+ * and leaving it off meant the one page built for the question gave half
+ * the answer.
+ *
+ * Said with the counters named, because almost every one of these is
+ * pinned to a few of them: a figure on its own would read as the price
+ * from anywhere and send somebody to a counter it was never on.
+ */
+export async function deliveryOffers(): Promise<DeliveryOffer[]> {
+  const [offers, bands] = await Promise.all([
+    liveOffers().catch(() => [] as LiveOffer[]),
+    activeBands().catch(() => [] as Band[]),
+  ]);
+  if (offers.length === 0) return [];
+
+  const ladder = headlineFee(bands.length > 0 ? bands : undefined);
+  const now = new Date();
+
+  const said = await Promise.all(
+    offers.map(async (offer) => {
+      const places = await placeLinks(offer.places);
+      // Pinned to counters that are all switched off. Showing it would
+      // send people to pages that are not there.
+      if (offer.places.length > 0 && places.length === 0) return null;
+      return {
+        code: offer.code,
+        fee: offer.fee,
+        was: offer.fee < ladder ? ladder : 0,
+        days: daysSaid(offer.onDays),
+        left: leftToRun(offer.expiresAt, now),
+        places,
+        firstOrderOnly: offer.firstOrderOnly,
+      };
+    })
+  );
+
+  // Cheapest first, which is the order a sale is read in.
+  return said
+    .filter((one): one is DeliveryOffer => one !== null)
+    .sort((a, b) => a.fee - b.fee);
+}
+
+/**
+ * How long a promotion has, said the way the counters' own sales say it.
+ *
+ * The same wording as a price cut's deadline on purpose: the two sit in
+ * one list on the sale page, and two ways of writing the same fact reads
+ * as two different kinds of fact.
+ */
+export function leftToRun(expiresAt: string | null | undefined, now: Date = new Date()): string {
+  if (!expiresAt) return "";
+  const ends = new Date(expiresAt).getTime();
+  if (!Number.isFinite(ends)) return "";
+  const left = ends - now.getTime();
+  if (left <= 0) return "";
+
+  const minutes = Math.floor(left / 60_000);
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} left`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} left`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} left`;
+}

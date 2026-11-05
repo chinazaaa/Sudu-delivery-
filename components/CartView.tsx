@@ -473,7 +473,7 @@ export default function CartView({
             </Link>
           </div>
 
-          <Empty icon="cart" title="Nothing in yours yet" href="/" action="Browse the menu">
+          <Empty icon="cart" title="Nothing in yours yet" href="/products" action="Browse the menu">
             Everybody in the group picks their own food and pays for their own. This
             is yours, and it goes in the same car as theirs.
           </Empty>
@@ -519,7 +519,7 @@ export default function CartView({
     }
 
     return (
-      <Empty icon="cart" title="Your cart is empty" href="/" action="Browse the menu">
+      <Empty icon="cart" title="Your cart is empty" href="/products" action="Browse the menu">
         Pick a few things and they gather here, ready for the next delivery.
       </Empty>
     );
@@ -757,9 +757,8 @@ export default function CartView({
   // charges in. A car of its own is priced by the same day ladder whatever
   // is in it: asking the value ladder first had a cart with market shopping
   // going on a picked time quoting a fee nobody was going to be charged.
-  const alone = promotion
-    ? promotion.fee
-    : carFee > 0
+  const ladderFee =
+    carFee > 0
       ? carFee
     : byValue.length > 0
       ? feeAcross({
@@ -776,6 +775,18 @@ export default function CartView({
           )
         )
       : 0;
+
+  const alone = promotion ? promotion.fee : ladderFee;
+  /*
+   * The ladder behind a promotion, struck through beside the figure.
+   *
+   * Without it two thousand reads as what delivery costs here, so
+   * somebody ordering for the first time this week learns the wrong
+   * price and the week the offer ends the shop looks as though it has put
+   * its fees up. Zero where no promotion is on, or where one does not
+   * actually beat the ladder, and then nothing is struck out.
+   */
+  const aloneWas = promotion && ladderFee > alone ? ladderFee : 0;
 
   /*
    * How full the car is, and what else fits in the same fee.
@@ -1186,7 +1197,14 @@ export default function CartView({
             <span className="text-muted">
               Delivery{tier === "" ? "" : ` (${tier})`}
             </span>
-            <span className="font-semibold">{naira(alone)}</span>
+            <span className="font-semibold">
+              {aloneWas > 0 && (
+                <span className="pr-1.5 font-semibold text-muted line-through">
+                  {naira(aloneWas)}
+                </span>
+              )}
+              {naira(alone)}
+            </span>
           </div>
           <div className="flex items-baseline justify-between gap-3 border-t-[1.5px] border-rule pt-2">
             <span className="font-bold">Total</span>
