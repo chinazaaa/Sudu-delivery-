@@ -42,11 +42,14 @@ export default function DeliveryOffers({ offers }: { offers: DeliveryOffer[] }) 
               )}
             </p>
 
+            {/* The days and nothing else. The headline above already says
+                what delivery costs, and spelling out the ladder under it
+                ("for up to 3 items, then ₦500 each") turned a price into
+                terms and conditions on the one page somebody is skimming
+                for what is cheap. The checkout does the arithmetic. */}
             <p className="pt-1.5 text-[15px] leading-relaxed text-muted">
               {one.days === "" ? "Any day" : one.days}
               {one.firstOrderOnly ? " · first order only" : ""}
-              {" · "}
-              {one.line}
             </p>
 
             {one.places.length === 0 ? (

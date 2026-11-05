@@ -1243,8 +1243,6 @@ export type DeliveryOffer = {
   /** The counters it covers. Empty means every one of them. */
   places: { id: string; name: string; href: string }[];
   firstOrderOnly: boolean;
-  /** The offer in a sentence, for the line under the price. */
-  line: string;
 };
 
 /**
@@ -1284,7 +1282,6 @@ export async function deliveryOffers(): Promise<DeliveryOffer[]> {
         left: leftToRun(offer.expiresAt, now),
         places,
         firstOrderOnly: offer.firstOrderOnly,
-        line: offerLine(offer),
       };
     })
   );
