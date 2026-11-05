@@ -1,5 +1,7 @@
 "use client";
 
+import { DAY_SAID, OFFER_DAYS } from "@/lib/coupons";
+
 import Link from "next/link";
 import { useState } from "react";
 import SaveButton from "@/components/SaveButton";
@@ -29,6 +31,7 @@ export type CouponFormValues = {
   first_order_only: boolean;
   starts_at: string | null;
   expires_at: string | null;
+  on_days?: string | null;
   max_uses: number | null;
   included_items: number | null;
   extra_per_item: number;
@@ -501,6 +504,44 @@ export default function CouponForm({
             className="field field-admin"
           />
           <p className="hint mt-1">Blank and it runs until you switch it off.</p>
+        </div>
+
+        {/*
+            The days it runs on, beside the dates rather than instead of
+            them. The two answer different halves of one question: "every
+            Friday" is the days, "until the end of the month" is the last
+            day, and an offer usually wants both.
+
+            Nothing ticked is every day, which is what every offer written
+            before this did and goes on doing, so an old offer opened in
+            this form and saved again comes out exactly as it went in.
+         */}
+        <div className="sm:col-span-2">
+          <span className="label block">Only on these days</span>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {OFFER_DAYS.map((day) => (
+              <label
+                key={day}
+                className="flex min-h-11 items-center gap-2 rounded-full border-[1.5px] border-rule px-3 text-sm font-semibold"
+              >
+                <input
+                  type="checkbox"
+                  name="on_days"
+                  value={day}
+                  defaultChecked={(values?.on_days ?? "")
+                    .toLowerCase()
+                    .split(",")
+                    .map((one) => one.trim())
+                    .includes(day)}
+                />
+                {DAY_SAID[day].slice(0, 3)}
+              </label>
+            ))}
+          </div>
+          <p className="hint mt-1">
+            Tick none for every day. Tick Friday and it is on Fridays only,
+            every week, until the last day above.
+          </p>
         </div>
         <div>
           <label className="label" htmlFor={id("max_uses")}>

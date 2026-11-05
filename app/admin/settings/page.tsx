@@ -804,6 +804,30 @@ export default async function SettingsAdmin() {
                   says so rather than taking money off twice.
                 </p>
               </div>
+
+              {/* Whether it is announced, which is not the same question as
+                  whether it applies. */}
+              <div>
+                <input type="hidden" name="show_perk_strip__asked" value="1" />
+                <label className="flex items-center gap-2 text-sm font-semibold">
+                  <input
+                    type="checkbox"
+                    name="show_perk_strip"
+                    value="on"
+                    defaultChecked={settings.show_perk_strip}
+                  />
+                  Say so on the page: &ldquo;Onize sent you&rdquo;
+                </label>
+                <p className="hint mt-1">
+                  Off, the link works exactly as it does now and the welcome
+                  still comes off at the checkout. It is only the strip along
+                  the top that goes. Worth leaving off while you are running a
+                  promotion of your own: the welcome stands down under a bigger
+                  offer, so the strip appears on the days there is no promotion
+                  and vanishes on the days there is, which reads as the shop
+                  changing its mind.
+                </p>
+              </div>
               <SaveButton look="btn-admin-go">Save</SaveButton>
             </div>
           </Panel>

@@ -97,6 +97,7 @@ import {
 } from "@/lib/order-edit";
 import { tripForBox } from "@/lib/box-day";
 import { naira, orderRef } from "@/lib/money";
+import { OFFER_DAYS } from "@/lib/coupons";
 import { namedPromoters, realPromoter } from "@/lib/promoters";
 import {
   pushDeal,
@@ -3248,6 +3249,13 @@ export async function saveCoupon(form: FormData): Promise<void> {
     expires_at: expires ? new Date(`${expires}T23:59:59+01:00`).toISOString() : null,
     max_uses: Number.isFinite(maxUses) && maxUses > 0 ? maxUses : null,
     first_order_only: form.get("first_order_only") === "on",
+    /* The days of the week it runs on. Nothing ticked is every day, which
+       is what every offer written before this did. */
+    on_days: form
+      .getAll("on_days")
+      .map((one) => String(one).trim().toLowerCase())
+      .filter((one) => (OFFER_DAYS as readonly string[]).includes(one))
+      .join(","),
   });
 
   // Everything the offer covers, written on the same save as the offer
@@ -3516,6 +3524,15 @@ const SETTING_FIELDS = [
  * Each ships a hidden line saying the form asked the question. Where that
  * is present, a missing tick is an answer rather than a silence.
  */
+/*
+ * Switches held as real booleans rather than as on/off text.
+ *
+ * The older ones are text because that is how the first one was written;
+ * a column added as a boolean cannot take "on" as a value, so it is
+ * written here instead of being quietly coerced.
+ */
+const SETTING_BOOLS = ["show_perk_strip"] as const;
+
 const SETTING_BOXES = [
   "hide_footer",
   "hide_promoter_link",
@@ -3574,6 +3591,14 @@ export async function saveSettings(form: FormData): Promise<void> {
     patch[field] = said;
   }
 
+  // The same rule for the boolean ones, written as true and false.
+  const flags: Record<string, boolean> = {};
+  for (const field of SETTING_BOOLS) {
+    if (form.get(askedName(field)) !== null) {
+      flags[field] = form.get(field) !== null;
+    }
+  }
+
   // Asked and not ticked is "no". Not asked at all is a different form,
   // which has no business turning anything off.
   for (const field of SETTING_BOXES) {
@@ -3596,12 +3621,12 @@ export async function saveSettings(form: FormData): Promise<void> {
       .join(",");
   }
 
-  if (Object.keys(patch).length === 0) return;
+  if (Object.keys(patch).length === 0 && Object.keys(flags).length === 0) return;
 
   const write = (fields: Record<string, string | number>) =>
     db()
       .from("settings")
-      .update({ ...fields, updated_at: new Date().toISOString() })
+      .update({ ...fields, ...flags, updated_at: new Date().toISOString() })
       .eq("id", true);
 
   let { error } = await write(patch);

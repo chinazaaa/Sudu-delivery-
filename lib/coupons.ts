@@ -75,12 +75,83 @@ export type CouponWithRuns = Coupon & {
  * offer strip and refused at the till.
  */
 export function inSeason(
-  coupon: { starts_at?: string | null; expires_at: string | null },
+  coupon: {
+    starts_at?: string | null;
+    expires_at: string | null;
+    on_days?: string | null;
+  },
   now: Date = new Date()
 ): boolean {
   if (coupon.starts_at && new Date(coupon.starts_at) > now) return false;
   if (coupon.expires_at && new Date(coupon.expires_at) <= now) return false;
-  return true;
+  return onItsDay(coupon.on_days, now);
+}
+
+/** The days of the week an offer can be pinned to, as they are stored. */
+export const OFFER_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+
+/** What each is called on the form. */
+export const DAY_SAID: Record<string, string> = {
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday",
+  sat: "Saturday",
+  sun: "Sunday",
+};
+
+/**
+ * Whether today is one of the days this offer runs on.
+ *
+ * In Lagos, not wherever the server is. An offer for Saturday that comes
+ * on at one in the morning because a machine in Virginia thinks it is
+ * already Saturday is an offer running on Friday night, and the one in
+ * the shop who finds out is whoever is paying for it.
+ *
+ * No days named means every day, which is what every offer written
+ * before this did and goes on doing. A list nobody can read means every
+ * day as well: an offer that quietly stops applying is harder to notice
+ * than one that applies too often, and both are a conversation, but only
+ * the first one happens in silence.
+ */
+export function onItsDay(
+  onDays: string | null | undefined,
+  now: Date = new Date()
+): boolean {
+  const wanted = String(onDays ?? "")
+    .toLowerCase()
+    .split(",")
+    .map((one) => one.trim())
+    .filter((one) => (OFFER_DAYS as readonly string[]).includes(one));
+  if (wanted.length === 0) return true;
+
+  const today = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Lagos",
+    weekday: "short",
+  })
+    .format(now)
+    .slice(0, 3)
+    .toLowerCase();
+
+  return wanted.includes(today);
+}
+
+/** The days an offer runs on, said for a person: "Fridays", "Saturdays and
+ *  Sundays", or nothing at all when it runs every day. */
+export function daysSaid(onDays: string | null | undefined): string {
+  const named = String(onDays ?? "")
+    .toLowerCase()
+    .split(",")
+    .map((one) => one.trim())
+    .filter((one) => (OFFER_DAYS as readonly string[]).includes(one));
+  if (named.length === 0 || named.length === 7) return "";
+
+  const words = OFFER_DAYS.filter((day) => named.includes(day)).map(
+    (day) => `${DAY_SAID[day]}s`
+  );
+  if (words.length === 1) return words[0];
+  return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
 }
 
 export async function couponPlaces(code: string): Promise<string[]> {
@@ -236,7 +307,14 @@ export async function anyCodeToType(): Promise<boolean> {
     const now = new Date();
     return (data ?? []).some(
       (row) =>
-        inSeason(row as { starts_at?: string | null; expires_at: string | null }, now) &&
+        inSeason(
+          row as {
+            starts_at?: string | null;
+            expires_at: string | null;
+            on_days?: string | null;
+          },
+          now
+        ) &&
         !(row.max_uses !== null && Number(row.used ?? 0) >= Number(row.max_uses))
     );
   } catch {

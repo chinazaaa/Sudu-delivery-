@@ -10,6 +10,7 @@ import {
 } from "../lib/deals";
 import { soundsUrgent } from "../lib/bot-match";
 import { REFERRAL_REWARD, creditToUse, shareText } from "../lib/referrals";
+import { daysSaid, onItsDay } from "../lib/coupons";
 import { backFromCounter, stillShopping } from "../lib/stages";
 import { cookingLine } from "../lib/push";
 import { otherWorthSaying } from "../lib/arrival";
@@ -7667,4 +7668,44 @@ test("a trip that has left is not on tonight's shopping list", () => {
   assert.equal(stillShopping(""), true);
   assert.equal(stillShopping(null), true);
   assert.equal(stillShopping("something new"), true);
+});
+
+test("an offer can be pinned to days of the week", () => {
+  // A Friday evening in Lagos.
+  const friday = new Date("2026-11-06T18:00:00+01:00");
+  const saturday = new Date("2026-11-07T18:00:00+01:00");
+
+  assert.equal(onItsDay("fri", friday), true);
+  assert.equal(onItsDay("fri", saturday), false);
+  assert.equal(onItsDay("sat,sun", saturday), true);
+  assert.equal(onItsDay("sat,sun", friday), false);
+
+  // Nothing named is every day, which is what every offer written before
+  // this did and goes on doing.
+  assert.equal(onItsDay("", friday), true);
+  assert.equal(onItsDay(null, friday), true);
+
+  // A list nobody can read is every day as well. An offer that quietly
+  // stops applying is harder to notice than one that applies too often.
+  assert.equal(onItsDay("whenever", friday), true);
+
+  // Lagos, not wherever the server is. Just past midnight on Saturday in
+  // Lagos is still Friday in London, and the offer is Saturday's.
+  const justAfterMidnight = new Date("2026-11-07T00:30:00+01:00");
+  assert.equal(onItsDay("sat", justAfterMidnight), true);
+  assert.equal(onItsDay("fri", justAfterMidnight), false);
+});
+
+test("the days an offer runs on, said for a person", () => {
+  // Plural, because a day an offer runs on every week is "Fridays".
+  assert.equal(daysSaid("fri"), "Fridays");
+  assert.equal(daysSaid("sat,sun"), "Saturdays and Sundays");
+  assert.equal(daysSaid("mon,wed,fri"), "Mondays, Wednesdays and Fridays");
+
+  // Written in the week's own order, not the order somebody ticked them.
+  assert.equal(daysSaid("sun,mon"), "Mondays and Sundays");
+
+  // Every day is not worth saying, and neither is none.
+  assert.equal(daysSaid(""), "");
+  assert.equal(daysSaid("mon,tue,wed,thu,fri,sat,sun"), "");
 });

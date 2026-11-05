@@ -169,6 +169,10 @@ export type Settings = {
    * offer. Empty means a link brings nothing but the promoter's name.
    */
   promoter_perk_code: string;
+  /** Whether the "somebody sent you" strip is drawn at all. The welcome
+   *  itself still applies at the checkout either way: this is only
+   *  whether it is announced. */
+  show_perk_strip: boolean;
   /**
    * The slider the home page builds when there are no slides of your own.
    * The headline is per restaurant, and the lines rotate beneath it.
@@ -341,6 +345,7 @@ export const EMPTY: Settings = {
   offer_code: "",
   deals_headline: "",
   promoter_perk_code: "",
+  show_perk_strip: false,
   auto_headline: "",
   auto_lines: "",
   home_order: "",

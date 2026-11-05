@@ -273,9 +273,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
    *
    * Both asked at once, and only for somebody who arrived on a link,
    * which is the only person this draws anything for.
+   *
+   * And only while the shop wants it announced at all. Turning it off is
+   * not the same as turning off the welcome: the ₦500 still applies at
+   * the checkout, it simply is not advertised on the way in, which is
+   * what the shop wants while it is running a bigger promotion on
+   * somebody's link and would rather not put a smaller number beside it.
    */
   const sentBy = jar.get(WHO_COOKIE)?.value ?? "";
-  const [welcome, perkFrom, running] = sentBy
+  const [welcome, perkFrom, running] = sentBy && settings.show_perk_strip
     ? await Promise.all([
         publicOffer(settings.promoter_perk_code),
         promoterCalledName(sentBy),

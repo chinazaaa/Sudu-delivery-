@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { daysSaid } from "@/lib/coupons";
 import PageHeader from "@/components/admin/PageHeader";
 import ActionButton from "@/components/ActionButton";
 import CopyText from "@/components/CopyText";
@@ -359,6 +360,8 @@ export default async function CouponsAdmin({
                       day: "numeric",
                       month: "short",
                     })}`}
+                  {daysSaid((coupon as { on_days?: string | null }).on_days) !== "" &&
+                    ` · ${daysSaid((coupon as { on_days?: string | null }).on_days)} only`}
                   {coupon.expires_at &&
                     ` · until ${new Date(coupon.expires_at).toLocaleDateString("en-NG", {
                       day: "numeric",
@@ -521,6 +524,7 @@ function valuesOf(coupon: Awaited<ReturnType<typeof listCoupons>>[number]): Coup
     first_order_only: coupon.first_order_only,
     starts_at: coupon.starts_at ?? null,
     expires_at: coupon.expires_at,
+    on_days: (coupon as { on_days?: string | null }).on_days ?? "",
     max_uses: coupon.max_uses,
     included_items: coupon.included_items,
     extra_per_item: coupon.extra_per_item ?? 0,
