@@ -1,4 +1,6 @@
+import { unstable_cache } from "next/cache";
 import {
+  asksNothing,
   choiceCombinations,
   choiceLabels,
   choiceSets,
@@ -1199,3 +1201,21 @@ export function offerTrouble(
 
   return "";
 }
+
+/**
+ * The promotions that ask nothing of the basket.
+ *
+ * What a page with no cart on it can quote: the front page ticket and the
+ * bot both name a day and a fee, and the fee has to be one the checkout
+ * will still honour. Cached for a minute because the front page asks on
+ * every visit and a promotion switched on a minute ago is not an
+ * emergency.
+ */
+async function readAsksNothing(): Promise<LiveOffer[]> {
+  return (await liveOffers()).filter(asksNothing);
+}
+
+export const openOffers = unstable_cache(readAsksNothing, ["open-offers"], {
+  revalidate: 60,
+  tags: ["coupons"],
+});

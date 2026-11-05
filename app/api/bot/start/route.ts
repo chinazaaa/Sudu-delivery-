@@ -13,6 +13,8 @@ import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/set
 import { deliverySlots, slotsWorthOffering, windowHours } from "@/lib/same-day";
 import { allAreas } from "@/lib/areas-server";
 import { headlineFee } from "@/lib/fees";
+import { openOffers } from "@/lib/coupons";
+import { blanketFee } from "@/lib/offers";
 import { toBatchView } from "@/lib/view";
 import { runDateLabel } from "@/lib/time";
 import { TZ } from "@/lib/config";
@@ -228,6 +230,32 @@ export async function GET(): Promise<NextResponse> {
       kitchens,
       // What delivery starts at, said as a floor rather than as the price.
       feeFrom: headlineFee(bands),
+      /*
+       * And the floor on each particular day, where a promotion beats it.
+       *
+       * A Friday offer makes the flat figure above wrong on the Friday
+       * the chat is quoting, and quoting four thousand over a checkout
+       * about to charge two is how people stop trusting the chat. Worked
+       * out here for every day the chat can name, since only the server
+       * knows what is on. Only promotions that ask nothing of the basket
+       * count: there is no basket in a chat asking about Friday.
+       */
+      feeByDay: await (async () => {
+        const open = await openOffers().catch(() => []);
+        if (open.length === 0) return {} as Record<string, number>;
+        const floor = headlineFee(bands);
+        const carFloor = sameDay === null ? 0 : headlineFee(sameDay.bands);
+        const byDay: Record<string, number> = {};
+        for (const run of runs) {
+          byDay[run.runDate] = blanketFee(open, floor, run.runDate);
+        }
+        for (const car of cars) {
+          const was = byDay[car.date];
+          const asked = blanketFee(open, carFloor, car.date, { sameDay: true });
+          byDay[car.date] = was === undefined ? asked : Math.min(was, asked);
+        }
+        return byDay;
+      })(),
       /*
        * The places that cost more than the floor.
        *

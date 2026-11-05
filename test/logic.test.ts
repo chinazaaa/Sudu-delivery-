@@ -11,7 +11,7 @@ import {
 import { soundsUrgent } from "../lib/bot-match";
 import { REFERRAL_REWARD, creditToUse, shareText } from "../lib/referrals";
 import { daysSaid, offerTrouble, onItsDay } from "../lib/coupons";
-import { dayMatches, dayOfDate, seasonCovers } from "../lib/offers";
+import { asksNothing, blanketFee, dayMatches, dayOfDate, seasonCovers } from "../lib/offers";
 import { backFromCounter, stillShopping } from "../lib/stages";
 import { cookingLine } from "../lib/push";
 import { otherWorthSaying } from "../lib/arrival";
@@ -6961,6 +6961,27 @@ test("the chat answers questions about which days it delivers", () => {
   for (const said of [next, now, wed, sat]) {
     assert.ok(!/ Between /.test(said), said);
   }
+
+  /*
+   * A promotion on the day being named is quoted on that day.
+   *
+   * The flat floor is wrong on a Wednesday the shop is doing delivery for
+   * two thousand, and the chat has the date in hand every time it names
+   * one. Only the day asked about moves: Sunday's answer is still the
+   * ladder's own.
+   */
+  const cheapWed = sayWhen({
+    ...shop,
+    asked: { weekday: 3 },
+    feeOn: (date) => (date === "2026-10-28" ? 2000 : -1),
+  });
+  assert.match(cheapWed, /starts at N2000/);
+  const sameSun = sayWhen({
+    ...shop,
+    asked: "today",
+    feeOn: (date) => (date === "2026-10-28" ? 2000 : -1),
+  });
+  assert.match(sameSun, /starts at N6500/);
 });
 
 test("the chat counts days the way a calendar does", () => {
@@ -7800,4 +7821,68 @@ test("an offer switched on and unable to apply says so", () => {
     offerTrouble({ ...fine, active: false, expires_at: "2026-10-31 22:59:59+00" }, now),
     ""
   );
+});
+
+test("the floor quoted with no cart follows the day and the offers that ask nothing", () => {
+  const plain = {
+    code: "FRIDAY",
+    note: "Fridays",
+    fee: 2000,
+    includedItems: null,
+    extraPerItem: 0,
+    places: [],
+    items: [],
+    choice: "",
+    sameDay: false,
+    runs: [],
+    onDays: "fri",
+    startsAt: null,
+    expiresAt: null,
+    firstOrderOnly: false,
+    minEach: 1000,
+  };
+  const thursdayEvening = new Date("2026-11-05T18:21:00+01:00");
+
+  // Friday's run is quoted at Friday's price, on Thursday evening, because
+  // the promise is about the day the food lands.
+  assert.equal(blanketFee([plain], 4000, "2026-11-06", {}, thursdayEvening), 2000);
+  // Saturday's is not Friday's offer.
+  assert.equal(blanketFee([plain], 4000, "2026-11-07", {}, thursdayEvening), 4000);
+  // Nothing on at all leaves the ladder alone.
+  assert.equal(blanketFee([], 4000, "2026-11-06", {}, thursdayEvening), 4000);
+  // A dearer offer never raises the figure.
+  assert.equal(
+    blanketFee([{ ...plain, fee: 6500 }], 4000, "2026-11-06", {}, thursdayEvening),
+    4000
+  );
+  // A car of its own only takes an offer written to reach one.
+  assert.equal(
+    blanketFee([plain], 6500, "2026-11-06", { sameDay: true }, thursdayEvening),
+    6500
+  );
+  assert.equal(
+    blanketFee([{ ...plain, sameDay: true }], 6500, "2026-11-06", { sameDay: true }, thursdayEvening),
+    2000
+  );
+  // An offer whose dates do not reach the day is not quoted on it.
+  assert.equal(
+    blanketFee(
+      [{ ...plain, expiresAt: "2026-11-05 23:00:00+00" }],
+      4000,
+      "2026-11-06",
+      {},
+      thursdayEvening
+    ),
+    4000
+  );
+
+  // What can be quoted with no basket in front of it: nothing narrower
+  // than everybody, because a figure the checkout then raises is worse
+  // than a plain one.
+  assert.equal(asksNothing(plain), true);
+  assert.equal(asksNothing({ ...plain, places: ["dominos"] }), false);
+  assert.equal(asksNothing({ ...plain, items: ["bbq-beef"] }), false);
+  assert.equal(asksNothing({ ...plain, choice: "Medium" }), false);
+  assert.equal(asksNothing({ ...plain, runs: ["b1"] }), false);
+  assert.equal(asksNothing({ ...plain, firstOrderOnly: true }), false);
 });

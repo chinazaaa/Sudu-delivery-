@@ -23,6 +23,8 @@ import {
 } from "@/lib/settings";
 import { toBatchView } from "@/lib/view";
 import { bandTable } from "@/lib/fees";
+import { openOffers } from "@/lib/coupons";
+import { blanketFee } from "@/lib/offers";
 import { collectedFrom, everywhere, parseAreas } from "@/lib/areas";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
 import { nextArrival, otherWorthSaying, runArrival } from "@/lib/arrival";
@@ -84,7 +86,7 @@ export default async function HomePage() {
    * Today's times go while somebody is out driving tonight's run: one
    * driver cannot do both. Tomorrow's stay. See lib/one-driver.ts.
    */
-  const [slots, packed, skincareShelf, pharmacyShelf, quotes] = await Promise.all([
+  const [slots, packed, skincareShelf, pharmacyShelf, quotes, openers] = await Promise.all([
     sameDayOn
       ? hoursByDay().then((hours) =>
           carsOnOffer(
@@ -102,6 +104,7 @@ export default async function HomePage() {
     skincareOn(settings) ? skincareShop() : Promise.resolve(null),
     pharmacyOn(settings) ? pharmacyShop() : Promise.resolve(null),
     shownSays(settings.google_quotes),
+    openOffers().catch(() => []),
   ]);
 
   /*
@@ -457,11 +460,23 @@ export default async function HomePage() {
        * written on it the whole time and the code underneath did not
        * follow it.
        */
-      arrivalFee={
+      /*
+       * And the promotion on the day it names, where there is one.
+       *
+       * A Friday offer makes the ticket's own figure wrong on the Friday
+       * it is quoting: four thousand over a checkout about to charge two
+       * is the same lie as the one above, told the other way round. Only
+       * promotions that ask nothing of the basket count, since there is
+       * no basket here yet.
+       */
+      arrivalFee={blanketFee(
+        openers,
         decided?.onARun === false || decidedRun?.lastMinute === true
           ? sameDayFirst
-          : (bands[0]?.fee ?? 0)
-      }
+          : (bands[0]?.fee ?? 0),
+        decidedRun?.runDate ?? null,
+        { sameDay: decided?.onARun === false }
+      )}
       fees={bandTable(null, bands).map((row, at, all) => ({
         label: row.label,
         fee: row.fee,

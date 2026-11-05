@@ -129,6 +129,11 @@ export function sayWhen(args: {
   /** How the shop writes money. Passed in so this file holds no opinion
    *  about currency. */
   money: (amount: number) => string;
+  /** The fee on a particular day, where a promotion makes it cheaper than
+   *  the floor above. A Friday offer makes the flat figure wrong on the
+   *  Friday the bot is quoting, and the bot has the date in hand every
+   *  time it names one, so it asks. Left out, every day is the floor. */
+  feeOn?: (date: string) => number;
   /** The places that cost more than the floor, by name. A figure on its
    *  own reads as the price, and somebody ordering from Ikoyi would be
    *  told a number thousands short of what they will pay. */
@@ -146,8 +151,15 @@ export function sayWhen(args: {
   const from = (amount: number) =>
     amount > 0 ? ` Delivery starts at ${money(amount)}${more}.` : "";
 
+  /** The floor on a day, as whatever is cheaper: the ladder or a
+   *  promotion covering it. */
+  const floorOn = (date: string, base: number) => {
+    const asked = args.feeOn?.(date);
+    return typeof asked === "number" && asked >= 0 && asked < base ? asked : base;
+  };
+
   const onARunDay = (run: RunOnOffer, word: string) =>
-    `Yes, ${word}, ${lower(run.window)}. Orders close ${run.closes}.${from(feeFrom)}`;
+    `Yes, ${word}, ${lower(run.window)}. Orders close ${run.closes}.${from(floorOn(run.runDate, feeFrom))}`;
 
   /*
    * A day the shop is not already driving.
@@ -156,10 +168,10 @@ export function sayWhen(args: {
    * one: a window and a price. They do not pick a time, they pick a day,
    * and the window comes off the hours admin set for it.
    */
-  const onACarDay = (word: string, window: string) =>
+  const onACarDay = (word: string, window: string, date: string) =>
     window === ""
-      ? `Yes, ${word}.${from(carFrom)}`
-      : `Yes, ${word}, ${lower(window)}.${from(carFrom)}`;
+      ? `Yes, ${word}.${from(floorOn(date, carFrom))}`
+      : `Yes, ${word}, ${lower(window)}.${from(floorOn(date, carFrom))}`;
 
   const soonestRun = [...runs].sort((a, b) => a.runDate.localeCompare(b.runDate))[0];
   const soonestCar = [...cars].sort((a, b) => a.date.localeCompare(b.date))[0];
@@ -171,12 +183,12 @@ export function sayWhen(args: {
     const runFirst =
       soonestRun && (!soonestCar || soonestRun.runDate <= soonestCar.date);
     if (runFirst) {
-      return `We are delivering ${soonestRun.said}, ${lower(soonestRun.window)}. Orders close ${soonestRun.closes}.${from(feeFrom)}`;
+      return `We are delivering ${soonestRun.said}, ${lower(soonestRun.window)}. Orders close ${soonestRun.closes}.${from(floorOn(soonestRun.runDate, feeFrom))}`;
     }
     if (soonestCar) {
       const word = whichDay(soonestCar.date, today);
       const when = soonestCar.window ? `, ${lower(soonestCar.window)}` : "";
-      return `We are delivering ${word}${when}.${from(carFrom)}`;
+      return `We are delivering ${word}${when}.${from(floorOn(soonestCar.date, carFrom))}`;
     }
     return "";
   }
@@ -194,7 +206,7 @@ export function sayWhen(args: {
   const run = runs.find((one) => one.runDate === date);
   if (run) return onARunDay(run, word);
   const car = cars.find((one) => one.date === date);
-  if (car) return onACarDay(word, car.window ?? "");
+  if (car) return onACarDay(word, car.window ?? "", car.date);
 
   // Nothing that day. What is next beats a flat no.
   const after = [...runs, ...cars.map((car) => ({ ...car, runDate: car.date }))]

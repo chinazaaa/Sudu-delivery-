@@ -67,6 +67,10 @@ type Start = {
   cars: Car[];
   carFrom: number;
   feeFrom: number;
+  /** The floor on a particular day, by date, where a promotion beats the
+   *  two above. A Friday offer makes a flat figure wrong on the Friday
+   *  being quoted. Missing days are the floor. */
+  feeByDay?: Record<string, number>;
   /** The places that cost more than that floor, by name, so a figure is
    *  never said as though it were the price everywhere. */
   farther?: string[];
@@ -740,6 +744,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         // a band changed in admin changes what is said here.
         feeFrom: startRef.current?.feeFrom ?? 0,
         carFrom: startRef.current?.carFrom ?? 0,
+        // And the promotion on the day being named, where one covers it.
+        feeOn: (date) => startRef.current?.feeByDay?.[date] ?? -1,
         farther: startRef.current?.farther ?? [],
         money: naira,
       });
@@ -4724,7 +4730,11 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           // Lower case inside a sentence. "Arrives Between 5pm and 7pm" is
           // the tell that a label has been dropped into prose unread.
           when: `Arrives ${first.window.charAt(0).toLowerCase()}${first.window.slice(1)}`,
-          note: `Orders close ${first.closes} · delivery from ${naira(lists?.feeFrom ?? 0)}`,
+          // The fee on that run's own day: a promotion covering it makes
+          // the flat floor wrong on the card naming it.
+          note: `Orders close ${first.closes} · delivery from ${naira(
+            lists?.feeByDay?.[first.runDate] ?? lists?.feeFrom ?? 0
+          )}`,
         },
       },
       420

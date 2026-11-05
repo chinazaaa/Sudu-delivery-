@@ -14,6 +14,8 @@ import {
   skincareShop,
 } from "@/lib/skincare";
 import { naira } from "@/lib/money";
+import { openOffers } from "@/lib/coupons";
+import { blanketFee } from "@/lib/offers";
 import { shelfSeo } from "@/lib/shelf-seo";
 import Shelf from "@/components/Shelf";
 import ShelfBar from "@/components/ShelfBar";
@@ -101,6 +103,21 @@ export default async function SkincarePage({
 
   const drop = nextDrop(settings);
   const bands = skincareBands(settings);
+  /*
+   * The fee the drop itself will charge.
+   *
+   * A promotion covering the day of the drop makes the ladder's own
+   * headline wrong on the chip quoting it, and a figure the checkout then
+   * undercuts teaches people the page is not worth reading. Only
+   * promotions that ask nothing of the basket count: there is no basket
+   * on a page nobody has shopped yet.
+   */
+  const dropFee = blanketFee(
+    await openOffers().catch(() => []),
+    bands[0]?.fee ?? 0,
+    drop.date
+  );
+
 
   return (
     <div className="-mt-4 space-y-4 pb-36">
@@ -130,9 +147,9 @@ export default async function SkincarePage({
             <span className="flex items-center rounded-full bg-ink px-4 py-2 text-sm font-semibold text-shell">
               One car a week · next drop {dropLabel(drop.date)}
             </span>
-            {bands[0].fee > 0 && (
+            {dropFee > 0 && (
               <span className="flex items-center rounded-full bg-volt px-4 py-2 text-sm font-semibold text-ink">
-                Delivery from {naira(bands[0].fee)}
+                Delivery from {naira(dropFee)}
               </span>
             )}
           </div>

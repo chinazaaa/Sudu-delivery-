@@ -16,6 +16,8 @@ import {
   pharmacyShop,
 } from "@/lib/pharmacy";
 import { naira } from "@/lib/money";
+import { openOffers } from "@/lib/coupons";
+import { blanketFee } from "@/lib/offers";
 import { deliverySlots } from "@/lib/same-day";
 import { hoursByDay, sameDayPricing } from "@/lib/settings";
 import { shelfSeo } from "@/lib/shelf-seo";
@@ -112,6 +114,21 @@ export default async function PharmacyPage({
 
   const drop = nextDrop(settings);
   const bands = pharmacyBands(settings);
+  /*
+   * The fee the drop itself will charge.
+   *
+   * A promotion covering the day of the drop makes the ladder's own
+   * headline wrong on the chip quoting it, and a figure the checkout then
+   * undercuts teaches people the page is not worth reading. Only
+   * promotions that ask nothing of the basket count: there is no basket
+   * on a page nobody has shopped yet.
+   */
+  const dropFee = blanketFee(
+    await openOffers().catch(() => []),
+    bands[0]?.fee ?? 0,
+    drop.date
+  );
+
 
   /*
    * Whether somebody could have it today instead.
@@ -171,9 +188,9 @@ export default async function PharmacyPage({
             <span className="flex items-center rounded-full bg-ink px-4 py-2 text-sm font-semibold text-shell">
               One car a week · next drop {dropLabel(drop.date)}
             </span>
-            {bands[0].fee > 0 && (
+            {dropFee > 0 && (
               <span className="flex items-center rounded-full bg-volt px-4 py-2 text-sm font-semibold text-ink">
-                Delivery from {naira(bands[0].fee)}
+                Delivery from {naira(dropFee)}
               </span>
             )}
             {sameDayFrom > 0 && (

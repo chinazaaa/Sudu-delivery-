@@ -1437,6 +1437,42 @@ export default function Checkout({
       return runDateLabel(date).replace(/,\s*\d{4}$/, "");
     };
 
+    /*
+     * What delivery costs on each day, on the day itself.
+     *
+     * An offer pinned to Fridays makes two days of the same week cost
+     * different money, and the row was the one place somebody chooses
+     * between them while saying nothing about it. Reading four thousand
+     * on a Wednesday with no way of knowing Friday is two is how
+     * somebody closes the tab.
+     *
+     * This is not the shop advertising a cheaper day: nothing points at
+     * one, nothing suggests waiting, and no sentence appears anywhere
+     * else. It is the price of each thing on a row of things being
+     * chosen between, which is what a price is for.
+     *
+     * Only on days that go on a run, because that is the fee this can
+     * work out exactly. A day whose only way is a car of its own is
+     * priced off its own ladder and by the hour somebody picks, so it is
+     * left alone rather than guessed at.
+     */
+    const feeOnDate = (date: string, runId: string | null) => {
+      if (!runId) return "";
+      const run = openable.find((one) => one.id === runId) ?? null;
+      const offer = pickOffer(offers, {
+        restaurantIds: [...new Set(cart.map((line) => line.restaurantId))],
+        itemIds: cart.map((line) => line.itemId),
+        lineChoices: cart.map((line) => line.choices),
+        items: itemCount,
+        batchId: runId,
+        deliverAt: null,
+        onDay: date,
+        returning: false,
+      });
+      const costs = offer ? offer.fee : feeOnRun(run?.flashFee ?? null, runBands);
+      return costs === 0 ? "free" : naira(costs);
+    };
+
     return (
       <div className="space-y-2.5">
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
@@ -1459,9 +1495,16 @@ export default function Checkout({
                       ? "border-shell/20 text-shell/40"
                       : "border-shell/40 text-shell"
                 }`}
-              >
-                {chipFor(one.date)}
-                {shut ? " · closed" : ""}
+                >
+                <span className="block leading-tight">
+                  {chipFor(one.date)}
+                  {shut ? " · closed" : ""}
+                </span>
+                {!shut && feeOnDate(one.date, one.choice?.runId ?? null) !== "" && (
+                  <span className="block text-[11px] font-semibold leading-tight opacity-70">
+                    {feeOnDate(one.date, one.choice?.runId ?? null)}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -1481,7 +1524,12 @@ export default function Checkout({
                   on ? "border-volt bg-volt text-ink" : "border-shell/40 text-shell"
                 }`}
               >
-                {chipFor(one.date)}
+                <span className="block leading-tight">{chipFor(one.date)}</span>
+                {feeOnDate(one.date, one.runId) !== "" && (
+                  <span className="block text-[11px] font-semibold leading-tight opacity-70">
+                    {feeOnDate(one.date, one.runId)}
+                  </span>
+                )}
               </button>
             );
           })}

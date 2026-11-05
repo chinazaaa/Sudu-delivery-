@@ -493,3 +493,45 @@ export function seasonCovers(
   }
   return true;
 }
+
+/**
+ * The delivery fee to quote when there is no cart yet, for the day the
+ * food lands on.
+ *
+ * A ticket on the front page and a bot answering "are you delivering
+ * Friday" are both quoting a day rather than a basket, so the only
+ * promotions that can honestly be read into the figure are the ones that
+ * ask nothing of the basket: no particular shop, dish, size or run, and
+ * not a first order. Anything narrower stays out, because a number on the
+ * front page the checkout then raises is worse than a plain one.
+ *
+ * Nothing matching leaves the ladder's own headline alone.
+ */
+export function blanketFee(
+  offers: LiveOffer[],
+  headline: number,
+  onDay?: string | null,
+  opts: { sameDay?: boolean } = {},
+  now: Date = new Date()
+): number {
+  let fee = headline;
+  for (const offer of offers) {
+    if (opts.sameDay && !offer.sameDay) continue;
+    if (!dayMatches(offer.onDays, onDay, now)) continue;
+    if (!seasonCovers(offer.startsAt, offer.expiresAt, onDay, now)) continue;
+    if (offer.fee < fee) fee = offer.fee;
+  }
+  return fee;
+}
+
+/** Whether an offer asks nothing of the basket, so its fee can be quoted
+ *  with no cart in front of it. */
+export function asksNothing(offer: LiveOffer): boolean {
+  return (
+    offer.places.length === 0 &&
+    offer.items.length === 0 &&
+    offer.choice === "" &&
+    offer.runs.length === 0 &&
+    !offer.firstOrderOnly
+  );
+}
