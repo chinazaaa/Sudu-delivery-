@@ -44,7 +44,16 @@ export async function uploadImage(
     });
   if (error) throw new Error(`Could not upload that image: ${error.message}`);
 
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  /*
+   * Without the trailing slash, where the setting carries one.
+   *
+   * It produced addresses with a doubled slash, "supabase.co//storage",
+   * which load perfectly well and are a different address as far as the
+   * CDN is concerned. The same photograph cached under two keys is the
+   * same photograph fetched from the origin twice, and a thousand of the
+   * menu's pictures were stored that way.
+   */
+  const base = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/+$/, "");
   return `${base}/storage/v1/object/public/${IMAGE_BUCKET}/${path}`;
 }
 

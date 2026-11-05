@@ -1131,11 +1131,11 @@ export async function offerNudge(): Promise<Nudge | null> {
           ? `${names[0]}, ${names[1]} and ${rest} more`
           : `${names[0]} or ${names[1]}`;
 
-  const detail = [
-    offerLine(offer),
-    offer.firstOrderOnly ? "First order only." : "",
-    "No code needed, it comes off at checkout.",
-  ]
+  /* The price, and anything that stops it being the price. Nothing else:
+     the card has a button on it saying where the offer is on, and a line
+     explaining that an automatic offer is automatic is a sentence
+     somebody has to read to learn nothing. */
+  const detail = [offerLine(offer), offer.firstOrderOnly ? "First order only." : ""]
     .filter(Boolean)
     .join(" ");
 
