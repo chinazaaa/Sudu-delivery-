@@ -924,6 +924,9 @@ export default function Checkout({
     items: itemCount,
     batchId,
     deliverAt: sameDay ? sameDay.at : null,
+    /* The day the food lands on, so a Friday offer is judged by when it
+       arrives rather than by what day it happens to be now. */
+    onDay: sameDay ? sameDay.date : (selected?.runDate ?? null),
     returning: false,
   });
 
@@ -937,6 +940,7 @@ export default function Checkout({
       items: itemCount,
       batchId,
       deliverAt: at,
+      onDay: at ? (allSlots.find((one) => one.at === at)?.date ?? null) : (selected?.runDate ?? null),
       returning: false,
     });
     return found ? (found.fee === 0 ? "free delivery" : naira(found.fee)) : null;
@@ -1086,6 +1090,7 @@ export default function Checkout({
       items: itemCount,
       batchId,
       deliverAt: car ? car.at : null,
+      onDay: car ? car.date : (selected?.runDate ?? null),
       returning: false,
     });
     if (covered) return covered.fee;

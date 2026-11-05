@@ -609,6 +609,9 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     items: countItems(priced.lines),
     batchId: batch.id,
     deliverAt: batch.kind === "same_day" ? batch.deliver_at : null,
+    // The day the food lands on, so a day-pinned offer is judged by when
+    // it arrives rather than by what day it is while somebody orders.
+    onDay: batch.run_date,
     returning,
   });
 
@@ -2091,6 +2094,8 @@ export async function previewCoupon(args: {
     items: countItems(priced.lines),
     batchId: batch?.id ?? "",
     deliverAt: car ? car.slot.at : batch?.kind === "same_day" ? batch.deliver_at : null,
+    // The day it lands on, for a day-pinned offer. A car has its own.
+    onDay: car ? car.slot.date : (batch?.run_date ?? null),
     returning: phone ? await isReturningCustomer(phone) : false,
   });
   if (holding) {
@@ -2174,6 +2179,9 @@ export async function perkFor(args: {
     items: countItems(priced.lines),
     batchId: batch.id,
     deliverAt: batch.kind === "same_day" ? batch.deliver_at : null,
+    // The day the food lands on, so a day-pinned offer is judged by when
+    // it arrives rather than by what day it is while somebody orders.
+    onDay: batch.run_date,
     returning,
   });
   if (holding) {

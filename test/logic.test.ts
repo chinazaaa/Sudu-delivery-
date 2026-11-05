@@ -11,6 +11,7 @@ import {
 import { soundsUrgent } from "../lib/bot-match";
 import { REFERRAL_REWARD, creditToUse, shareText } from "../lib/referrals";
 import { daysSaid, onItsDay } from "../lib/coupons";
+import { dayMatches, dayOfDate } from "../lib/offers";
 import { backFromCounter, stillShopping } from "../lib/stages";
 import { cookingLine } from "../lib/push";
 import { otherWorthSaying } from "../lib/arrival";
@@ -7708,4 +7709,31 @@ test("the days an offer runs on, said for a person", () => {
   // Every day is not worth saying, and neither is none.
   assert.equal(daysSaid(""), "");
   assert.equal(daysSaid("mon,tue,wed,thu,fri,sat,sun"), "");
+});
+
+test("a day-pinned offer is judged by the day the food arrives", () => {
+  // Thursday evening, ordering for Friday's run. The offer is Friday's,
+  // and the food lands on Friday, so it applies: charging more for
+  // ordering ahead is backwards for a shop with a cut-off.
+  const thursdayEvening = new Date("2026-11-05T18:21:00+01:00");
+  assert.equal(dayMatches("fri", "2026-11-06", thursdayEvening), true);
+
+  // The same evening, ordering for Saturday. Not Friday's offer.
+  assert.equal(dayMatches("fri", "2026-11-07", thursdayEvening), false);
+
+  // No day on the offer is every day, which is every offer written
+  // before days existed.
+  assert.equal(dayMatches("", "2026-11-07", thursdayEvening), true);
+
+  // Nothing to go on falls back to the clock, for anything asking
+  // without a cart in front of it.
+  assert.equal(dayMatches("thu", null, thursdayEvening), true);
+  assert.equal(dayMatches("fri", null, thursdayEvening), false);
+
+  // A run's own date reads as its own weekday, whatever the server's
+  // clock is doing either side of midnight.
+  assert.equal(dayOfDate("2026-11-06"), "fri");
+  assert.equal(dayOfDate("2026-11-07"), "sat");
+  assert.equal(dayOfDate(""), "");
+  assert.equal(dayOfDate("not a date"), "");
 });

@@ -80,11 +80,21 @@ export function inSeason(
     expires_at: string | null;
     on_days?: string | null;
   },
-  now: Date = new Date()
+  now: Date = new Date(),
+  /*
+   * `anyDay` leaves the day test to whoever knows the delivery date.
+   *
+   * The dates are about the promotion's own run and are rightly read off
+   * the clock. The days are about when the food arrives, which this
+   * cannot know: liveOffers is asked without a cart, so a Friday offer
+   * has to survive being asked on Thursday or it never reaches the
+   * checkout to be judged against Friday's run. See dayMatches.
+   */
+  opts: { anyDay?: boolean } = {}
 ): boolean {
   if (coupon.starts_at && new Date(coupon.starts_at) > now) return false;
   if (coupon.expires_at && new Date(coupon.expires_at) <= now) return false;
-  return onItsDay(coupon.on_days, now);
+  return opts.anyDay === true || onItsDay(coupon.on_days, now);
 }
 
 /** The days of the week an offer can be pinned to, as they are stored. */
@@ -193,7 +203,7 @@ export async function liveOffers(): Promise<LiveOffer[]> {
   const live = offers.filter(
     (coupon) =>
       coupon.applies_to === "fee" &&
-      inSeason(coupon, now) &&
+      inSeason(coupon, now, { anyDay: true }) &&
       !(coupon.max_uses !== null && coupon.used >= coupon.max_uses)
   );
   if (live.length === 0) return [];
@@ -248,6 +258,9 @@ export async function liveOffers(): Promise<LiveOffer[]> {
   return live.map((coupon) => ({
     code: coupon.code,
     note: coupon.note,
+    // Carried through rather than tested here: only the cart knows which
+    // day the food lands on.
+    onDays: (coupon as { on_days?: string | null }).on_days ?? "",
     fee: coupon.amount,
     includedItems: coupon.included_items,
     extraPerItem: coupon.extra_per_item ?? 0,

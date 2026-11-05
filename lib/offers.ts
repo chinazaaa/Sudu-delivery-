@@ -36,6 +36,11 @@ export type LiveOffer = {
   choice: string;
   /** Empty means any run. */
   runs: string[];
+  /** The days of the week it runs on, as "fri" or "sat,sun". Empty is
+   *  every day. Judged against the day the food arrives rather than the
+   *  day somebody orders: a Friday offer is a promise about when the
+   *  food turns up, and charging more for ordering ahead is backwards. */
+  onDays?: string;
   /** Whether it reaches a same day car at all. Off is the safe answer: a
    *  flat price that replaces a car somebody has to themselves is driving at
    *  a loss rather than discounting. */
@@ -56,8 +61,23 @@ export type OfferContext = {
   items: number;
   batchId: string;
   deliverAt?: string | null;
+  /** The day the food arrives, as the run keeps it: "2026-11-06". Left
+   *  out, a day-pinned offer falls back to today, which is right for
+   *  anything asking without a cart in front of it. */
+  onDay?: string | null;
   returning: boolean;
 };
+
+/** The weekday of a run's own date, as offers spell it. The date is
+ *  already the shop's own day, so it is read at noon to keep it clear of
+ *  either end. */
+export function dayOfDate(date: string | null | undefined): string {
+  const said = String(date ?? "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(said)) return "";
+  const at = new Date(`${said}T12:00:00Z`);
+  if (!Number.isFinite(at.getTime())) return "";
+  return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][at.getUTCDay()] ?? "";
+}
 
 /**
  * The promotion this cart has earned, and what delivery costs under it.
@@ -75,6 +95,16 @@ export function pickOffer(
 
   for (const offer of offers) {
     if (offer.firstOrderOnly && context.returning) continue;
+    /*
+     * The day the food arrives, not the day somebody is sitting here.
+     *
+     * A Friday offer is a promise about when the food turns up. Judged
+     * on the clock instead, ordering on Thursday evening for Friday's
+     * run cost four thousand and the same order placed on Friday
+     * morning cost two, which charges people for ordering ahead: the
+     * one thing a shop with a cut-off actually wants them to do.
+     */
+    if (!dayMatches(offer.onDays, context.onDay)) continue;
     if (offer.places.length > 0) {
       if (cart.length === 0 || cart.some((id) => !offer.places.includes(id))) continue;
     }
@@ -380,4 +410,37 @@ export function choiceCombinations(choice: string, most = 4): string[] {
       ),
     [""]
   );
+}
+
+/**
+ * Whether a day-pinned offer covers the day this order arrives.
+ *
+ * No days on the offer is every day, which is what every offer written
+ * before days existed did and goes on doing. No day on the order is
+ * today: anything asking without a cart in front of it, the strip above
+ * the shop among them, has only the clock to go on.
+ */
+export function dayMatches(
+  onDays: string | null | undefined,
+  onDay: string | null | undefined,
+  now: Date = new Date()
+): boolean {
+  const wanted = String(onDays ?? "")
+    .toLowerCase()
+    .split(",")
+    .map((one) => one.trim())
+    .filter(Boolean);
+  if (wanted.length === 0) return true;
+
+  const day =
+    dayOfDate(onDay) ||
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Africa/Lagos",
+      weekday: "short",
+    })
+      .format(now)
+      .slice(0, 3)
+      .toLowerCase();
+
+  return wanted.includes(day);
 }
