@@ -17,12 +17,16 @@ export default function Ribbon({
   text,
   href = "",
   offer,
+  go = "",
 }: {
   text: string;
   /** Where the words take somebody. Empty leaves them as plain text, which
    *  is right for a claim: "since 2018" is not a door. */
   href?: string;
   offer: { code: string; line: string; automatic?: boolean } | null;
+  /** Where an automatic offer's words take somebody. Empty leaves them as
+   *  plain text, which is right for a code nobody can tap towards. */
+  go?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -48,16 +52,17 @@ export default function Ribbon({
           </span>
         )}
 
-        {/* A promotion has no code to type, so there is nothing to copy and
-            saying "with" would send people looking for a box. It is simply
-            true of the cart, and saying so is the whole announcement. */}
-        {offer?.automatic && (
-          <span className="flex items-center gap-1.5">
-            <span className="text-white/80">{offer.line}</span>
-            <span className="ticket rounded-none bg-volt px-2 py-1 text-ink">
-              No code needed
-            </span>
-          </span>
+        {/* An automatic offer is simply true of the cart, so there is
+            nothing to type and nothing to explain: the line is the whole
+            announcement, and it is a door where there is somewhere to
+            send people. */}
+        {offer?.automatic && go !== "" && (
+          <Link href={go!} className="font-semibold text-volt underline underline-offset-2">
+            {offer.line}
+          </Link>
+        )}
+        {offer?.automatic && go === "" && (
+          <span className="text-white/80">{offer.line}</span>
         )}
 
         {offer && !offer.automatic && (

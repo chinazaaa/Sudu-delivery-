@@ -23,7 +23,7 @@ import {
 } from "@/lib/settings";
 import { toBatchView } from "@/lib/view";
 import { bandTable } from "@/lib/fees";
-import { openOffers } from "@/lib/coupons";
+import { offerNudge, openOffers } from "@/lib/coupons";
 import { floorFee } from "@/lib/offers";
 import { collectedFrom, everywhere, parseAreas } from "@/lib/areas";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
@@ -86,7 +86,8 @@ export default async function HomePage() {
    * Today's times go while somebody is out driving tonight's run: one
    * driver cannot do both. Tomorrow's stay. See lib/one-driver.ts.
    */
-  const [slots, packed, skincareShelf, pharmacyShelf, quotes, openers] = await Promise.all([
+  const [slots, packed, skincareShelf, pharmacyShelf, quotes, openers, nudge] =
+    await Promise.all([
     sameDayOn
       ? hoursByDay().then((hours) =>
           carsOnOffer(
@@ -105,6 +106,10 @@ export default async function HomePage() {
     pharmacyOn(settings) ? pharmacyShop() : Promise.resolve(null),
     shownSays(settings.google_quotes),
     openOffers().catch(() => []),
+    /* The promotion that is on today, for the card above the button. A
+       flyer promising two thousand delivery on a Friday lands somebody on
+       this page, and until now the page said nothing about it. */
+    offerNudge().catch(() => null),
   ]);
 
   /*
@@ -482,6 +487,9 @@ export default async function HomePage() {
        * The ladder goes with it, struck through, so somebody arriving
        * today reads two thousand as today rather than as normal.
        */
+      todayOffer={
+        nudge && nudge.today ? { badge: nudge.badge, where: nudge.where } : null
+      }
       arrivalFee={arrival.fee}
       arrivalWas={arrival.was ?? 0}
       fees={bandTable(null, bands).map((row, at, all) => ({

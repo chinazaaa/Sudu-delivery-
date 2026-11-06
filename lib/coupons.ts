@@ -1090,7 +1090,26 @@ export type Nudge = {
   /** Where to send somebody who wants it. One entry per counter, or a single
    *  entry for the whole menu when the offer names no counter. */
   go: { label: string; href: string }[];
+  /** Whether today in Lagos is one of the days it runs on. A Friday offer
+   *  is a promise about Friday, and the line along the top of the shop is
+   *  read by somebody standing in the day it is about. */
+  today: boolean;
+  /** "Fridays", or empty where it runs every day. */
+  days: string;
 };
+
+/** Whether a promotion's own dates cover this minute. */
+function inSeasonNow(offer: LiveOffer, now: Date = new Date()): boolean {
+  if (offer.startsAt) {
+    const from = new Date(offer.startsAt);
+    if (Number.isFinite(from.getTime()) && from > now) return false;
+  }
+  if (offer.expiresAt) {
+    const to = new Date(offer.expiresAt);
+    if (Number.isFinite(to.getTime()) && to <= now) return false;
+  }
+  return true;
+}
 
 /**
  * The promotion worth interrupting somebody for, or nothing.
@@ -1144,6 +1163,8 @@ export async function offerNudge(): Promise<Nudge | null> {
     badge: offerBadge(offer),
     where,
     detail,
+    today: onItsDay(offer.onDays) && inSeasonNow(offer),
+    days: daysSaid(offer.onDays),
     // One button per counter only while there are few enough for that to be
     // a choice. Past two it is a wall of chips naming an arbitrary three of
     // seven places, so it becomes one button to the menu, where all of them

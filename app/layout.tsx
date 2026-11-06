@@ -290,6 +290,30 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     : [null, "", []];
   const perk = running.length > 0 ? null : welcome;
 
+  /*
+   * The promotion that is on today, along the top of every page.
+   *
+   * A flyer goes out saying pizza and ice cream Friday, two thousand
+   * delivery, and somebody who reads it and opens the shop lands on a
+   * page that mentions none of it. The one line that is already on every
+   * page is where that belongs, and it was only ever able to carry a
+   * typed code.
+   *
+   * Only on the days the offer actually runs. A Friday offer announced on
+   * a Thursday is the complaint from the other direction: a promise
+   * somebody carries to the checkout and does not get.
+   */
+  const onNow =
+    nudge && nudge.today
+      ? {
+          code: nudge.code,
+          line: nudge.where === ""
+            ? `${nudge.badge} today`
+            : `${nudge.badge} today from ${nudge.where}`,
+          automatic: true,
+        }
+      : null;
+
   // The square goes to the one address that asks the phone which store it
   // wants. A printed code is scanned by both kinds of phone, and one that
   // only ever opens the App Store is wrong half the time.
@@ -413,7 +437,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Each line of the footer is there because something is set. Empty
             it in admin and it goes. */}
         <ShopOnly>
-          <Ribbon text={ribbon?.text ?? ""} href={ribbon?.href ?? ""} offer={offer} />
+          {/* The live promotion wins the line where there is one: it is
+              today's news and the shop's own standing words are not, and
+              two of them on one line is a line nobody finishes. */}
+          <Ribbon
+            text={onNow ? "" : (ribbon?.text ?? "")}
+            href={onNow ? "" : (ribbon?.href ?? "")}
+            offer={onNow ?? offer}
+            go={onNow ? "/deals" : ""}
+          />
           {/* A break, said on the way in.
 
               Without it the shop simply has fewer days in its selector,

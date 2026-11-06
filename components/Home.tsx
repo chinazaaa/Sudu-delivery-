@@ -6,6 +6,7 @@ import CartBar from "./CartBar";
 import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
 import ArrivalStrip from "./ArrivalStrip";
+import TodaysOffer from "./TodaysOffer";
 import Drawing from "./Drawing";
 import GoogleSays, { GoogleChip } from "./GoogleSays";
 import type { GoogleQuote } from "@/lib/settings";
@@ -59,6 +60,7 @@ export default function Home({
   fees = [],
   arrivalFee = 0,
   arrivalWas = 0,
+  todayOffer = null,
   areaExtras = [],
   award = "",
   where = "",
@@ -106,6 +108,9 @@ export default function Home({
   /** What the thing in the ticket actually costs: the run ladder for a run,
    *  the same day ladder for a car of its own. */
   arrivalFee?: number;
+  /** The promotion that is on today, for the card above the button. Null
+   *  on a day nothing is on, and then nothing is drawn. */
+  todayOffer?: { badge: string; where: string } | null;
   /** The ladder with nothing taken off, where a promotion beats it. Shown
    *  struck through beside the figure, so two thousand reads as today
    *  rather than as what delivery normally costs. Zero means no promotion
@@ -372,6 +377,11 @@ export default function Home({
                   restaurants in one order, pay once, and collect it at your
                   hostel block.
                 </p>
+                {/* Above the button, because somebody who came here off a
+                    flyer came for this rather than for the headline. */}
+                {todayOffer && (
+                  <TodaysOffer badge={todayOffer.badge} where={todayOffer.where} />
+                )}
                 <div className="flex flex-wrap gap-3">
                   <Link href="/products" className="btn-primary w-full text-lg sm:w-auto">
                     Start an order
