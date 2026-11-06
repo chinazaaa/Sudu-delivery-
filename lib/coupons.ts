@@ -1281,7 +1281,10 @@ export async function offerNudge(onDay = ""): Promise<Nudge | null> {
      * said by its day, "on Monday", because there is no habit to learn.
      */
     said: standing
-      ? everySaid(offer.onDays) || daySaidFor(later?.day ?? "", lagosToday())
+      ? (comesRoundAgain(offer.onDays, offer.expiresAt, lagosToday(), offer.startsAt)
+          ? everySaid(offer.onDays)
+          : thisTimeSaid(offer.onDays)) ||
+        daySaidFor(later?.day ?? "", lagosToday())
       : daySaidFor(onDay, lagosToday()),
     headline: offer.headline ?? "",
     standing,
@@ -1419,7 +1422,12 @@ export async function deliveryOffers(): Promise<DeliveryOffer[]> {
         code: offer.code,
         fee: offer.fee,
         was: offer.fee < ladder ? ladder : 0,
-        days: daysSaid(offer.onDays),
+        /* "Fridays" for a habit, "This Saturday and Sunday only" for an
+           offer that happens once: said the same way, a weekend promo
+           reads as a standing arrangement. */
+        days: comesRoundAgain(offer.onDays, offer.expiresAt, lagosToday(), offer.startsAt)
+          ? daysSaid(offer.onDays)
+          : thisTimeSaid(offer.onDays),
         left: leftToRun(offer.expiresAt, now),
         places,
         firstOrderOnly: offer.firstOrderOnly,
@@ -1502,4 +1510,64 @@ export function daySaidFor(date: string, today: string): string {
   if (days === 1) return "tomorrow";
   const name = DAY_SAID[["sun", "mon", "tue", "wed", "thu", "fri", "sat"][at.getUTCDay()] ?? ""];
   return name ? `on ${name}` : "";
+}
+
+/**
+ * Whether an offer comes round more than once before its dates run out.
+ *
+ * "Saturdays and Sundays" is a promise about every weekend, and an offer
+ * that expires on Sunday night is a promise about this one. Both were
+ * said the same way, so a weekend promo read as a standing arrangement
+ * and the Friday one read as nothing special.
+ *
+ * Counted rather than configured: the days it runs on and the date it
+ * ends are already written down, and between them they say which kind of
+ * offer it is. No end date is a standing offer by definition.
+ */
+export function comesRoundAgain(
+  onDays: string | null | undefined,
+  expiresAt: string | null | undefined,
+  from: string,
+  startsAt: string | null | undefined = null
+): boolean {
+  const named = String(onDays ?? "")
+    .toLowerCase()
+    .split(",")
+    .map((one) => one.trim())
+    .filter((one) => (OFFER_DAYS as readonly string[]).includes(one));
+  // No days of its own is either on or over, and neither is a weekday
+  // habit anybody can learn.
+  if (named.length === 0) return false;
+  if (!expiresAt) return true;
+
+  const start = new Date(`${from}T12:00:00Z`);
+  if (!Number.isFinite(start.getTime())) return false;
+
+  let seen = 0;
+  for (let ahead = 0; ahead <= 60; ahead++) {
+    const day = new Date(start.getTime() + ahead * 86_400_000).toISOString().slice(0, 10);
+    if (!seasonCovers(startsAt, expiresAt, day)) continue;
+    if (!dayMatches(onDays, day)) continue;
+    seen++;
+    // One full turn of its own days is once. More than that is a habit.
+    if (seen > named.length) return true;
+  }
+  return false;
+}
+
+/** "This Saturday and Sunday", for an offer that happens once. */
+export function thisTimeSaid(onDays: string | null | undefined): string {
+  const named = String(onDays ?? "")
+    .toLowerCase()
+    .split(",")
+    .map((one) => one.trim())
+    .filter((one) => (OFFER_DAYS as readonly string[]).includes(one));
+  if (named.length === 0 || named.length === 7) return "";
+
+  const words = OFFER_DAYS.filter((day) => named.includes(day)).map((day) => DAY_SAID[day]);
+  const list =
+    words.length === 1
+      ? words[0]
+      : `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
+  return `This ${list} only`;
 }

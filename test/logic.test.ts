@@ -10,7 +10,7 @@ import {
 } from "../lib/deals";
 import { soundsUrgent } from "../lib/bot-match";
 import { REFERRAL_REWARD, creditToUse, shareText } from "../lib/referrals";
-import { comingRound, daySaidFor, daysSaid, everySaid, leftToRun, offerTrouble, onItsDay } from "../lib/coupons";
+import { comesRoundAgain, comingRound, daySaidFor, daysSaid, everySaid, leftToRun, offerTrouble, onItsDay, thisTimeSaid } from "../lib/coupons";
 import { asksNothing, blanketFee, dayMatches, dayOfDate, floorFee, seasonCovers } from "../lib/offers";
 import { backFromCounter, stillShopping } from "../lib/stages";
 import { cookingLine } from "../lib/push";
@@ -8212,4 +8212,31 @@ test("the shop names the next deal there is, so people learn the habit", () => {
   // Every day is not a habit worth naming, and neither is none.
   assert.equal(everySaid(""), "");
   assert.equal(everySaid("mon,tue,wed,thu,fri,sat,sun"), "");
+});
+
+test("a weekend promo is not a standing arrangement", () => {
+  const friday = "2026-11-06";
+
+  /*
+   * The shop's two real offers. Fridays runs to the end of the month and
+   * comes round four more times; the weekend one ends on Sunday night and
+   * happens once. Said the same way, the weekend promo read as every
+   * weekend and the Friday one read as nothing special.
+   */
+  assert.equal(comesRoundAgain("fri", "2026-11-30 22:59:59+00", friday), true);
+  assert.equal(comesRoundAgain("sat,sun", "2026-11-08 22:59:59+00", friday), false);
+
+  // No end date is a standing offer by definition.
+  assert.equal(comesRoundAgain("fri", null, friday), true);
+
+  // No days of its own is either on or over, and neither is a habit.
+  assert.equal(comesRoundAgain("", "2026-11-30 22:59:59+00", friday), false);
+
+  // One more turn is a habit; the same turn twice over is not.
+  assert.equal(comesRoundAgain("sat,sun", "2026-11-15 22:59:59+00", friday), true);
+
+  // Said for a person, either way.
+  assert.equal(thisTimeSaid("sat,sun"), "This Saturday and Sunday only");
+  assert.equal(thisTimeSaid("fri"), "This Friday only");
+  assert.equal(thisTimeSaid(""), "");
 });
