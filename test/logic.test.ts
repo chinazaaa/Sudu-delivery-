@@ -10,7 +10,7 @@ import {
 } from "../lib/deals";
 import { soundsUrgent } from "../lib/bot-match";
 import { REFERRAL_REWARD, creditToUse, shareText } from "../lib/referrals";
-import { daySaidFor, daysSaid, leftToRun, offerTrouble, onItsDay } from "../lib/coupons";
+import { comingRound, daySaidFor, daysSaid, everySaid, leftToRun, offerTrouble, onItsDay } from "../lib/coupons";
 import { asksNothing, blanketFee, dayMatches, dayOfDate, floorFee, seasonCovers } from "../lib/offers";
 import { backFromCounter, stillShopping } from "../lib/stages";
 import { cookingLine } from "../lib/push";
@@ -8156,4 +8156,60 @@ test("an offer is announced for the day the food lands, not for the clock", () =
   assert.equal(daySaidFor("", friday), "");
   assert.equal(daySaidFor(saturday, ""), "");
   assert.equal(daySaidFor("not a date", friday), "");
+});
+
+test("the shop names the next deal there is, so people learn the habit", () => {
+  const offer = (over: Partial<Record<string, unknown>> = {}) => ({
+    code: "FRIDAY",
+    note: "",
+    headline: "Pizza and ice cream",
+    fee: 2000,
+    includedItems: null,
+    extraPerItem: 0,
+    places: ["dominos"],
+    items: [],
+    choice: "",
+    sameDay: false,
+    runs: [],
+    onDays: "fri",
+    startsAt: null,
+    expiresAt: null,
+    firstOrderOnly: false,
+    minEach: 1000,
+    ...over,
+  });
+
+  /*
+   * Saturday, with nothing on until Friday. The shop says Friday rather
+   * than nothing: somebody who opens it and buys nothing should still
+   * leave knowing that Friday is the cheap day.
+   */
+  const soon = comingRound([offer()], "2026-11-07");
+  assert.equal(soon?.day, "2026-11-13");
+  assert.equal(soon?.offers.length, 1);
+
+  // A one-off nearer than the weekly one wins: it is the next deal there
+  // is, which is the whole question being asked.
+  const monday = offer({
+    code: "MONDAY",
+    onDays: "mon",
+    headline: "Burgers",
+  });
+  assert.equal(comingRound([offer(), monday], "2026-11-07")?.day, "2026-11-09");
+
+  // An offer whose dates run out before its next day never comes round,
+  // so it is never advertised as a habit.
+  assert.equal(comingRound([offer({ expiresAt: "2026-11-10 00:00:00+00" })], "2026-11-07"), null);
+
+  // Nothing on at all says nothing.
+  assert.equal(comingRound([], "2026-11-07"), null);
+
+  // Said as the habit it is, in the week's own order, singular because a
+  // customer says "every Friday" and not "every Fridays".
+  assert.equal(everySaid("fri"), "Every Friday");
+  assert.equal(everySaid("sat,sun"), "Every Saturday and Sunday");
+  assert.equal(everySaid("mon,wed,fri"), "Every Monday, Wednesday and Friday");
+  // Every day is not a habit worth naming, and neither is none.
+  assert.equal(everySaid(""), "");
+  assert.equal(everySaid("mon,tue,wed,thu,fri,sat,sun"), "");
 });

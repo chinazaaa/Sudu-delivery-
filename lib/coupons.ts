@@ -20,6 +20,15 @@ import { lagosToday, runDateLabel } from "./time";
 
 export type Coupon = {
   code: string;
+  /**
+   * What the offer is about, in the shop's own words.
+   *
+   * Listing the counters says who is in it and nothing about what it is.
+   * The Friday offer is pizza and ice cream, and that is the phrase a
+   * customer is meant to carry around, not four shop signs. Empty falls
+   * back to the names, which is every offer nobody has worded.
+   */
+  headline?: string;
   applies_to: "delivery" | "order" | "fee";
   amount: number;
   note: string;
@@ -273,6 +282,7 @@ export async function liveOffers(): Promise<LiveOffer[]> {
   return live.map((coupon) => ({
     code: coupon.code,
     note: coupon.note,
+    headline: String((coupon as { headline?: string | null }).headline ?? "").trim(),
     // Carried through rather than tested here: only the cart knows which
     // day the food lands on.
     onDays: (coupon as { on_days?: string | null }).on_days ?? "",
@@ -1099,8 +1109,22 @@ export type Nudge = {
   /** "Fridays", or empty where it runs every day. */
   days: string;
   /** The day this is about, said for a person: "today", "tomorrow", "on
-   *  Saturday". Empty where nothing said which day. */
+   *  Saturday", or "Every Friday" for a standing one. Empty where nothing
+   *  said which day. */
   said: string;
+  /** What it is about in the shop's own words, where it has been worded:
+   *  "Pizza and ice cream". Empty falls back to `where`. */
+  headline: string;
+  /**
+   * Whether this is the offer on the next delivery, or a standing promise
+   * about a day further out.
+   *
+   * A shop with nothing on until Friday has a choice between saying
+   * nothing and saying what Friday is. Saying it is how somebody learns
+   * that Friday is the cheap day, which is worth more than one night's
+   * sale: the habit is the point, not the sale.
+   */
+  standing: boolean;
 };
 
 /** Whether a promotion's own dates cover this minute. */
@@ -1114,6 +1138,56 @@ function inSeasonNow(offer: LiveOffer, now: Date = new Date()): boolean {
     if (Number.isFinite(to.getTime()) && to <= now) return false;
   }
   return true;
+}
+
+/**
+ * The next offer there is, and the day it lands on.
+ *
+ * Not only the weekly ones. Somebody opening the shop on a Saturday with
+ * nothing on until Monday should be told about Monday: it is the same
+ * question, asked earlier, and the answer builds towards the day instead
+ * of waiting for it. A lot of people open the shop and buy nothing, and
+ * what they take away from that visit is the only thing this section is
+ * for.
+ *
+ * The soonest day any offer covers, and every offer that covers it, so a
+ * day with two on it still picks the cheapest below.
+ */
+export function comingRound(
+  offers: LiveOffer[],
+  from: string,
+  within = 28
+): { offers: LiveOffer[]; day: string } | null {
+  const start = new Date(`${from}T12:00:00Z`);
+  if (!Number.isFinite(start.getTime())) return null;
+
+  for (let ahead = 1; ahead <= within; ahead++) {
+    const day = new Date(start.getTime() + ahead * 86_400_000).toISOString().slice(0, 10);
+    const on = offers.filter(
+      (one) =>
+        dayMatches(one.onDays, day) && seasonCovers(one.startsAt, one.expiresAt, day)
+    );
+    if (on.length > 0) return { offers: on, day };
+  }
+  return null;
+}
+
+/** "Every Friday", for an offer that comes round every week. Empty for one
+ *  that does not, which is said by its date instead. */
+export function everySaid(onDays: string | null | undefined): string {
+  const named = String(onDays ?? "")
+    .toLowerCase()
+    .split(",")
+    .map((one) => one.trim())
+    .filter((one) => (OFFER_DAYS as readonly string[]).includes(one));
+  if (named.length === 0 || named.length === 7) return "";
+
+  const words = OFFER_DAYS.filter((day) => named.includes(day)).map((day) => DAY_SAID[day]);
+  const list =
+    words.length === 1
+      ? words[0]
+      : `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
+  return `Every ${list}`;
 }
 
 /**
@@ -1143,10 +1217,23 @@ export async function offerNudge(onDay = ""): Promise<Nudge | null> {
       (onDay === "" ? onItsDay(one.onDays) : dayMatches(one.onDays, onDay)) &&
       (onDay === "" ? inSeasonNow(one) : seasonCovers(one.startsAt, one.expiresAt, onDay))
   );
-  if (open.length === 0) return null;
+
+  /*
+   * Nothing on the next delivery, so say what is standing instead.
+   *
+   * A shop with no offer until Friday can say nothing, or it can say what
+   * Friday is. Saying it is how somebody comes to know that Friday is the
+   * cheap day, which is worth more than any one night's sale. It only
+   * speaks for an offer that really will come round again: a weekly one,
+   * inside its own dates, with a date ahead of it that it covers.
+   */
+  const standing = open.length === 0;
+  const later = standing ? comingRound(offers, onDay || lagosToday()) : null;
+  const picked = standing ? (later?.offers ?? []) : open;
+  if (picked.length === 0) return null;
 
   // The one with the lowest fee is the loudest thing on the shop that day.
-  const offer = [...open].sort((a, b) => a.fee - b.fee)[0];
+  const offer = [...picked].sort((a, b) => a.fee - b.fee)[0];
   const places = await placeLinks(offer.places);
 
   // The offer names a counter that is switched off. Announcing it would send
@@ -1186,9 +1273,18 @@ export async function offerNudge(onDay = ""): Promise<Nudge | null> {
     where,
     detail,
     // It reached here, so it covers the day being asked about.
-    today: true,
+    today: !standing,
     days: daysSaid(offer.onDays),
-    said: daySaidFor(onDay, lagosToday()),
+    /*
+     * A weekly offer is said as the habit it is, "Every Friday", because
+     * that is the thing worth remembering. One that only happens once is
+     * said by its day, "on Monday", because there is no habit to learn.
+     */
+    said: standing
+      ? everySaid(offer.onDays) || daySaidFor(later?.day ?? "", lagosToday())
+      : daySaidFor(onDay, lagosToday()),
+    headline: offer.headline ?? "",
+    standing,
     // One button per counter only while there are few enough for that to be
     // a choice. Past two it is a wall of chips naming an arbitrary three of
     // seven places, so it becomes one button to the menu, where all of them

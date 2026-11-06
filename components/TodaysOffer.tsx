@@ -21,17 +21,26 @@ export default function TodaysOffer({
   badge,
   where,
   said = "",
+  headline = "",
+  standing = false,
   href = "/deals",
 }: {
   /** "₦2,000 delivery". */
   badge: string;
   /** The counters, already shortened: "Domino's Pizza, Panarottis and 2 more". */
   where: string;
-  /** The day it is about: "today", "tomorrow", "on Saturday". The run it
-   *  belongs to, not the clock: once tonight's has closed the soonest
-   *  food anybody can order is tomorrow's, and saying today sells
-   *  something nobody can buy. */
+  /** The day it is about: "today", "tomorrow", "on Saturday", "Every
+   *  Friday". The run it belongs to, not the clock: once tonight's has
+   *  closed the soonest food anybody can order is tomorrow's, and saying
+   *  today sells something nobody can buy. */
   said?: string;
+  /** What it is about in the shop's own words: "Pizza and ice cream".
+   *  Empty falls back to naming the counters. */
+  headline?: string;
+  /** Whether this is a promise about a day further out rather than the
+   *  offer on the next delivery. Said more quietly: it is information,
+   *  not a sale closing tonight. */
+  standing?: boolean;
   href?: string;
 }) {
   if (badge === "") return null;
@@ -39,7 +48,9 @@ export default function TodaysOffer({
   return (
     <Link
       href={href}
-      className="group block rounded-2xl border-2 border-ink bg-volt p-3.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition hover:-translate-y-0.5"
+      className={`group block rounded-2xl border-2 border-ink p-3.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition hover:-translate-y-0.5 ${
+        standing ? "bg-paper" : "bg-volt"
+      }`}
     >
       <span className="ticket block text-ink/70">
         {said === "today" ? "Today only" : said === "" ? "On offer" : said}
@@ -49,9 +60,12 @@ export default function TodaysOffer({
           {badge}
         </span>
       </span>
-      {where !== "" && (
+      {(headline || where) !== "" && (
         <span className="block pt-1 text-[15px] font-semibold leading-snug text-ink/80">
-          {where}
+          {/* What it is, where the shop has said what it is. The counter
+              names say who is in it and nothing about what it is, and
+              "pizza and ice cream" is the phrase meant to be remembered. */}
+          {headline || where}
           <span aria-hidden className="pl-1.5 text-ink/50 group-hover:text-ink">
             →
           </span>

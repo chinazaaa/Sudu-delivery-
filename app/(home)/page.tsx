@@ -490,7 +490,15 @@ export default async function HomePage() {
        * today reads two thousand as today rather than as normal.
        */
       todayOffer={
-        nudge ? { badge: nudge.badge, where: nudge.where, said: nudge.said } : null
+        nudge
+          ? {
+              badge: nudge.badge,
+              where: nudge.where,
+              said: nudge.said,
+              headline: nudge.headline,
+              standing: nudge.standing,
+            }
+          : null
       }
       arrivalFee={arrival.fee}
       arrivalWas={arrival.was ?? 0}

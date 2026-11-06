@@ -312,7 +312,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     nudge && nudge.today
       ? {
           code: nudge.code,
-          line: [nudge.badge, nudge.said, nudge.where === "" ? "" : `from ${nudge.where}`]
+          /* What it is where the shop has worded it, the counters where
+             it has not, and the day either way. */
+          line: [
+            nudge.badge,
+            nudge.said,
+            nudge.headline !== ""
+              ? `on ${nudge.headline.toLowerCase()}`
+              : nudge.where === ""
+                ? ""
+                : `from ${nudge.where}`,
+          ]
             .filter(Boolean)
             .join(" "),
           automatic: true,

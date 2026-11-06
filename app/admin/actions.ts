@@ -3223,6 +3223,10 @@ export async function saveCoupon(form: FormData): Promise<void> {
     code,
     applies_to: effect === "order" || effect === "fee" ? effect : "delivery",
     amount,
+    // What the offer is about, for the shop rather than for the books.
+    // Naming the counters says who is in it; this says what it is, which
+    // is the half a customer remembers.
+    headline: String(form.get("headline") ?? "").trim().slice(0, 60),
     // A promotion applies itself; a code is typed. Nothing else about them
     // differs, which is why they live in one table.
     automatic: effect === "fee",

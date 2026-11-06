@@ -27,6 +27,8 @@ export type CouponFormValues = {
   applies_to: "delivery" | "order" | "fee";
   amount: number;
   note: string;
+  /** What the offer is about, for customers: "Pizza and ice cream". */
+  headline?: string;
   active: boolean;
   first_order_only: boolean;
   starts_at: string | null;
@@ -221,6 +223,26 @@ export default function CouponForm({
             className={`field field-admin uppercase ${editing ? "bg-wash text-muted" : ""}`}
           />
           {sets && <p className="hint mt-1">Nobody types this one.</p>}
+        </div>
+
+        <div>
+          <label className="label" htmlFor={id("headline")}>
+            What it is, for customers
+          </label>
+          <input
+            id={id("headline")}
+            name="headline"
+            defaultValue={values?.headline ?? ""}
+            placeholder="Pizza and ice cream"
+            className="field field-admin"
+          />
+          <p className="hint pt-1">
+            {/* Naming the counters says who is in it and nothing about what
+                it is. The phrase here is the one a customer is meant to
+                carry around: pizza and ice cream, not four shop signs. */}
+            Shown on the shop in place of the counter names. Leave it empty
+            and the counters are named instead.
+          </p>
         </div>
 
         <div>

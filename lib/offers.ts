@@ -20,6 +20,10 @@ import { naira } from "./money";
 export type LiveOffer = {
   code: string;
   note: string;
+  /** What the offer is about, in the shop's own words: "Pizza and ice
+   *  cream". Empty falls back to naming the counters, which says who is
+   *  in it and nothing about what it is. */
+  headline?: string;
   fee: number;
   includedItems: number | null;
   extraPerItem: number;

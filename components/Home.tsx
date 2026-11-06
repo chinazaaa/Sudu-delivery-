@@ -110,7 +110,13 @@ export default function Home({
   arrivalFee?: number;
   /** The promotion that is on today, for the card above the button. Null
    *  on a day nothing is on, and then nothing is drawn. */
-  todayOffer?: { badge: string; where: string; said: string } | null;
+  todayOffer?: {
+    badge: string;
+    where: string;
+    said: string;
+    headline: string;
+    standing: boolean;
+  } | null;
   /** The ladder with nothing taken off, where a promotion beats it. Shown
    *  struck through beside the figure, so two thousand reads as today
    *  rather than as what delivery normally costs. Zero means no promotion
@@ -384,6 +390,8 @@ export default function Home({
                     badge={todayOffer.badge}
                     where={todayOffer.where}
                     said={todayOffer.said}
+                    headline={todayOffer.headline}
+                    standing={todayOffer.standing}
                   />
                 )}
                 <div className="flex flex-wrap gap-3">
