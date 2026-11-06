@@ -319,11 +319,19 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   // an ice cream shop still drops to the end on the runs where it is.
   const onIce = await itemsNeedingIce().catch(() => new Set<string>());
 
+  // Tonight's own arrangement where there is one, otherwise the road the
+  // shop usually drives. Only the alphabet after that, which is nobody's
+  // route.
+  const houseRoute = usualRoute((await safeSettings().catch(() => null))?.route_stops);
+  // And the counters bought at a second branch when somebody else is on
+  // the run, which no fixed route can say on its own.
+  const pairs = await besideStops().catch(() => new Map<string, string>());
   const counterLines = groupForCounter(
     lines.filter((l) => paidIds.has(l.order_id)),
-    batch.stop_order ?? null,
+    batch.stop_order ?? (houseRoute.length > 0 ? houseRoute : null),
     goLast,
-    onIce
+    onIce,
+    pairs
   );
   const everyLine = counterLines.flatMap((place) => place.lines);
   const reconciled = everyLine.filter((line) => spentOn.has(line.key));
@@ -413,9 +421,10 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
     batch,
     counter: groupForCounter(
       lines.filter((l) => paidIds.has(l.order_id)),
-      batch.stop_order ?? null,
+      batch.stop_order ?? (houseRoute.length > 0 ? houseRoute : null),
       goLast,
-      onIce
+      onIce,
+      pairs
     ).map(
       (place) => ({
         ...place,
@@ -700,6 +709,92 @@ export async function meltingStops(): Promise<string[]> {
  * Orders collapsed by restaurant into totals. This is what she reads aloud at
  * the counter, so it is one line per distinct item, not one per order.
  */
+/**
+ * The order the shop is usually driven, as counter names.
+ *
+ * A run that nobody has arranged falls back to this rather than to the
+ * alphabet, which is how Cold Stone used to lead a route that ends at
+ * Cold Stone. Written by arranging any run's stops, so the shop learns
+ * its own road once and every run after that starts on it.
+ */
+export function usualRoute(route: string | null | undefined): string[] {
+  return String(route ?? "")
+    .split("\n")
+    .map((one) => one.trim())
+    .filter((one) => one !== "");
+}
+
+/**
+ * The usual route, updated by what somebody just arranged on one run.
+ *
+ * The stops they touched are authoritative and slot in where they were
+ * put. Counters that run did not hold keep their standing place around
+ * them, because a quiet run holding three stops knows nothing about the
+ * other eight and must not throw away what a busy one taught us.
+ *
+ * Walked rather than appended: wherever the standing route holds one of
+ * the arranged counters, the arranged list is spent there in its own
+ * order, so the block moves as a block and everything else stays put.
+ */
+/**
+ * Counters bought at a second branch when somebody else is on the run.
+ *
+ * Read as names rather than ids because the run sheet groups by the name
+ * on the order line, which is the same reason `meltingStops` does.
+ */
+export async function besideStops(): Promise<Map<string, string>> {
+  try {
+    const { data, error } = await db()
+      .from("restaurants")
+      .select("name, beside_id")
+      .not("beside_id", "is", null);
+    if (error) return new Map();
+
+    const rows = (data ?? []) as { name: string; beside_id: string }[];
+    if (rows.length === 0) return new Map();
+
+    const { data: leaders } = await db()
+      .from("restaurants")
+      .select("id, name")
+      .in("id", rows.map((one) => one.beside_id));
+    const named = new Map(
+      ((leaders ?? []) as { id: string; name: string }[]).map((one) => [one.id, one.name])
+    );
+
+    const pairs = new Map<string, string>();
+    for (const row of rows) {
+      const leader = named.get(row.beside_id);
+      // A counter cannot follow itself, and a name nobody has is no rule.
+      if (!leader || leader === row.name) continue;
+      pairs.set(row.name, leader);
+    }
+    return pairs;
+  } catch {
+    // No pairing is the route as it was, which is the safe way to be wrong.
+    return new Map();
+  }
+}
+
+export function mergeRoute(known: string[], arranged: string[]): string[] {
+  if (arranged.length === 0) return [...known];
+
+  const touched = new Set(arranged);
+  const next: string[] = [];
+  let taken = 0;
+
+  for (const stop of known) {
+    if (touched.has(stop)) {
+      if (taken < arranged.length) next.push(arranged[taken++]);
+      continue;
+    }
+    next.push(stop);
+  }
+  while (taken < arranged.length) next.push(arranged[taken++]);
+
+  const seen = new Set<string>();
+  return next.filter((one) => (seen.has(one) ? false : (seen.add(one), true)));
+}
+
 export function groupForCounter(
   lines: OrderLine[],
   /** The order this run is actually driven in, when somebody has arranged
@@ -712,7 +807,10 @@ export function groupForCounter(
   /** The dishes that travel with a bag of ice, by id. A stop holding one
    *  of them tonight drops to the end of the route, behind everything
    *  except the counters that melt by trade. */
-  needsIce: Set<string> = new Set()
+  needsIce: Set<string> = new Set(),
+  /** Counters bought at a second branch when somebody else is on the run,
+   *  by name. See `sortStops`. */
+  beside: Map<string, string> = new Map()
 ): CounterGroup[] {
   const byRestaurant = new Map<string, Map<string, CounterLine>>();
 
@@ -771,7 +869,8 @@ export function groupForCounter(
     groups,
     stopOrder,
     goLast,
-    groups.filter((one) => one.chills).map((one) => one.restaurant)
+    groups.filter((one) => one.chills).map((one) => one.restaurant),
+    beside
   );
 }
 
@@ -795,7 +894,18 @@ export function sortStops<T extends { restaurant: string }>(
   goLast: string[] = [],
   /** Counters carrying something that needs ice on this run. They go after
    *  everything else and before the ones that melt by trade. */
-  chilled: string[] = []
+  chilled: string[] = [],
+  /**
+   * Counters with a second branch, by name, pointing at the counter whose
+   * presence moves them to it.
+   *
+   * KFC is in Sky Mall and in Novare. On a run that already stops at
+   * Chicken Republic in Sky Mall, the KFC beside it is free; with no
+   * Chicken Republic on the run that trip is a detour and the Novare
+   * branch is the one to use. So the stop moves depending on who else is
+   * being bought, which a fixed route cannot say.
+   */
+  beside: Map<string, string> = new Map()
 ): T[] {
   const place = new Map((stopOrder ?? []).map((name, index) => [name, index]));
   const last = place.size;
@@ -818,7 +928,7 @@ export function sortStops<T extends { restaurant: string }>(
    */
   const rank = (name: string) => (melts.has(name) ? 2 : chills.has(name) ? 1 : 0);
 
-  return [...groups].sort((a, b) => {
+  const sorted = [...groups].sort((a, b) => {
     const mine = rank(a.restaurant);
     const theirs = rank(b.restaurant);
     if (mine !== theirs) return mine - theirs;
@@ -829,6 +939,33 @@ export function sortStops<T extends { restaurant: string }>(
       ? a.restaurant.localeCompare(b.restaurant)
       : left - right;
   });
+
+  /*
+   * Then the counters that follow somebody else to a different branch.
+   *
+   * Only where the one they follow is actually on this run, which is the
+   * whole point: present, and they are the same stop; absent, and the
+   * route's own order stands and they are bought wherever they normally
+   * are.
+   *
+   * Never moved across the melting tiers. A tub of ice cream is last
+   * because it is a tub of ice cream, and being next door to somewhere
+   * does not change that.
+   */
+  const here = new Set(sorted.map((one) => one.restaurant));
+  for (const [follower, leader] of beside) {
+    if (!here.has(follower) || !here.has(leader)) continue;
+
+    const from = sorted.findIndex((one) => one.restaurant === follower);
+    const to = sorted.findIndex((one) => one.restaurant === leader);
+    if (from === -1 || to === -1) continue;
+    if (rank(follower) !== rank(leader)) continue;
+
+    const [moved] = sorted.splice(from, 1);
+    sorted.splice(sorted.findIndex((one) => one.restaurant === leader) + 1, 0, moved);
+  }
+
+  return sorted;
 }
 
 export type Commission = {

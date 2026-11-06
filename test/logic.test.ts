@@ -134,7 +134,7 @@ import { kitchenTotals } from "../lib/profit";
 import { templateFor } from "../lib/messages";
 import { EMPTY } from "../lib/settings";
 import { test } from "node:test";
-import { chargedByRestaurant, groupForCounter, sortStops } from "../lib/admin";
+import { chargedByRestaurant, groupForCounter, mergeRoute, sortStops, usualRoute } from "../lib/admin";
 import { bare, spellings } from "../lib/admin-search";
 import { inWords } from "../lib/counts";
 import { fareFor, parseFares, putOnCard, serialiseFares } from "../lib/transport";
@@ -8021,4 +8021,123 @@ test("how long a delivery offer has, said the way a counter's sale says it", () 
   assert.equal(leftToRun(null, now), "");
   assert.equal(leftToRun("", now), "");
   assert.equal(leftToRun("not a date", now), "");
+});
+
+test("the shop learns the road it is actually driven", () => {
+  // Nothing known yet: the first arrangement is the whole route.
+  assert.deepEqual(
+    mergeRoute([], ["Chicken Republic", "KFC", "Domino's Pizza"]),
+    ["Chicken Republic", "KFC", "Domino's Pizza"]
+  );
+
+  /*
+   * A quiet run must not throw away what a busy one taught us.
+   *
+   * The road is Sky Mall, then Novare, then the two beside it. A run
+   * holding only three of those counters arranges those three and knows
+   * nothing about the rest, so the rest keep their places around them.
+   */
+  const road = [
+    "Chicken Republic",
+    "KFC",
+    "Dodo Pizza",
+    "Krispy Kreme",
+    "Burger King",
+    "Domino's Pizza",
+    "Cold Stone Creamery",
+  ];
+  assert.deepEqual(
+    mergeRoute(road, ["KFC", "Chicken Republic"]),
+    [
+      // The two swapped between themselves, in the places those two held.
+      "KFC",
+      "Chicken Republic",
+      "Dodo Pizza",
+      "Krispy Kreme",
+      "Burger King",
+      "Domino's Pizza",
+      "Cold Stone Creamery",
+    ]
+  );
+
+  // A counter the road has never seen joins at the end rather than
+  // vanishing: a missing stop is food nobody buys.
+  assert.deepEqual(
+    mergeRoute(road, ["Chicken Republic", "The Place"]),
+    [...road, "The Place"]
+  );
+
+  // Arranging nothing changes nothing.
+  assert.deepEqual(mergeRoute(road, []), road);
+
+  // The same counter twice is one stop: the list is a road, not a tally.
+  assert.deepEqual(
+    mergeRoute(["KFC", "KFC", "Domino's Pizza"], ["Domino's Pizza", "KFC"]),
+    ["Domino's Pizza", "KFC"]
+  );
+
+  // What is written down, read back: blank lines and stray spaces are not
+  // counters, and an empty setting is simply no road yet.
+  assert.deepEqual(usualRoute("Chicken Republic\n  KFC  \n\nDomino's Pizza"), [
+    "Chicken Republic",
+    "KFC",
+    "Domino's Pizza",
+  ]);
+  assert.deepEqual(usualRoute(""), []);
+  assert.deepEqual(usualRoute(null), []);
+});
+
+test("a counter with two branches is bought at whichever is on the way", () => {
+  const run = (names: string[]) => names.map((restaurant) => ({ restaurant }));
+  const road = [
+    "Chicken Republic",
+    "KFC",
+    "Dodo Pizza",
+    "Domino's Pizza",
+    "Cold Stone Creamery",
+  ];
+  // KFC follows Chicken Republic to Sky Mall when it is on the run.
+  const beside = new Map([["KFC", "Chicken Republic"]]);
+
+  /*
+   * Sky Mall is already a stop, so the KFC beside it is free and is
+   * bought there, directly after it.
+   */
+  assert.deepEqual(
+    sortStops(run(["Domino's Pizza", "KFC", "Chicken Republic"]), road, [], [], beside).map(
+      (one) => one.restaurant
+    ),
+    ["Chicken Republic", "KFC", "Domino's Pizza"]
+  );
+
+  /*
+   * No Chicken Republic on the run, so Sky Mall is a detour: KFC keeps
+   * its own place on the road and is bought at Novare.
+   */
+  assert.deepEqual(
+    sortStops(run(["Domino's Pizza", "KFC"]), road, [], [], beside).map((one) => one.restaurant),
+    ["KFC", "Domino's Pizza"]
+  );
+
+  /*
+   * Ice cream is last because it is ice cream. Being next door to
+   * somewhere does not change that, so a pairing never lifts a counter
+   * out of the melting tier.
+   */
+  const melting = sortStops(
+    run(["Cold Stone Creamery", "KFC", "Chicken Republic"]),
+    road,
+    ["Cold Stone Creamery"],
+    [],
+    new Map([["Cold Stone Creamery", "Chicken Republic"]])
+  ).map((one) => one.restaurant);
+  assert.equal(melting[melting.length - 1], "Cold Stone Creamery");
+
+  // No pairing at all leaves the road exactly as it was.
+  assert.deepEqual(
+    sortStops(run(["Domino's Pizza", "KFC", "Chicken Republic"]), road).map(
+      (one) => one.restaurant
+    ),
+    ["Chicken Republic", "KFC", "Domino's Pizza"]
+  );
 });

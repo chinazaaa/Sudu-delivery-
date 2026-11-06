@@ -161,6 +161,18 @@ export type Settings = {
    *  is for the other fifty weeks. */
   deals_headline: string;
   /**
+   * The order the shop is driven, as counter names, one per line.
+   *
+   * Written by arranging any run's stops: the arrows answer "tonight" and
+   * this is what "tonight" taught us about every night. Not the same fact
+   * as the area, which is how far the food is coming and so what it
+   * costs: four counters in one mall are one stop and four prices.
+   *
+   * A counter not on the list keeps its place at the end, alphabetically,
+   * so a kitchen added this morning appears rather than disappears.
+   */
+  route_stops: string;
+  /**
    * The coupon a promoter's own link carries: open sudu.store/s/ada and it
    * applies itself at the checkout.
    *
@@ -344,6 +356,7 @@ export const EMPTY: Settings = {
   run_last_hour: "",
   offer_code: "",
   deals_headline: "",
+  route_stops: "",
   promoter_perk_code: "",
   show_perk_strip: false,
   auto_headline: "",

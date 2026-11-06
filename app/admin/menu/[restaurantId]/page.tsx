@@ -202,6 +202,37 @@ export default async function RestaurantAdmin({
             On the site
           </label>
         </div>
+        {/* A counter with more than one branch, bought at whichever is on
+            the way. KFC is in Sky Mall and in Novare: on a run already
+            stopping at Chicken Republic in Sky Mall the one beside it is
+            free, and with no Chicken Republic that trip is a detour and
+            Novare is the branch to use. So the stop moves depending on who
+            else is being bought, which a fixed route cannot say. */}
+        <div>
+          <label className="label" htmlFor="beside_id">
+            Bought beside
+          </label>
+          <select
+            id="beside_id"
+            name="beside_id"
+            defaultValue={(restaurant as { beside_id?: string | null }).beside_id ?? ""}
+            className="input"
+          >
+            <option value="">Always the same branch</option>
+            {(siblings ?? [])
+              .filter((one) => one.id !== restaurant.id)
+              .map((one) => (
+                <option key={one.id} value={one.id}>
+                  When {one.name} is on the run
+                </option>
+              ))}
+          </select>
+          <p className="hint pt-1">
+            For a counter with a second branch. On a run holding the one you
+            pick, this is bought beside it; otherwise it keeps its own place
+            on the route.
+          </p>
+        </div>
         {/* Which days it opens at all. Nearly every restaurant is all
             seven, so all seven ticked is stored as "every day" and nothing
             has to be set for the ones that never close. D.O Bowls is the

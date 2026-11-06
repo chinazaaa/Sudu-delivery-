@@ -14,7 +14,7 @@ import {
   waitBeforeTrying,
   waitSaid,
 } from "@/lib/admin-gate";
-import { batchSheet, stillOpen } from "@/lib/admin";
+import { batchSheet, mergeRoute, stillOpen } from "@/lib/admin";
 import { db } from "@/lib/supabase";
 import {
   STAGES,
@@ -4219,6 +4219,13 @@ export async function updateRestaurant(form: FormData): Promise<void> {
       // Whether what it sells melts, which puts it last on every run
       // without anybody having to remember on the night.
       melts: form.get("melts") === "on",
+      // The counter whose presence moves this one to its other branch.
+      // Empty is the overwhelming majority: one address, one place on the
+      // route. Never itself, which would be a stop that follows itself.
+      beside_id: (() => {
+        const said = String(form.get("beside_id") ?? "").trim();
+        return said === "" || said === String(form.get("id") ?? "") ? null : said;
+      })(),
       closes_at: String(form.get("closes_at") ?? "").trim() || undefined,
       // All seven, or none ticked, both mean "every day": a restaurant
       // nobody has thought about must behave exactly as it always has.
@@ -4917,7 +4924,51 @@ export async function moveStop(form: FormData): Promise<void> {
   [next[at], next[to]] = [next[to], next[at]];
 
   await db().from("batches").update({ stop_order: next }).eq("id", batchId);
+
+  /*
+   * And the shop learns its own route from it.
+   *
+   * Arranging the stops answers "tonight", and tonight is almost always
+   * the answer to "always": Sky Mall before Novare before the two beside
+   * it, every week, because that is the road. Doing it again on every run
+   * is work the shop can do for itself once somebody has done it once.
+   *
+   * Merged rather than replaced, so a quiet run holding three counters
+   * does not throw away what a busy one taught us about the other eight.
+   * The arranged ones take their new places and everything else keeps its
+   * old one, in the order it already had.
+   */
+  await rememberRoute(next);
   revalidatePath("/admin", "layout");
+}
+
+/**
+ * The usual route, updated by what somebody just arranged.
+ *
+ * The stops they touched are authoritative and slot in where they were
+ * put. Counters the run did not hold are untouched and keep their
+ * standing order around them, because a run with three stops in it knows
+ * nothing about the other eight.
+ */
+async function rememberRoute(arranged: string[]): Promise<void> {
+  if (arranged.length === 0) return;
+  try {
+    const settings = await safeSettings();
+    const known = String(settings.route_stops ?? "")
+      .split("\n")
+      .map((one) => one.trim())
+      .filter((one) => one !== "");
+
+    const tidy = mergeRoute(known, arranged);
+
+    await db()
+      .from("settings")
+      .update({ route_stops: tidy.join("\n"), updated_at: new Date().toISOString() })
+      .eq("id", true);
+  } catch {
+    // The run's own arrangement is saved either way. A house route that
+    // failed to learn is a worse list next time, not a broken run now.
+  }
 }
 
 /** Reorder the home page slider. */
