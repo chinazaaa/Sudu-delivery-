@@ -3,9 +3,11 @@ import {
   choiceCombinations,
   choiceLabels,
   choiceSets,
+  dayMatches,
   offerBadge,
   offerLine,
   pickOffer,
+  seasonCovers,
   type LiveOffer,
   type OfferContext,
 } from "./offers";
@@ -14,7 +16,7 @@ import { activeBands } from "./settings";
 import { headlineFee, type Band } from "./fees";
 import { naira } from "./money";
 import { SLOT_LABEL, type BatchSlot } from "./config";
-import { runDateLabel } from "./time";
+import { lagosToday, runDateLabel } from "./time";
 
 export type Coupon = {
   code: string;
@@ -1096,6 +1098,9 @@ export type Nudge = {
   today: boolean;
   /** "Fridays", or empty where it runs every day. */
   days: string;
+  /** The day this is about, said for a person: "today", "tomorrow", "on
+   *  Saturday". Empty where nothing said which day. */
+  said: string;
 };
 
 /** Whether a promotion's own dates cover this minute. */
@@ -1119,12 +1124,29 @@ function inSeasonNow(offer: LiveOffer, now: Date = new Date()): boolean {
  * is built from the offer itself rather than written anywhere, so an offer
  * that is switched off in admin stops being announced in the same moment.
  */
-export async function offerNudge(): Promise<Nudge | null> {
+export async function offerNudge(onDay = ""): Promise<Nudge | null> {
   const offers = await liveOffers();
   if (offers.length === 0) return null;
 
-  // The one with the lowest fee is the loudest thing on the shop today.
-  const offer = [...offers].sort((a, b) => a.fee - b.fee)[0];
+  /*
+   * Only the offers that cover the day the food actually lands.
+   *
+   * At half past ten on a Friday the Friday run has gone and the soonest
+   * delivery is Saturday's, so Friday's offer is not on sale any more and
+   * the weekend's is. Judged by the day the food arrives, which is the
+   * rule everywhere else and was missing from the one place that
+   * announces it. With no day to go on it falls back to the clock, which
+   * is right for anything asking without a run in front of it.
+   */
+  const open = offers.filter(
+    (one) =>
+      (onDay === "" ? onItsDay(one.onDays) : dayMatches(one.onDays, onDay)) &&
+      (onDay === "" ? inSeasonNow(one) : seasonCovers(one.startsAt, one.expiresAt, onDay))
+  );
+  if (open.length === 0) return null;
+
+  // The one with the lowest fee is the loudest thing on the shop that day.
+  const offer = [...open].sort((a, b) => a.fee - b.fee)[0];
   const places = await placeLinks(offer.places);
 
   // The offer names a counter that is switched off. Announcing it would send
@@ -1163,8 +1185,10 @@ export async function offerNudge(): Promise<Nudge | null> {
     badge: offerBadge(offer),
     where,
     detail,
-    today: onItsDay(offer.onDays) && inSeasonNow(offer),
+    // It reached here, so it covers the day being asked about.
+    today: true,
     days: daysSaid(offer.onDays),
+    said: daySaidFor(onDay, lagosToday()),
     // One button per counter only while there are few enough for that to be
     // a choice. Past two it is a wall of chips naming an arbitrary three of
     // seven places, so it becomes one button to the menu, where all of them
@@ -1333,4 +1357,53 @@ export function leftToRun(expiresAt: string | null | undefined, now: Date = new 
   if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} left`;
   const days = Math.floor(hours / 24);
   return `${days} day${days === 1 ? "" : "s"} left`;
+}
+
+/**
+ * The day the next delivery actually lands.
+ *
+ * Not today. At half past ten on a Friday night the Friday run has gone
+ * and the soonest food anybody can order is Saturday's, so a line saying
+ * "two thousand delivery today" is selling something nobody can buy. The
+ * offer has to be judged against the day the food arrives, which is the
+ * rule everywhere else in the shop and was missing from the one place
+ * that announces it.
+ *
+ * The soonest run whose cut-off has not passed and which is not full.
+ * Cached for a minute because every page asks.
+ */
+async function readNextDeliveryDay(): Promise<string> {
+  try {
+    const { data, error } = await db()
+      .from("batches")
+      .select("run_date, cut_off_at, full")
+      .gte("cut_off_at", new Date().toISOString())
+      .order("run_date", { ascending: true })
+      .limit(8);
+    if (error) return "";
+
+    const rows = (data ?? []) as { run_date: string; full?: boolean }[];
+    const open = rows.find((one) => one.full !== true);
+    return open?.run_date ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export const nextDeliveryDay = unstable_cache(readNextDeliveryDay, ["next-delivery-day"], {
+  revalidate: 60,
+  tags: ["batches"],
+});
+
+/** "today", "tomorrow", or "on Saturday": the day a promise is about. */
+export function daySaidFor(date: string, today: string): string {
+  if (date === "" || today === "") return "";
+  if (date === today) return "today";
+  const at = new Date(`${date}T12:00:00Z`);
+  const now = new Date(`${today}T12:00:00Z`);
+  if (!Number.isFinite(at.getTime()) || !Number.isFinite(now.getTime())) return "";
+  const days = Math.round((at.getTime() - now.getTime()) / 86_400_000);
+  if (days === 1) return "tomorrow";
+  const name = DAY_SAID[["sun", "mon", "tue", "wed", "thu", "fri", "sat"][at.getUTCDay()] ?? ""];
+  return name ? `on ${name}` : "";
 }

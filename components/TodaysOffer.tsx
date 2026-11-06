@@ -20,12 +20,18 @@ import Link from "next/link";
 export default function TodaysOffer({
   badge,
   where,
+  said = "",
   href = "/deals",
 }: {
   /** "₦2,000 delivery". */
   badge: string;
   /** The counters, already shortened: "Domino's Pizza, Panarottis and 2 more". */
   where: string;
+  /** The day it is about: "today", "tomorrow", "on Saturday". The run it
+   *  belongs to, not the clock: once tonight's has closed the soonest
+   *  food anybody can order is tomorrow's, and saying today sells
+   *  something nobody can buy. */
+  said?: string;
   href?: string;
 }) {
   if (badge === "") return null;
@@ -35,7 +41,9 @@ export default function TodaysOffer({
       href={href}
       className="group block rounded-2xl border-2 border-ink bg-volt p-3.5 shadow-[4px_4px_0_0_rgba(0,0,0,1)] transition hover:-translate-y-0.5"
     >
-      <span className="ticket block text-ink/70">Today only</span>
+      <span className="ticket block text-ink/70">
+        {said === "today" ? "Today only" : said === "" ? "On offer" : said}
+      </span>
       <span className="flex flex-wrap items-baseline gap-x-2">
         <span className="font-display text-[min(8vw,2rem)] font-black uppercase leading-none text-ink">
           {badge}

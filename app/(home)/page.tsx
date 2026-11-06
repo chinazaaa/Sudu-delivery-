@@ -23,7 +23,7 @@ import {
 } from "@/lib/settings";
 import { toBatchView } from "@/lib/view";
 import { bandTable } from "@/lib/fees";
-import { offerNudge, openOffers } from "@/lib/coupons";
+import { nextDeliveryDay, offerNudge, openOffers } from "@/lib/coupons";
 import { floorFee } from "@/lib/offers";
 import { collectedFrom, everywhere, parseAreas } from "@/lib/areas";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
@@ -109,7 +109,9 @@ export default async function HomePage() {
     /* The promotion that is on today, for the card above the button. A
        flyer promising two thousand delivery on a Friday lands somebody on
        this page, and until now the page said nothing about it. */
-    offerNudge().catch(() => null),
+    nextDeliveryDay()
+      .then((day) => offerNudge(day))
+      .catch(() => null),
   ]);
 
   /*
@@ -488,7 +490,7 @@ export default async function HomePage() {
        * today reads two thousand as today rather than as normal.
        */
       todayOffer={
-        nudge && nudge.today ? { badge: nudge.badge, where: nudge.where } : null
+        nudge ? { badge: nudge.badge, where: nudge.where, said: nudge.said } : null
       }
       arrivalFee={arrival.fee}
       arrivalWas={arrival.was ?? 0}

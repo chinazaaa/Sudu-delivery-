@@ -10,7 +10,7 @@ import {
 } from "../lib/deals";
 import { soundsUrgent } from "../lib/bot-match";
 import { REFERRAL_REWARD, creditToUse, shareText } from "../lib/referrals";
-import { daysSaid, leftToRun, offerTrouble, onItsDay } from "../lib/coupons";
+import { daySaidFor, daysSaid, leftToRun, offerTrouble, onItsDay } from "../lib/coupons";
 import { asksNothing, blanketFee, dayMatches, dayOfDate, floorFee, seasonCovers } from "../lib/offers";
 import { backFromCounter, stillShopping } from "../lib/stages";
 import { cookingLine } from "../lib/push";
@@ -8140,4 +8140,20 @@ test("a counter with two branches is bought at whichever is on the way", () => {
     ),
     ["Chicken Republic", "KFC", "Domino's Pizza"]
   );
+});
+
+test("an offer is announced for the day the food lands, not for the clock", () => {
+  // Friday. Tonight's run has gone, so the soonest delivery is Saturday.
+  const friday = "2026-11-06";
+  const saturday = "2026-11-07";
+
+  assert.equal(daySaidFor(friday, friday), "today");
+  assert.equal(daySaidFor(saturday, friday), "tomorrow");
+  assert.equal(daySaidFor("2026-11-08", friday), "on Sunday");
+  assert.equal(daySaidFor("2026-11-12", friday), "on Thursday");
+
+  // Nothing to go on says nothing rather than guessing at a day.
+  assert.equal(daySaidFor("", friday), "");
+  assert.equal(daySaidFor(saturday, ""), "");
+  assert.equal(daySaidFor("not a date", friday), "");
 });

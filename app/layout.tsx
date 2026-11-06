@@ -36,7 +36,7 @@ import { cookies } from "next/headers";
 import { WHO_COOKIE } from "@/lib/came-from";
 import { promoterCalledName } from "@/lib/promoters";
 import LinkPerk from "@/components/LinkPerk";
-import { liveOffers } from "@/lib/coupons";
+import { liveOffers, nextDeliveryDay } from "@/lib/coupons";
 import "./globals.css";
 import { openSeasons } from "@/lib/boxes";
 
@@ -205,7 +205,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     publicOffer(settings.offer_code),
     // Read from the offer itself too: an automatic promotion has no code to
     // type, so nobody finds it unless the shop says it is on.
-    offerNudge(),
+    // Judged against the day the food actually lands, not the clock: at
+    // half past ten on a Friday the Friday run has gone and the soonest
+    // delivery is Saturday's.
+    nextDeliveryDay()
+      .then((day) => offerNudge(day))
+      .catch(() => null),
     cookies(),
   ]);
 
@@ -307,9 +312,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     nudge && nudge.today
       ? {
           code: nudge.code,
-          line: nudge.where === ""
-            ? `${nudge.badge} today`
-            : `${nudge.badge} today from ${nudge.where}`,
+          line: [nudge.badge, nudge.said, nudge.where === "" ? "" : `from ${nudge.where}`]
+            .filter(Boolean)
+            .join(" "),
           automatic: true,
         }
       : null;

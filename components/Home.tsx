@@ -110,7 +110,7 @@ export default function Home({
   arrivalFee?: number;
   /** The promotion that is on today, for the card above the button. Null
    *  on a day nothing is on, and then nothing is drawn. */
-  todayOffer?: { badge: string; where: string } | null;
+  todayOffer?: { badge: string; where: string; said: string } | null;
   /** The ladder with nothing taken off, where a promotion beats it. Shown
    *  struck through beside the figure, so two thousand reads as today
    *  rather than as what delivery normally costs. Zero means no promotion
@@ -380,7 +380,11 @@ export default function Home({
                 {/* Above the button, because somebody who came here off a
                     flyer came for this rather than for the headline. */}
                 {todayOffer && (
-                  <TodaysOffer badge={todayOffer.badge} where={todayOffer.where} />
+                  <TodaysOffer
+                    badge={todayOffer.badge}
+                    where={todayOffer.where}
+                    said={todayOffer.said}
+                  />
                 )}
                 <div className="flex flex-wrap gap-3">
                   <Link href="/products" className="btn-primary w-full text-lg sm:w-auto">
