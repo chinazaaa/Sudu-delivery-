@@ -2048,8 +2048,8 @@ export default function Checkout({
             {saidList(stillToCome)} {stillToCome.length === 1 ? "is" : "are"}{" "}
             still ahead of the car, so {stillToCome.length === 1 ? "that" : "those"}{" "}
             can go out today as a last minute order: take the rest out of the
-            cart and it comes tonight. For all of it together, pick the next
-            run or a car of its own below.
+            cart and it comes tonight. For all of it together, pick a day
+            below.
           </p>
         )}
 
@@ -3042,8 +3042,8 @@ export default function Checkout({
             <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
               {/* The way out is named, because "no run" on its own leaves
                   somebody holding a cart with nothing to do about it. */}
-              No run is going to {farNames} just now, and a car of its own
-              cannot get there and back in time.{" "}
+              No delivery is going to {farNames} just now, and we cannot
+              get there and back in time for a faster one.{" "}
               {farLines.length < cart.length && withoutFar
                 ? `Take ${farLines.length === 1 ? "that one" : "those"} out and the rest can come ${withoutFar.said}.`
                 : farLines.length < cart.length

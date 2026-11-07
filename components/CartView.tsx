@@ -1296,10 +1296,7 @@ export default function CartView({
        */}
       {group === "" && (
         <section className="card space-y-2">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="text-muted">Subtotal</span>
-            <span className="font-semibold">{naira(cartSubtotal(cart))}</span>
-          </div>
+
           {paired.off > 0 && (
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-mint">{paired.said}</span>
@@ -1308,7 +1305,7 @@ export default function CartView({
               </span>
             </div>
           )}
-          <div className="flex items-baseline justify-between gap-3 border-t-[1.5px] border-rule pt-2">
+          <div className="flex items-baseline justify-between gap-3">
             <span className="font-bold">Food</span>
             <span className="font-display text-[28px] font-black leading-none">
               {naira(cartSubtotal(cart) - paired.off)}
@@ -1331,13 +1328,16 @@ export default function CartView({
           <p className="text-sm leading-relaxed text-muted">
             Delivery is added at the checkout, once you pick the day you
             want it.
+            {/* "A car of its own" is the shop's own words for it and
+                means nothing to anybody else. What a customer is choosing
+                between is cheaper and sooner, so that is what it says. */}
             {sharedPick && carPick && carPick.said !== sharedPick.said ? (
               <>
                 {" "}
                 <span className="font-semibold text-ink">
                   {naira(sharedPick.fee)} {sharedPick.said}
                 </span>
-                , or {naira(carPick.fee)} {carPick.said} on a car of its own.
+                , or {naira(carPick.fee)} to get it {carPick.said}.
               </>
             ) : sharedPick ? (
               <>
@@ -1353,7 +1353,7 @@ export default function CartView({
                 <span className="font-semibold text-ink">
                   {naira(carPick.fee)} {carPick.said}
                 </span>
-                , on a car of its own.
+                .
               </>
             ) : null}
           </p>
@@ -1589,8 +1589,13 @@ export default function CartView({
               {countItems(cart)} item{countItems(cart) === 1 ? "" : "s"}
               {group === "" && tier !== "" ? ` · ${tier}` : ""}
             </p>
+            {/* The food, which is what the card above it totals. Adding a
+                delivery fee here put a figure on the bar that the cart
+                itself does not claim and the checkout may not charge:
+                what delivery costs depends on the day, and the day is
+                the next question. */}
             <p className="truncate font-display text-[26px] font-black leading-none">
-              {naira(cartSubtotal(cart) - paired.off + (group === "" ? alone : 0))}
+              {naira(cartSubtotal(cart) - paired.off)}
             </p>
           </div>
           {group !== "" ? (

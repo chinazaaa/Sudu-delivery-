@@ -341,7 +341,8 @@ export function Asking({
           ))}
         </div>
         <div className="bothint">
-          A car of its own goes out for your order alone, at the time you pick.
+          A faster delivery goes out for your order alone, at the time you
+          pick.
         </div>
       </div>
     );

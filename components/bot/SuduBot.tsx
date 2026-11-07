@@ -4399,10 +4399,10 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
 
     if (earlier.length === 0) {
       bot(
-        `The <b>${keep?.said ?? "next"}</b> run is the soonest we can promise. ` +
-          `A car of its own would not get there much before it, so it is not ` +
-          `worth the extra. If it really cannot wait, say so on WhatsApp and ` +
-          `we will tell you what is possible.`,
+        `The <b>${keep?.said ?? "next"}</b> delivery is the soonest we can ` +
+          `promise. A faster one would not get there much before it, so it ` +
+          `is not worth the extra. If it really cannot wait, say so on ` +
+          `WhatsApp and we will tell you what is possible.`,
         480
       );
       setAsk({
@@ -4441,7 +4441,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     const runFee = lists?.feeFrom ?? 0;
 
     bot(
-      `I can get it to you <b>${soonest.phrase || soonest.label}</b>, on a car of its own. ` +
+      `I can get it to you <b>${soonest.phrase || soonest.label}</b>. ` +
         `That is <b>${naira(carFee)}</b> instead of ${naira(runFee)}, because it goes out just for you.`,
       560
     );
@@ -4449,7 +4449,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     const takeTheCar = (car: Car) => {
       held.current.car = car;
       held.current.run = null;
-      me(`A car of its own, ${car.phrase || car.label}`);
+      me(`${car.phrase || car.label}, just for me`);
       onward();
     };
 
@@ -4680,8 +4680,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         );
       } else {
         bot(
-          `No run goes out that day, so it would be a car of its own, ` +
-            `one trip, just for this.`,
+          `Nothing else goes out that day, so it would be one trip, ` +
+            `just for this.`,
           520
         );
         setAsk({
