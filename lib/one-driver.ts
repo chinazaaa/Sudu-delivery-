@@ -57,19 +57,39 @@ export function driverIsOut(runs: DrivingNow[], today: string): boolean {
  * Whoever is out is out for the rest of today, so today's times go and
  * every later day stays. Nobody out and nothing is dropped at all.
  */
-export function carsStillDrivable<T extends { date: string }>(
+export function carsStillDrivable<T extends { date: string; hour?: number }>(
   slots: T[],
   driving: boolean,
-  today: string
+  today: string,
+  /*
+   * When she is expected back, as an hour of the day, and how long she
+   * needs after that.
+   *
+   * Being out is not being out for the rest of the day. She is on a run
+   * that lands at half past one; a car asked for at five is a different
+   * trip entirely and she will have been home for hours. Refusing it
+   * turned every afternoon she drove into an afternoon the shop could
+   * not sell, which is the opposite of what one driver is for.
+   *
+   * Left out, nothing of today is offered, which is how this behaved
+   * before and is still the right answer when nobody can say when she is
+   * back.
+   */
+  backBy?: number,
+  gap = BACK_IN_TIME_HOURS
 ): T[] {
   if (!driving) return slots;
-  return slots.filter((one) => one.date !== today);
+  return slots.filter((one) => {
+    if (one.date !== today) return true;
+    if (backBy === undefined || one.hour === undefined) return false;
+    return one.hour >= backBy + gap;
+  });
 }
 
 /** Said to whoever is looking at a shut car, so it reads as tonight
  *  rather than as broken. */
 export const OUT_SAID =
-  "Our driver is on the road with tonight's run, so a car of its own cannot go today. Pick a time tomorrow, or put it on the next run.";
+  "Our driver is on the road with today's delivery, so a car of its own cannot go until she is back. Pick a later time, or tomorrow.";
 
 /**
  * Why today's cars are not on offer, where they are not.
@@ -113,11 +133,25 @@ export const BACK_IN_TIME_HOURS = 1;
 export function carsBeforeTheRun<T extends { date: string; hour: number }>(
   slots: T[],
   runStart: Record<string, number>,
-  gap = BACK_IN_TIME_HOURS
+  gap = BACK_IN_TIME_HOURS,
+  /*
+   * When the run's own window ends, so the hours it occupies are a gap in
+   * the day rather than the end of it.
+   *
+   * Without this a run landing at half past one took every car after it
+   * off the board, and an order for five in the evening was refused on a
+   * day she was home by two. The run is a couple of hours out of her
+   * afternoon, not the whole of it. A date with no end known behaves as
+   * it did before, which is to keep only the cars ahead of the run.
+   */
+  runEnd: Record<string, number> = {}
 ): T[] {
   return slots.filter((one) => {
     const starts = runStart[one.date];
     if (starts === undefined) return true;
-    return one.hour <= starts - gap;
+    if (one.hour <= starts - gap) return true;
+
+    const ends = runEnd[one.date];
+    return ends === undefined ? false : one.hour >= ends + gap;
   });
 }

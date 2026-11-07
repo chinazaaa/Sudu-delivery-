@@ -2061,10 +2061,14 @@ export default function Checkout({
           </p>
         )}
 
+        {/* On the dark card, so it is said in the card's own colours. Dark
+            red on dark green is a warning nobody can read, which is worse
+            than no warning: it looks like something is wrong and will not
+            say what. */}
         {wrongCounter.length > 0 && (
-          <p className="text-sm text-brand-dark">
-            <span className="font-semibold">
-              Not every run stops at {counterSaid}.
+          <p className="text-sm leading-[1.45] text-shell/85">
+            <span className="font-semibold text-volt">
+              We do not collect from {counterSaid} on every delivery.
             </span>{" "}
             {openable.length > 0
               ? `The next one that does is ${goingThere?.label ?? "the one below"}.`

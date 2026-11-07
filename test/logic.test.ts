@@ -27,7 +27,7 @@ import { withIce, withoutIce } from "../lib/ice";
 import { runToWorkOn, type RunToPick } from "../lib/which-run";
 import { dayCostSoFar, shareOut, splitDayCosts } from "../lib/day-costs";
 import { windowGone } from "../lib/last-minute";
-import { carsBeforeTheRun } from "../lib/one-driver";
+import { carsBeforeTheRun, carsStillDrivable } from "../lib/one-driver";
 import { dayAfter, daySaid, daysOnOffer, dayOfChoice, dayToHoldTo, soonestDay } from "../lib/pick-a-day";
 import { carsStillDrivable, driverIsOut } from "../lib/one-driver";
 import { saidPick, saidPicks, saidPicksLine } from "../lib/picks";
@@ -8299,4 +8299,65 @@ test("a car only goes to an area on the days that area takes one", () => {
 
   // Home is always reachable: the ladders were written for it.
   assert.equal(carGoesOn([], "2026-11-07", opensOn), true);
+});
+
+test("being out on a delivery is not being out for the day", () => {
+  const today = "2026-11-07";
+  // The run lands between 1pm and 1:30pm, so she is home by half past.
+  const ends = { [today]: 13.5 };
+  const slots = [
+    { date: today, hour: 12 },
+    { date: today, hour: 14 },
+    { date: today, hour: 17 },
+    { date: "2026-11-08", hour: 10 },
+  ];
+
+  /*
+   * A car at five is a trip she will be home in time to drive: the
+   * delivery is a couple of hours out of her afternoon, not the whole of
+   * it. Refusing it turned every afternoon she drove into an afternoon
+   * the shop could not sell.
+   */
+  const open = carsStillDrivable(slots, true, today, ends[today]);
+  assert.deepEqual(
+    open.map((one) => `${one.date} ${one.hour}`),
+    [`${today} 17`, "2026-11-08 10"]
+  );
+
+  // Two o'clock is half an hour after she lands, which is not a gap.
+  assert.ok(!open.some((one) => one.hour === 14));
+
+  // Not driving at all leaves every time alone.
+  assert.equal(carsStillDrivable(slots, false, today, ends[today]).length, 4);
+
+  // Nobody able to say when she is back is the old answer: nothing today.
+  const blind = carsStillDrivable(slots, true, today);
+  assert.deepEqual(blind.map((one) => one.date), ["2026-11-08"]);
+});
+
+test("the delivery's own hours are a gap in the day, not the end of it", () => {
+  const day = "2026-11-07";
+  const slots = [
+    { date: day, hour: 11 },
+    { date: day, hour: 13 },
+    { date: day, hour: 17 },
+  ];
+  // A run from 3pm to 6pm.
+  const starts = { [day]: 15 };
+  const ends = { [day]: 18 };
+
+  /*
+   * Before it is fine and has always been. After it was not: a run
+   * landing at six took every evening car off the board, and the shop
+   * could not sell a nine o'clock on a day it drove at three.
+   */
+  const kept = carsBeforeTheRun(slots, starts, 1, ends).map((one) => one.hour);
+  assert.deepEqual(kept, [11, 13]);
+
+  // An hour past the end is back on the board.
+  const late = carsBeforeTheRun([{ date: day, hour: 19 }], starts, 1, ends);
+  assert.equal(late.length, 1);
+
+  // With no end known it behaves as it did: only what is ahead of the run.
+  assert.equal(carsBeforeTheRun([{ date: day, hour: 19 }], starts, 1).length, 0);
 });

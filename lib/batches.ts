@@ -582,15 +582,22 @@ export async function carsOnOffer<T extends { date: string; at: string }>(
   // A car at the run's own hour is a dearer way to get the same food at
   // the same time. A car hours before it is a different trip, and she
   // can make it and be back in time to load the run.
-  const starts = await runStartsOn([...new Set(slots.map((one) => one.date))]);
-  const timed = slots.map((one) => ({ one, hour: hourOf(one.at) }));
-  const left = carsBeforeTheRun(
-    timed.map((row) => ({ date: row.one.date, hour: row.hour, row })),
-    starts
-  ).map((kept) => kept.row.one);
+  const days = [...new Set(slots.map((one) => one.date))];
+  const [starts, ends] = await Promise.all([runStartsOn(days), runEndsOn(days)]);
+  const timed = slots.map((one) => ({ date: one.date, hour: hourOf(one.at), one }));
+  const left = carsBeforeTheRun(timed, starts, undefined, ends);
 
-  // And today goes altogether while she is out with the boot full.
-  return carsStillDrivable(left, await someoneIsDriving(), lagosToday());
+  /*
+   * And while she is out, only the times she can still make.
+   *
+   * Being out is not being out for the day: a delivery landing at half
+   * past one leaves the evening free, and a car asked for at five is a
+   * trip she will be home in time to drive. What cannot happen is a car
+   * before she is back.
+   */
+  const today = lagosToday();
+  const kept = carsStillDrivable(left, await someoneIsDriving(), today, ends[today]);
+  return kept.map((row) => row.one);
 }
 
 /**
@@ -676,6 +683,43 @@ export async function runStartsOn(
 }
 
 /** The run being driven right now, if there is one. */
+/**
+ * When each day's run is done, as an hour of the day.
+ *
+ * The other half of `runStartsOn`. The run occupies a couple of hours of
+ * her afternoon and the shop can sell a car either side of it, so both
+ * ends of that window have to be known: without this, a run landing at
+ * half past one took every car after it off the board and an order for
+ * five in the evening was refused on a day she was home by two.
+ *
+ * The latest end where a day has more than one run, since she is not
+ * free until the last of them is delivered.
+ */
+export async function runEndsOn(dates: string[]): Promise<Record<string, number>> {
+  const wanted = [...new Set(dates.filter((one) => one !== ""))];
+  if (wanted.length === 0) return {};
+  try {
+    const { data, error } = await db()
+      .from("batches")
+      .select("kind, run_date, status, delivery_window_text")
+      .in("run_date", wanted)
+      .neq("status", "cancelled");
+    if (error) return {};
+
+    const ends: Record<string, number> = {};
+    for (const one of (data ?? []) as Batch[]) {
+      if ((one.kind ?? "run") !== "run") continue;
+      const hours = windowHours(one.delivery_window_text ?? "");
+      if (!hours) continue;
+      const had = ends[one.run_date];
+      ends[one.run_date] = had === undefined ? hours.to : Math.max(had, hours.to);
+    }
+    return ends;
+  } catch {
+    return {};
+  }
+}
+
 export async function someoneIsDriving(): Promise<boolean> {
   try {
     const today = lagosToday();
