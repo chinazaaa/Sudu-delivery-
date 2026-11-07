@@ -106,17 +106,7 @@ import {
   stillDriving,
   withGot,
 } from "../lib/runner";
-import {
-  collectedFrom,
-  everyPair,
-  everywhere,
-  mixedExtra,
-  parseAreaPairs,
-  serialiseAreaPairs,
-  withExtra,
-  carGoesOn,
-  MIXED_AREA_EXTRA,
-} from "../lib/areas";
+import { MIXED_AREA_EXTRA, carGoesOn, collectedFrom, everyPair, everywhere, mixedExtra, parseAreaPairs, serialiseAreaPairs, withExtra } from "../lib/areas";
 import { opensOn } from "../lib/open-days";
 import { dayAsked, nextOn, sayWhen } from "../lib/bot-days";
 import {
@@ -8285,4 +8275,28 @@ test("a size nobody has costed is not a free size", () => {
     chargedByRestaurant([line], [], markups, costs, written, menu)[0].charged,
     9400 + 11000
   );
+});
+
+test("a car only goes to an area on the days that area takes one", () => {
+  // Lekki takes a car on Sundays and no other day. Saturday is not one.
+  const lekki = [
+    { id: "l", name: "Lekki", runExtra: 2500, sameDayExtra: 3500, sameDay: true, sameDayDays: "0" },
+  ];
+  assert.equal(carGoesOn(lekki, "2026-11-08", opensOn), true); // Sunday
+  assert.equal(carGoesOn(lekki, "2026-11-07", opensOn), false); // Saturday
+
+  /*
+   * Switched off entirely beats any day list: an area that cannot take a
+   * car cannot take one on Sunday either.
+   */
+  const shut = [{ ...lekki[0], sameDay: false }];
+  assert.equal(carGoesOn(shut, "2026-11-08", opensOn), false);
+
+  // No days named is every day, which is how an area nobody has thought
+  // about has always behaved.
+  const anyDay = [{ ...lekki[0], sameDayDays: "" }];
+  assert.equal(carGoesOn(anyDay, "2026-11-07", opensOn), true);
+
+  // Home is always reachable: the ladders were written for it.
+  assert.equal(carGoesOn([], "2026-11-07", opensOn), true);
 });

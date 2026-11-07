@@ -17,7 +17,8 @@ import { hoursByDay, safeSettings } from "@/lib/settings";
 import { deliveryIn, returnsPolicy } from "@/lib/offer-shipping";
 import { saidAbout } from "@/lib/product-said";
 import { parseBands } from "@/lib/fees";
-import { canGoSameDay, parseAreas, runCovers } from "@/lib/areas";
+import { carGoesOn, parseAreas, runCovers } from "@/lib/areas";
+import { opensOn } from "@/lib/open-days";
 import { runCarries } from "@/lib/run-places";
 import { activeBands } from "@/lib/settings";
 import { lagosToday } from "@/lib/time";
@@ -116,18 +117,28 @@ export default async function RestaurantPage({
       ? ""
       : areas.find((one) => one.id === place.restaurant.areaId)?.name ?? "";
 
-  /* And a car of its own only where one can really reach this counter.
-     Lekki does not take one at all, so offering a time there is a promise
-     broken on the day. */
+  /* And a car of its own only on a day one can really reach this counter.
+     Lekki takes a car on Sundays and no other day, so a Saturday time
+     there is a promise broken before anybody has read it. The day is the
+     whole of the rule, not just whether the area takes a car at all. */
+  /*
+   * A car of its own, only on a day one can really reach this counter.
+   *
+   * Lekki takes a car on Sundays and no other day, and the page offered
+   * one on a Saturday: a promise broken before anybody has read it. The
+   * day is the whole of the rule, not merely whether the area takes a car
+   * at all, which is why asking only that was not enough.
+   */
+  const mine = areas.filter((one) => one.id === place.restaurant.areaId);
   const slots =
-    settings.same_day_on === "on" && canGoSameDay(areas.filter((one) => one.id === place.restaurant.areaId))
+    settings.same_day_on === "on"
       ? slotsWorthOffering(
           deliverySlots(new Date(), await hoursByDay()),
           batches.map((one) => ({
             run_date: one.run_date,
             window: one.delivery_window_text,
           }))
-        )
+        ).filter((slot) => carGoesOn(mine, slot.date, opensOn))
       : [];
   /*
    * The next run that can actually fetch from this counter.
@@ -143,7 +154,6 @@ export default async function RestaurantPage({
    * may not be. The checkout has always asked both; this page asked
    * neither.
    */
-  const mine = areas.filter((one) => one.id === place.restaurant.areaId);
   const arriving =
     nextArrival(
       batches
