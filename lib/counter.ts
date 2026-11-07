@@ -39,6 +39,16 @@ export type Counter = {
   defaultPromise: string;
   /** When it lands, before admin words it. */
   defaultWindow: string;
+  /**
+   * Whether this counter lands on one named date rather than every week.
+   *
+   * The shelves all began as a weekly car: pick a weekday, and the drop is
+   * the next one of those. A shelf whose stock is flown in once does not
+   * work that way. It has a single date, admin types it, and orders close
+   * before it the same as any other drop. Off for a counter that really
+   * is weekly, which is all of them bar the books.
+   */
+  onOneDate?: boolean;
 };
 
 /**
@@ -70,6 +80,26 @@ export const COUNTERS: Record<string, Counter> = {
     // counter it was bought over rather than only the city.
     defaultPromise: "Bought over the counter at licensed Lagos pharmacies.",
     defaultWindow: "Between 12pm and 6pm",
+  },
+  books: {
+    kind: "books",
+    href: "/books",
+    fallbackName: "Bookstore",
+    // Never used: the books land on a date somebody types rather than on
+    // a weekday, which is what `onOneDate` says. Kept honest rather than
+    // left at zero, since a Saturday is what it would fall back to.
+    defaultDay: 6,
+    /*
+     * Why these books are worth the wait.
+     *
+     * The whole offer is that they are not here: the titles people read
+     * about are published in the UK and arrive in Nigeria late, dear, or
+     * not at all. So the promise is where they come from, which is the
+     * thing a Lagos shelf cannot say.
+     */
+    defaultPromise: "Brought in from the UK. Not reprints, not scans.",
+    defaultWindow: "",
+    onOneDate: true,
   },
 };
 
@@ -167,6 +197,22 @@ export function nextDrop(
 ): { date: string; cutOff: string } {
   const weekday = counted(settings, counter, "day", counter.defaultDay);
   const [hour, minute] = cutOffTime(said(settings, counter, "cut_off"));
+
+  /*
+   * A shelf that lands once, on a date somebody typed.
+   *
+   * Stock flown in for a single trip has no next week to fall back on, so
+   * the date is read as it was written and the cut-off is the hour of the
+   * day before. A date nobody has filled in yet behaves as a weekly
+   * counter does, which keeps the shelf harmless rather than opening it
+   * on a day that does not exist.
+   */
+  if (counter.onOneDate) {
+    const lands = said(settings, counter, "date").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(lands)) {
+      return { date: lands, cutOff: lagosInstant(lands, hour, minute) };
+    }
+  }
 
   // Walked a day at a time from today, in the shop's own calendar, rather
   // than by arithmetic on an instant: the difference is an hour of the year

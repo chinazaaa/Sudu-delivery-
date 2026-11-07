@@ -196,6 +196,24 @@ export type Settings = {
   home_order: string;
   /** The skincare shop: on or off, what delivery costs on one of its orders,
    *  which day the car goes and when it stops taking orders that morning. */
+  /*
+   * The bookstore, which is a shelf of its own and not a weekly car.
+   *
+   * Its stock is carried in from the UK on one trip, so it has a date
+   * rather than a weekday: `books_date` is the day it lands, and orders
+   * close at `books_cut_off` on it. Everything else is the same shape as
+   * the other shelves, because it is the same machinery.
+   */
+  books_on: string;
+  books_fee: number;
+  books_day: number;
+  books_date: string;
+  books_cut_off: string;
+  books_window: string;
+  books_blurb: string;
+  books_bands: string;
+  books_promise: string;
+
   skincare_on: string;
   skincare_fee: number;
   skincare_day: number;
@@ -362,6 +380,16 @@ export const EMPTY: Settings = {
   auto_headline: "",
   auto_lines: "",
   home_order: "",
+  books_on: "",
+  books_fee: 0,
+  books_day: 6,
+  books_date: "",
+  books_cut_off: "08:00",
+  books_window: "",
+  books_blurb: "",
+  books_bands: "",
+  books_promise: "",
+
   skincare_on: "",
   skincare_fee: 0,
   skincare_day: 6,
