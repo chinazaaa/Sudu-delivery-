@@ -17,7 +17,8 @@ import { hoursByDay, safeSettings } from "@/lib/settings";
 import { deliveryIn, returnsPolicy } from "@/lib/offer-shipping";
 import { saidAbout } from "@/lib/product-said";
 import { parseBands } from "@/lib/fees";
-import { parseAreas } from "@/lib/areas";
+import { canGoSameDay, parseAreas, runCovers } from "@/lib/areas";
+import { runCarries } from "@/lib/run-places";
 import { activeBands } from "@/lib/settings";
 import { lagosToday } from "@/lib/time";
 
@@ -115,8 +116,11 @@ export default async function RestaurantPage({
       ? ""
       : areas.find((one) => one.id === place.restaurant.areaId)?.name ?? "";
 
+  /* And a car of its own only where one can really reach this counter.
+     Lekki does not take one at all, so offering a time there is a promise
+     broken on the day. */
   const slots =
-    settings.same_day_on === "on"
+    settings.same_day_on === "on" && canGoSameDay(areas.filter((one) => one.id === place.restaurant.areaId))
       ? slotsWorthOffering(
           deliverySlots(new Date(), await hoursByDay()),
           batches.map((one) => ({
@@ -125,11 +129,32 @@ export default async function RestaurantPage({
           }))
         )
       : [];
+  /*
+   * The next run that can actually fetch from this counter.
+   *
+   * It used to name whichever run was soonest, so Uncle Stan's in Lekki
+   * said "next run today" on a day the car was only going to Ajah and
+   * Sangotedo. The page was reading the shop's diary rather than
+   * answering the question somebody standing on it is asking, which is
+   * when THIS food can come.
+   *
+   * Both halves of that: a run has to reach this counter's area, and it
+   * has to be stopping here at all, which a run limited to a few counters
+   * may not be. The checkout has always asked both; this page asked
+   * neither.
+   */
+  const mine = areas.filter((one) => one.id === place.restaurant.areaId);
   const arriving =
     nextArrival(
       batches
         .map(toBatchView)
-        .filter((one) => !one.closed && !one.full)
+        .filter(
+          (one) =>
+            !one.closed &&
+            !one.full &&
+            runCovers(one.areas, mine) &&
+            runCarries(one.onlyPlaces, [place.restaurant.id])
+        )
         .map(runArrival),
       slots,
       lagosToday()
