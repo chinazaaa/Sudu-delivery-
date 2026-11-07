@@ -350,7 +350,20 @@ export default function Checkout({
    * about tonight first and can choose to wait. The day is the question
    * and the price is the answer to it, rather than the other way round.
    */
-  const firstDay = soonestDay(dayChoices);
+  /*
+   * The day the page opens on.
+   *
+   * A shared delivery wherever one is coming, even when a car of its own
+   * is sooner, because that is the day the cart quoted and the one
+   * almost everybody means: the car is thousands dearer and some offers
+   * do not reach it at all. Opening on the car put two thousand in the
+   * cart and six and a half here, which reads as the price changing
+   * between one screen and the next.
+   *
+   * Today is still a tap away and says what it costs, which is the whole
+   * point of pricing the chips.
+   */
+  const firstDay = dayChoices.find((one) => one.runId !== null) ?? soonestDay(dayChoices);
 
   /*
    * A day with two ways of arriving on it.

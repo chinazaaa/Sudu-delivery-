@@ -610,7 +610,23 @@ export default function CartView({
   const carDays = canGoSameDay(cartAreas)
     ? slots.filter((one) => carGoesOn(cartAreas, one.date, opensOn))
     : [];
-  const going = nextArrival(usableRuns, carDays, today);
+  /*
+   * What the cart quotes for, and what the checkout will open on.
+   *
+   * A shared delivery wins over a car of its own wherever one is coming,
+   * even when the car is sooner. The car is thousands dearer and the
+   * cheaper day is the one almost everybody means; somebody who really
+   * wants it tonight picks today at the checkout and is shown what that
+   * costs. Quoting the car instead put two thousand in the cart and six
+   * and a half at the checkout, which reads as the price changing under
+   * them.
+   */
+  const soonestRun = [...usableRuns].sort((a, b) =>
+    a.runDate.localeCompare(b.runDate)
+  )[0];
+  const going = soonestRun
+    ? nextArrival([soonestRun], [], today)
+    : nextArrival(usableRuns, carDays, today);
   const onItsOwn = going !== null && !going.onARun;
 
   // The day the cart is quoting for: the run it would go on, or today when
@@ -636,7 +652,16 @@ export default function CartView({
     lineChoices: cart.map((line) => line.choices),
     items: countItems(cart),
     batchId: going?.runId || nextRunId,
-    deliverAt: null,
+    /*
+     * The car's own time where that is what is being quoted.
+     *
+     * Passing nothing said "a shared delivery" whatever the cart was
+     * really going on, so an offer written for a shared one was applied
+     * to a car it explicitly does not reach: two thousand in the cart,
+     * six and a half at the checkout, which is the checkout being right
+     * and the cart quoting a price the shop would never charge.
+     */
+    deliverAt: onItsOwn ? (going?.at ?? null) : null,
     onDay: goingOn,
     returning: false,
   });
@@ -777,6 +802,96 @@ export default function CartView({
       : 0;
 
   const alone = promotion ? promotion.fee : ladderFee;
+
+  /*
+   * What delivery would come to on each of the two days worth naming.
+   *
+   * The cart does not charge for delivery, because what it costs depends
+   * on the day and the day is the next question. But saying nothing at
+   * all leaves somebody to find a six and a half thousand car at the
+   * checkout with no warning, so it says both ends of the choice: the
+   * cheapest day and the soonest, each with its own figure.
+   *
+   * Priced by the same function the checkout and the server use, asked
+   * the same way, so these are the numbers they will actually meet.
+   */
+  const feeOnDay = (opts: {
+    runId: string | null;
+    at: string | null;
+    date: string;
+    urgent: boolean;
+    flash: number | null;
+  }): number => {
+    const offer = pickOffer(offers, {
+      restaurantIds: kitchensIn,
+      itemIds: cart.map((line) => line.itemId),
+      lineChoices: cart.map((line) => line.choices),
+      items: countItems(cart),
+      batchId: opts.runId || nextRunId,
+      deliverAt: opts.at,
+      onDay: opts.date,
+      returning: false,
+    });
+    if (offer) return offer.fee;
+
+    if (opts.at !== null) {
+      return sameDayBands.length > 0
+        ? sameDayFee(
+            countItems(cart),
+            opts.urgent,
+            withExtra(sameDayBands, dearest.sameDayExtra + secondStop),
+            urgentExtra
+          )
+        : 0;
+    }
+    if (byValue.length > 0) {
+      return feeAcross({
+        marketFood: cartSubtotal(marketHalf),
+        restaurantFee:
+          restHalf.length === 0 ? 0 : feeFor(countItems(restHalf), opts.flash, ladder),
+        bands: byValue,
+      });
+    }
+    return ladder.length > 0
+      ? ridesAlong(
+          feeFor(
+            ridingHalf.length === 0 ? countItems(cart) : countItems(drivingHalf),
+            opts.flash,
+            ladder
+          )
+        )
+      : 0;
+  };
+
+  const sharedSoon = [...usableRuns].sort((a, b) => a.runDate.localeCompare(b.runDate))[0];
+  const carSoon = [...carDays].sort((a, b) => a.at.localeCompare(b.at))[0];
+  const dayWord = (date: string) =>
+    date === today ? "today" : date === dayAfter(today) ? "tomorrow" : runDateLabel(date);
+
+  const sharedPick = sharedSoon
+    ? {
+        said: dayWord(sharedSoon.runDate),
+        fee: feeOnDay({
+          runId: sharedSoon.id,
+          at: null,
+          date: sharedSoon.runDate,
+          urgent: false,
+          flash: sharedSoon.flashFee ?? null,
+        }),
+      }
+    : null;
+  const carPick = carSoon
+    ? {
+        said: dayWord(carSoon.date),
+        fee: feeOnDay({
+          runId: null,
+          at: carSoon.at,
+          date: carSoon.date,
+          urgent: carSoon.urgent,
+          flash: null,
+        }),
+      }
+    : null;
   /*
    * The ladder behind a promotion, struck through beside the figure.
    *
@@ -1193,25 +1308,55 @@ export default function CartView({
               </span>
             </div>
           )}
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="text-muted">
-              Delivery{tier === "" ? "" : ` (${tier})`}
-            </span>
-            <span className="font-semibold">
-              {aloneWas > 0 && (
-                <span className="pr-1.5 font-semibold text-muted line-through">
-                  {naira(aloneWas)}
-                </span>
-              )}
-              {naira(alone)}
-            </span>
-          </div>
           <div className="flex items-baseline justify-between gap-3 border-t-[1.5px] border-rule pt-2">
-            <span className="font-bold">Total</span>
+            <span className="font-bold">Food</span>
             <span className="font-display text-[28px] font-black leading-none">
-              {naira(cartSubtotal(cart) - paired.off + alone)}
+              {naira(cartSubtotal(cart) - paired.off)}
             </span>
           </div>
+          {/*
+              Delivery is not a number this page can know.
+
+              What it costs depends on the day: a shared delivery tomorrow
+              and a car of its own tonight are thousands apart, and some
+              offers reach one and not the other. The cart was guessing at
+              the day to put a figure here, so it quoted two thousand and
+              the checkout then charged six and a half, which reads as the
+              price changing under somebody rather than as the two days
+              costing different money.
+
+              So it says what is true: the food is this, and delivery is
+              decided by the day, which is the next thing they are asked.
+           */}
+          <p className="text-sm leading-relaxed text-muted">
+            Delivery is added at the checkout, once you pick the day you
+            want it.
+            {sharedPick && carPick && carPick.said !== sharedPick.said ? (
+              <>
+                {" "}
+                <span className="font-semibold text-ink">
+                  {naira(sharedPick.fee)} {sharedPick.said}
+                </span>
+                , or {naira(carPick.fee)} {carPick.said} on a car of its own.
+              </>
+            ) : sharedPick ? (
+              <>
+                {" "}
+                <span className="font-semibold text-ink">
+                  {naira(sharedPick.fee)} {sharedPick.said}
+                </span>
+                .
+              </>
+            ) : carPick ? (
+              <>
+                {" "}
+                <span className="font-semibold text-ink">
+                  {naira(carPick.fee)} {carPick.said}
+                </span>
+                , on a car of its own.
+              </>
+            ) : null}
+          </p>
         </section>
       )}
 

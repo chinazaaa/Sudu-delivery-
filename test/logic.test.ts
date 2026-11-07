@@ -8226,6 +8226,23 @@ test("a weekend promo is not a standing arrangement", () => {
 
   // Said for a person, either way.
   assert.equal(thisTimeSaid("sat,sun"), "This Saturday and Sunday only");
+
+  /*
+   * And only the days anybody can still order into.
+   *
+   * On the Saturday its own deliveries have closed, a weekend offer is a
+   * Sunday offer: naming Saturday points at a day whose only remaining
+   * way in is a car of its own at full price.
+   */
+  assert.equal(
+    thisTimeSaid("sat,sun", "2026-11-08", "2026-11-08 22:59:59+00"),
+    "This Sunday only"
+  );
+  // Asked on the Friday before, both days are still ahead.
+  assert.equal(
+    thisTimeSaid("sat,sun", "2026-11-07", "2026-11-08 22:59:59+00"),
+    "This Saturday and Sunday only"
+  );
   assert.equal(thisTimeSaid("fri"), "This Friday only");
   assert.equal(thisTimeSaid(""), "");
 });

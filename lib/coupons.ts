@@ -4,6 +4,7 @@ import {
   choiceLabels,
   choiceSets,
   dayMatches,
+  dayOfDate,
   offerBadge,
   offerLine,
   pickOffer,
@@ -1296,7 +1297,7 @@ export async function offerNudge(onDay = ""): Promise<Nudge | null> {
     said: standing
       ? (comesRoundAgain(offer.onDays, offer.expiresAt, lagosToday(), offer.startsAt)
           ? everySaid(offer.onDays)
-          : thisTimeSaid(offer.onDays)) ||
+          : thisTimeSaid(offer.onDays, onDay, offer.expiresAt, offer.startsAt)) ||
         daySaidFor(later?.day ?? "", lagosToday())
       : daySaidFor(onDay, lagosToday()),
     headline: offer.headline ?? "",
@@ -1416,9 +1417,12 @@ export type DeliveryOffer = {
  * from anywhere and send somebody to a counter it was never on.
  */
 export async function deliveryOffers(): Promise<DeliveryOffer[]> {
-  const [offers, bands] = await Promise.all([
+  const [offers, bands, from] = await Promise.all([
     liveOffers().catch(() => [] as LiveOffer[]),
     activeBands().catch(() => [] as Band[]),
+    // Where the offer really starts from: a day whose own deliveries have
+    // closed is behind us whatever the clock says.
+    nextDeliveryDay().catch(() => ""),
   ]);
   if (offers.length === 0) return [];
 
@@ -1440,7 +1444,7 @@ export async function deliveryOffers(): Promise<DeliveryOffer[]> {
            reads as a standing arrangement. */
         days: comesRoundAgain(offer.onDays, offer.expiresAt, lagosToday(), offer.startsAt)
           ? daysSaid(offer.onDays)
-          : thisTimeSaid(offer.onDays),
+          : thisTimeSaid(offer.onDays, from, offer.expiresAt, offer.startsAt),
         left: leftToRun(offer.expiresAt, now),
         places,
         firstOrderOnly: offer.firstOrderOnly,
@@ -1491,16 +1495,33 @@ export function leftToRun(expiresAt: string | null | undefined, now: Date = new 
  */
 async function readNextDeliveryDay(): Promise<string> {
   try {
+    /*
+     * Real columns only. This asked for `full`, which batches has never
+     * had, so every call errored and answered "no next delivery": the
+     * badge lost its day and said only "on offer", and the offer fell
+     * back to being judged by the clock, which is the whole thing this
+     * was written to stop.
+     */
     const { data, error } = await db()
       .from("batches")
-      .select("run_date, cut_off_at, full")
+      .select("run_date, cut_off_at, status, no_more_orders, kind")
       .gte("cut_off_at", new Date().toISOString())
-      .order("run_date", { ascending: true })
-      .limit(8);
+      .order("cut_off_at", { ascending: true })
+      .limit(12);
     if (error) return "";
 
-    const rows = (data ?? []) as { run_date: string; full?: boolean }[];
-    const open = rows.find((one) => one.full !== true);
+    const rows = (data ?? []) as {
+      run_date: string;
+      status?: string;
+      no_more_orders?: boolean;
+      kind?: string;
+    }[];
+    const open = rows.find(
+      (one) =>
+        (one.kind ?? "run") === "run" &&
+        one.status !== "cancelled" &&
+        one.no_more_orders !== true
+    );
     return open?.run_date ?? "";
   } catch {
     return "";
@@ -1568,13 +1589,49 @@ export function comesRoundAgain(
   return false;
 }
 
-/** "This Saturday and Sunday", for an offer that happens once. */
-export function thisTimeSaid(onDays: string | null | undefined): string {
-  const named = String(onDays ?? "")
+/**
+ * "This Saturday and Sunday only", for an offer that happens once.
+ *
+ * Only the days of it anybody can still order into. A weekend offer read
+ * "this Saturday and Sunday" on the Saturday its own deliveries had
+ * closed, which names a day whose only remaining way in is a car of its
+ * own at full price. The day the next delivery lands on is where the
+ * offer really starts from, so the days behind it are not part of it.
+ */
+export function thisTimeSaid(
+  onDays: string | null | undefined,
+  /** The day the next delivery lands. Empty names every day it runs on,
+   *  which is right for anything asking without the shop's diary. */
+  from = "",
+  expiresAt: string | null | undefined = null,
+  startsAt: string | null | undefined = null
+): string {
+  const all = String(onDays ?? "")
     .toLowerCase()
     .split(",")
     .map((one) => one.trim())
     .filter((one) => (OFFER_DAYS as readonly string[]).includes(one));
+
+  // Which of those days still has a turn left, counted from the next
+  // delivery forward rather than from today: a day whose deliveries have
+  // closed is behind us whatever the clock says.
+  const left = (() => {
+    if (from === "" || all.length === 0) return all;
+    const start = new Date(`${from}T12:00:00Z`);
+    if (!Number.isFinite(start.getTime())) return all;
+
+    const still = new Set<string>();
+    for (let ahead = 0; ahead <= 60; ahead++) {
+      const day = new Date(start.getTime() + ahead * 86_400_000).toISOString().slice(0, 10);
+      if (!seasonCovers(startsAt, expiresAt, day)) continue;
+      const name = dayOfDate(day);
+      if (all.includes(name)) still.add(name);
+      if (still.size === all.length) break;
+    }
+    return still.size > 0 ? all.filter((one) => still.has(one)) : all;
+  })();
+
+  const named = left;
   if (named.length === 0 || named.length === 7) return "";
 
   const words = OFFER_DAYS.filter((day) => named.includes(day)).map((day) => DAY_SAID[day]);
