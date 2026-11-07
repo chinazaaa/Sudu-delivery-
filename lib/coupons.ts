@@ -1058,11 +1058,23 @@ async function placeLinks(
 ): Promise<{ id: string; name: string; href: string }[]> {
   if (ids.length === 0) return [];
   try {
+    /*
+     * In the shop's own order, not the database's.
+     *
+     * The badge names the first two and counts the rest, and with no
+     * order at all those two were whichever rows came back first: an
+     * offer on eight counters advertised itself with Krispy Kreme,
+     * which is eighth on the menu. The menu's own order is the shop
+     * saying which of its counters it leads with, and that is the same
+     * question.
+     */
     const { data, error } = await db()
       .from("restaurants")
-      .select("id, name, slug")
+      .select("id, name, slug, sort_order")
       .in("id", ids)
-      .eq("active", true);
+      .eq("active", true)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
     // An older database has no slug column, and an offer people cannot see
     // is worse than a link that carries a uuid.
     if (error) {
@@ -1070,7 +1082,8 @@ async function placeLinks(
         .from("restaurants")
         .select("id, name")
         .in("id", ids)
-        .eq("active", true);
+        .eq("active", true)
+        .order("name", { ascending: true });
       return (plain ?? []).map((row) => ({
         id: row.id as string,
         name: row.name as string,
