@@ -1106,6 +1106,16 @@ export type BatchRow = Batch & {
   paidCount: number;
   /** Money in, less food, commission and the run's own costs. */
   profit: number;
+  /**
+   * Whether the night's own costs have been put in yet.
+   *
+   * Fuel, the driver and the transport are typed in after the run, so a
+   * run that has not gone has none of them and its profit is the whole
+   * margin with nothing taken off. Calling that "profit" reads as money
+   * made: the figure is right and the word is not, and the difference is
+   * the driver.
+   */
+  costed: boolean;
   gross: number;
 };
 
@@ -1622,6 +1632,7 @@ export async function batchOverview(
       ...(b.kind === "parcel" && mine.length === 1 ? { parcelOrderId: mine[0].id } : {}),
       paidCount: paid.length,
       gross: sum(paid, (o) => o.total),
+      costed: costs > 0,
       profit: Math.round(
         margin - (extra.get(b.id) ?? 0) - (owed.get(b.id) ?? 0) - costs
       ),
@@ -1715,9 +1726,12 @@ export async function overMenu(
   // What these things really cost, where somebody has written it down, so
   // this agrees with the run's own sheet rather than reckoning the same
   // food two ways on two screens.
-  const [atCounter, perChoice] = await Promise.all([
+  const [atCounter, perChoice, sellsFor] = await Promise.all([
     counterCosts(lines.map((line) => line.menu_item_id)),
     choiceCosts(lines.map((line) => line.menu_item_id)),
+    // And what each thing sells for, so a size nobody has costed is
+    // reckoned rather than counted as free.
+    menuPrices(lines.map((line) => line.menu_item_id)),
   ]);
 
   for (const id of reconciledIds) {
@@ -1727,7 +1741,8 @@ export async function overMenu(
       spend.filter((row) => row.batch_id === id),
       markups,
       atCounter,
-      perChoice
+      perChoice,
+      sellsFor
     ).reduce(
       (total, place) => total + place.charged,
       0
@@ -1797,7 +1812,19 @@ export function chargedByRestaurant(
    * every size anybody ordered. Empty counts the item alone, which is how
    * this worked before.
    */
-  choices: Map<string, Map<string, number>> = new Map()
+  choices: Map<string, Map<string, number>> = new Map(),
+  /*
+   * What each thing sells for today, by item, so the size can be reckoned
+   * where nobody has written down what it costs.
+   *
+   * Without it a size with no cost against it was counted as costing
+   * nothing at all: a chairman pizza went down as a medium and the eleven
+   * thousand of size on it was pure margin. The run's own sheet has always
+   * fallen back to the size's own price less the counter's markup, and
+   * this is that same fallback, so the two screens stop reckoning the same
+   * food two ways. Empty keeps the old behaviour.
+   */
+  menu: Map<string, number> = new Map()
 ): CounterCharge[] {
   const spentOn = new Map(spend.map((row) => [row.line_key, Number(row.paid ?? 0)]));
   const gotBack = new Map(spend.map((row) => [row.line_key, Number(row.recovered ?? 0)]));
@@ -1824,7 +1851,23 @@ export function chargedByRestaurant(
             (sum, pick) => sum + (mine.get(pick.name.trim().toLowerCase()) ?? 0),
             0
           );
-          return total + (said + sizes) * line.qty;
+          /*
+           * A size nobody has costed is not a free size.
+           *
+           * Where none of the choices has a figure written against it,
+           * what they add to the price is reckoned at the counter's
+           * markup, exactly as the run's own sheet does it. Counting them
+           * as nothing said a chairman pizza cost what a medium costs.
+           */
+          const sells = menu.get(line.itemId) ?? 0;
+          const extras = sells > 0 ? Math.max(0, line.unitPrice - sells) : 0;
+          const added =
+            sizes > 0
+              ? sizes
+              : markup === undefined
+                ? 0
+                : lineCost(extras, 1, markup);
+          return total + (said + added) * line.qty;
         }
         return (
           total +

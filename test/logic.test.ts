@@ -8240,3 +8240,47 @@ test("a weekend promo is not a standing arrangement", () => {
   assert.equal(thisTimeSaid("fri"), "This Friday only");
   assert.equal(thisTimeSaid(""), "");
 });
+
+test("a size nobody has costed is not a free size", () => {
+  // One chairman pizza: the medium sells for 10,850 and this one went out
+  // at 22,700, so 11,850 of it is size. The counter's cost for the
+  // ordinary one is written down; the size's is not.
+  const line = {
+    order_id: "o1",
+    key: "k1",
+    name: "BBQ Chicken",
+    restaurant: "Domino's Pizza",
+    menu_item_id: "bbq",
+    qty: 1,
+    unit_price_at_order: 22700,
+    choices: ["Chairman"],
+    picks: [{ group: "Size", name: "Chairman" }],
+  };
+  const costs = new Map([["bbq", 9400]]);
+  const menu = new Map([["bbq", 10850]]);
+  // A markup is a percentage here, not a multiplier: fifteen, not 1.15.
+  const markups = { "Domino's Pizza": 15 };
+
+  /*
+   * Counting the size as nothing put the whole 11,850 down as margin: a
+   * chairman pizza costing exactly what a medium costs is the shop
+   * looking more profitable than it is, by the size of every size
+   * anybody orders.
+   */
+  const blind = chargedByRestaurant([line], [], markups, costs, new Map())[0].charged;
+  assert.equal(blind, 9400);
+
+  // With the menu to reckon against, the size is costed at what it sells
+  // for less the counter's markup, which is what the run's own sheet has
+  // always done.
+  const seeing = chargedByRestaurant([line], [], markups, costs, new Map(), menu)[0].charged;
+  assert.ok(seeing > blind, `${seeing} should beat ${blind}`);
+  assert.equal(seeing, 9400 + Math.round(11850 / 1.15));
+
+  // A figure somebody actually wrote down for that size still wins.
+  const written = new Map([["bbq", new Map([["chairman", 11000]])]]);
+  assert.equal(
+    chargedByRestaurant([line], [], markups, costs, written, menu)[0].charged,
+    9400 + 11000
+  );
+});

@@ -248,6 +248,10 @@ export default async function RunsPage({
   const orders = live.reduce((total, batch) => total + batch.orderCount, 0);
   const paid = live.reduce((total, batch) => total + batch.paidCount, 0);
   const profit = live.reduce((total, batch) => total + batch.profit, 0);
+  /* Runs whose own costs have not been typed in yet. Their margin is in
+     the figure above with nothing taken off it, which is a different
+     thing from profit and has to say so. */
+  const waiting = live.filter((batch) => !batch.costed && batch.paidCount > 0).length;
 
   /**
    * The run somebody is in the middle of.
@@ -515,12 +519,22 @@ export default async function RunsPage({
           />
         </div>
         {/* Only a profit in hand is coloured. A loss in mint reads as money
-            made, which is the one thing it is not. */}
+            made, which is the one thing it is not.
+
+            And it is only called profit once the night's costs are in.
+            Fuel and the driver are typed in after a run, so a run that
+            has not gone yet shows its whole margin with nothing taken
+            off, and reading that as profit is how a run that clears
+            sixteen thousand looks like thirty. */}
         <Figure
-          label="Profit"
+          label={waiting === 0 ? "Profit" : "Before costs"}
           value={naira(profit)}
           tone={profit >= 0 ? "mint" : "ink"}
-          detail="Across the runs below"
+          detail={
+            waiting === 0
+              ? "Across the runs below"
+              : `Fuel and driver not in on ${waiting} of ${live.length}`
+          }
         />
       </div>
 
@@ -721,7 +735,8 @@ export default async function RunsPage({
                         batch.profit >= 0 ? "text-mint" : "text-brand-dark"
                       }`}
                     >
-                      {naira(batch.profit)} profit
+                      {naira(batch.profit)}
+                      {batch.costed ? " profit" : " before costs"}
                     </p>
                   )}
                 </div>
