@@ -169,7 +169,7 @@ export default async function SkincarePage({
         <Link href="/" className="font-semibold text-brand">
           The menu is here
         </Link>
-        , delivered today or on the next run.
+        , delivered today or on the next delivery.
       </p>
 
       <ShelfBar bands={bands} when={dropLabel(drop.date)} />

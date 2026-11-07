@@ -71,7 +71,8 @@ export default async function CustomOrderPage({
       a:
         "Nearly always, yes. Tell us what it is and roughly what you would " +
         "pay, and we go and find it, price it and bring it to your hostel " +
-        "with the next run. If we cannot get it we say so rather than leave " +
+        "with the next delivery. If we cannot get it we say so rather than " +
+        "leave " +
         "you waiting, and that is rare.",
     },
     {
@@ -92,7 +93,7 @@ export default async function CustomOrderPage({
     {
       q: "How long does it take?",
       a:
-        "Usually the next run. Something that has to be hunted for takes " +
+        "Usually the next delivery. Something that has to be hunted for takes " +
         "longer, and we tell you that when we quote it rather than after.",
     },
     {
@@ -170,7 +171,7 @@ export default async function CustomOrderPage({
               ["Tell us", "What it is, roughly what you would pay, and your block."],
               ["We find it", "We track it down and send you the price on WhatsApp."],
               ["You say yes", "We only buy once you have approved the price."],
-              ["We bring it", "It comes to your block on the next run."],
+              ["We bring it", "It comes to your block on the next delivery."],
             ].map(([said, note], at) => (
               <li
                 key={said}

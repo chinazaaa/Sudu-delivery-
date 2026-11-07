@@ -665,7 +665,7 @@ export default async function OrderPage({
             <>
               <p className="text-sm text-ink/75">
                 Delivered. Thank you
-                {isParcel ? "." : ", and see you on the next run."}
+                {isParcel ? "." : ", and see you on the next delivery."}
               </p>
               <StageTimeline
                 stage="handed_out"
@@ -1093,7 +1093,7 @@ export default async function OrderPage({
             This order was cancelled, so nothing was collected and nothing is
             owed. If you were charged, message us and we will put it back.{" "}
             <Link href="/" className="font-semibold text-brand underline">
-              Order into the next run
+              Order into the next delivery
             </Link>
             .
           </p>

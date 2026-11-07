@@ -99,7 +99,7 @@ export default async function DeliveryToPauPage() {
       q: `Can I order ${one.name} to PAU?`,
       a:
         `Yes. ${one.name} is on Sudu, and it comes to your hostel on the ` +
-        "next run. You can put things from other restaurants in the same " +
+        "next delivery. You can put things from other restaurants in the same " +
         "order and pay one delivery between you.",
     })),
     {

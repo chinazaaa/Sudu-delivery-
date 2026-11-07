@@ -9,7 +9,7 @@ import { isSkincare } from "@/lib/skincare";
 import { isPharmacy } from "@/lib/pharmacy";
 import Deals from "@/components/Deals";
 import { photoOf } from "@/lib/product-photo";
-import { openBatches } from "@/lib/batches";
+import { carsOnOffer, openBatches } from "@/lib/batches";
 import { toBatchView } from "@/lib/view";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
@@ -122,7 +122,15 @@ export default async function RestaurantPage({
      there is a promise broken before anybody has read it. The day is the
      whole of the rule, not just whether the area takes a car at all. */
   /*
-   * A car of its own, only on a day one can really reach this counter.
+   * A car of its own, only where the shop would really sell one.
+   *
+   * `carsOnOffer` is the rest of that question and every other screen
+   * asks it: a car at or after the run's own hour is a dearer way to get
+   * the same food at the same time, and today's cars stop altogether once
+   * she is out with the boot full. This page was the one place that did
+   * not, so it offered a quarter past three on a day the run leaves at
+   * three and the checkout refused it.
+   *
    *
    * Lekki takes a car on Sundays and no other day, and the page offered
    * one on a Saturday: a promise broken before anybody has read it. The
@@ -132,12 +140,16 @@ export default async function RestaurantPage({
   const mine = areas.filter((one) => one.id === place.restaurant.areaId);
   const slots =
     settings.same_day_on === "on"
-      ? slotsWorthOffering(
-          deliverySlots(new Date(), await hoursByDay()),
-          batches.map((one) => ({
-            run_date: one.run_date,
-            window: one.delivery_window_text,
-          }))
+      ? (
+          await carsOnOffer(
+            slotsWorthOffering(
+              deliverySlots(new Date(), await hoursByDay()),
+              batches.map((one) => ({
+                run_date: one.run_date,
+                window: one.delivery_window_text,
+              }))
+            )
+          )
         ).filter((slot) => carGoesOn(mine, slot.date, opensOn))
       : [];
   /*
@@ -328,7 +340,7 @@ export default async function RestaurantPage({
             {arriving !== "" && (
               <span className="flex items-center gap-1.5 rounded-full border border-[#4a423b] px-2.5 py-1 sm:px-3 sm:py-1.5">
                 <Clock />
-                Next run {arriving}
+                Next delivery {arriving}
               </span>
             )}
             {place.restaurant.closedDays !== "" && (
