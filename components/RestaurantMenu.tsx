@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
 import CartBar from "./CartBar";
@@ -36,6 +36,23 @@ export default function RestaurantMenu({
   const [top, setTop] = useState<string | null>(null);
   const [sub, setSub] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>("az");
+  /*
+   * Where the list begins, so changing section takes you to it.
+   *
+   * The chips are sticky, so somebody at the bottom of the chicken can
+   * reach for the dips without scrolling up, pick them, and still be at
+   * the bottom of the page looking at the footer. The list under the
+   * chips changed and the view did not, which reads as a tap that did
+   * nothing.
+   *
+   * An anchor of its own rather than the bar itself: the bar is stuck to
+   * the top of the screen by then, so scrolling it into view is already
+   * true and moves nothing.
+   */
+  const listTop = useRef<HTMLDivElement | null>(null);
+  const showTheList = () => {
+    listTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const [query, setQuery] = useState("");
   const cart = useCart();
 
@@ -119,6 +136,14 @@ export default function RestaurantMenu({
     <>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
         <div className="flex min-w-0 flex-1 flex-col gap-5">
+          {/* Where a change of section scrolls back to. Sits above the
+              sticky bar and carries the clearance for the site header, so
+              the chips land under it rather than behind it. */}
+          <div
+            ref={listTop}
+            aria-hidden
+            className="scroll-mt-[57px] md:scroll-mt-[65px]"
+          />
           {/* Search, the chips and the sort. Sticky, because a menu is long
               and the way back to another category should not be a scroll to
               the top of the page. */}
@@ -160,6 +185,7 @@ export default function RestaurantMenu({
                       onClick={() => {
                         setTop(null);
                         setSub(null);
+                        showTheList();
                       }}
                       className={`chip ${top === null ? "chip-on" : "bg-transparent"}`}
                     >
@@ -172,6 +198,7 @@ export default function RestaurantMenu({
                         onClick={() => {
                           setTop(entry.name);
                           setSub(null);
+                          showTheList();
                         }}
                         className={`chip ${top === entry.name ? "chip-on" : "bg-transparent"}`}
                       >
@@ -206,7 +233,10 @@ export default function RestaurantMenu({
               <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
                 <button
                   type="button"
-                  onClick={() => setSub(null)}
+                  onClick={() => {
+                    setSub(null);
+                    showTheList();
+                  }}
                   className={`chip min-h-[38px] px-3.5 text-sm ${
                     sub === null ? "chip-on" : "bg-transparent"
                   }`}
@@ -217,7 +247,10 @@ export default function RestaurantMenu({
                   <button
                     key={category.id}
                     type="button"
-                    onClick={() => setSub(category.sub)}
+                    onClick={() => {
+                      setSub(category.sub);
+                      showTheList();
+                    }}
                     className={`chip min-h-[38px] px-3.5 text-sm ${
                       sub === category.sub ? "chip-on" : "bg-transparent"
                     }`}
