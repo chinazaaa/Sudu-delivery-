@@ -8246,13 +8246,15 @@ test("a size nobody has costed is not a free size", () => {
   // at 22,700, so 11,850 of it is size. The counter's cost for the
   // ordinary one is written down; the size's is not.
   const line = {
+    id: "l1",
     order_id: "o1",
-    key: "k1",
-    name: "BBQ Chicken",
-    restaurant: "Domino's Pizza",
     menu_item_id: "bbq",
     qty: 1,
     unit_price_at_order: 22700,
+    for_name: null,
+    name: "BBQ Chicken",
+    restaurant: "Domino's Pizza",
+    source: "",
     choices: ["Chairman"],
     picks: [{ group: "Size", name: "Chairman" }],
   };
