@@ -210,6 +210,13 @@ export default async function SettingsAdmin() {
             words: "footer line bottom",
           },
           {
+            id: "uk-orders",
+            title: "Football shirts and books from the UK",
+            where: "The site",
+            words:
+              "football shirts jersey kit books uk brought quote form request arrives december delivery from switch on off",
+          },
+          {
             id: "promoter-perk",
             title: "What a promoter's link is worth",
             where: "Business",
