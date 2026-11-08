@@ -96,7 +96,7 @@ export default function UkRequestForm({
               required
               value={club}
               onChange={(event) => setClub(event.target.value)}
-              placeholder="Arsenal, PSG, Bayern, Nigeria"
+              placeholder="Arsenal, PSG, Bayern, Liverpool"
               className="field"
             />
           </div>
