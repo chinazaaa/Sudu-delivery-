@@ -7,6 +7,7 @@ import { fileFrom, uploadAsk } from "@/lib/uploads";
 import { tellAdmin } from "@/lib/admin-alerts";
 import {
   composeBook,
+  composeOther,
   composeShirt,
   composeWhere,
   UK_PATH,
@@ -32,18 +33,21 @@ export async function sendUkRequest(
   form: FormData
 ): Promise<UkState> {
   const said = (name: string) => String(form.get(name) ?? "");
-  const kind: UkKind = said("kind") === "book" ? "book" : "shirt";
+  const kind: UkKind =
+    said("kind") === "book" ? "book" : said("kind") === "other" ? "other" : "shirt";
 
   const composed: Composed =
     kind === "book"
       ? composeBook({ title: said("title"), author: said("author"), format: said("format") })
-      : composeShirt({
-          club: said("club"),
-          style: said("style"),
-          look: said("look"),
-          fit: said("fit"),
-          size: said("size"),
-        });
+      : kind === "other"
+        ? composeOther({ what: said("what") })
+        : composeShirt({
+            club: said("club"),
+            style: said("style"),
+            look: said("look"),
+            fit: said("fit"),
+            size: said("size"),
+          });
   if (!composed.ok) return { error: composed.error };
 
   // The campus or somewhere else in Lagos, and the one thing each needs.
@@ -75,7 +79,12 @@ export async function sendUkRequest(
   // After the row exists and never in a way that can fail it.
   try {
     await tellAdmin({
-      title: kind === "book" ? "Book from the UK" : "Football shirt",
+      title:
+        kind === "book"
+          ? "Book from the UK"
+          : kind === "other"
+            ? "Something from the UK"
+            : "Football shirt",
       body: `${said("name").trim() || "Someone"}: ${composed.wanted}`,
       url: "/admin/requests",
     });

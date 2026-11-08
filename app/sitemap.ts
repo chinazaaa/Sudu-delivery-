@@ -318,6 +318,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...(uk?.books_on === "on"
         ? [{ url: `${site}/books`, changeFrequency: "monthly" as const, priority: 0.6 }]
         : []),
+      // Open whenever either of the others is.
+      ...(uk?.shirts_on === "on" || uk?.books_on === "on"
+        ? [{ url: `${site}/from-the-uk`, changeFrequency: "monthly" as const, priority: 0.5 }]
+        : []),
     ];
 
     return [

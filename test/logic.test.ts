@@ -17,7 +17,7 @@ import { cookingLine } from "../lib/push";
 import { otherWorthSaying } from "../lib/arrival";
 import { windowStart, worthACar } from "../lib/pick-a-day";
 import { easterSunday, motheringSunday, mothersDayMay, nextOf, valentines } from "../lib/feasts";
-import { composeBook, composeShirt, composeWhere, ukKindOf } from "../lib/uk-requests";
+import { composeBook, composeOther, composeShirt, composeWhere, ukKindOf } from "../lib/uk-requests";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -8456,4 +8456,25 @@ test("a UK request says where it is going, on campus or in Lagos", () => {
   // A block left over from before the switch to Lagos is not carried along.
   const switched = composeWhere({ where: "lagos", hostel: "Block B", address: "5 Ozumba Mbadiwe, VI", note: "" });
   assert.equal(switched.ok && switched.hostel, "Lagos");
+});
+
+test("anything else from the UK takes whatever words they have", () => {
+  // Shirts and books are the two the shop brings on purpose. People want far
+  // more than that, so this takes it as it comes, a few words or a link.
+  assert.deepEqual(composeOther({ what: "  A bottle of perfume,   the blue one " }), {
+    ok: true,
+    wanted: "From the UK · A bottle of perfume, the blue one",
+  });
+  assert.equal(
+    composeOther({ what: "https://example.com/item/42" }).ok,
+    true
+  );
+
+  // Four characters is the least that can be acted on.
+  assert.equal(composeOther({ what: "hi" }).ok, false);
+  assert.equal(composeOther({ what: "   " }).ok, false);
+
+  // The inbox can tell it apart from the other two.
+  assert.equal(ukKindOf("From the UK · A bottle of perfume"), "other");
+  assert.equal(ukKindOf("Football shirt · PSG home · M"), "shirt");
 });

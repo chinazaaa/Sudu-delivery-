@@ -42,6 +42,7 @@ export default function UkRequestForm({
   const [look, setLook] = useState("");
   const [fit, setFit] = useState("");
   const [size, setSize] = useState("");
+  const [what, setWhat] = useState("");
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [format, setFormat] = useState("");
@@ -56,19 +57,23 @@ export default function UkRequestForm({
   // itself rides the form and is never held in state.
   const [photo, setPhoto] = useState("");
 
-  const what =
-    kind === "book"
-      ? [title.trim(), author.trim() ? `by ${author.trim()}` : "", format]
-          .filter(Boolean)
-          .join(" ")
-      : [club.trim(), style.toLowerCase(), look.trim() ? `(${look.trim()})` : "", fit, size.trim()]
-          .filter(Boolean)
-          .join(" ");
+  const said =
+    kind === "other"
+      ? what.trim()
+      : kind === "book"
+        ? [title.trim(), author.trim() ? `by ${author.trim()}` : "", format]
+            .filter(Boolean)
+            .join(" ")
+        : [club.trim(), style.toLowerCase(), look.trim() ? `(${look.trim()})` : "", fit, size.trim()]
+            .filter(Boolean)
+            .join(" ");
 
   const link = waLink(
     whatsapp,
-    `Hi Sudu, I would like ${kind === "book" ? "a book" : "a football shirt"} from the UK.` +
-      (what ? `\n\n${what}` : "") +
+    `Hi Sudu, I would like ${
+      kind === "book" ? "a book" : kind === "other" ? "something" : "a football shirt"
+    } from the UK.` +
+      (said ? `\n\n${said}` : "") +
       (where === "lagos"
         ? address.trim()
           ? `\nDelivery in Lagos: ${address.trim()}`
@@ -86,7 +91,21 @@ export default function UkRequestForm({
     <form action={action} encType="multipart/form-data" className="card space-y-4">
       <input type="hidden" name="kind" value={kind} />
 
-      {kind === "shirt" ? (
+      {kind === "other" ? (
+        <div>
+          <label className="label" htmlFor="what">What do you want?</label>
+          <textarea
+            id="what"
+            name="what"
+            rows={3}
+            required
+            value={what}
+            onChange={(event) => setWhat(event.target.value)}
+            placeholder="Say it however you like, or paste a link"
+            className="field"
+          />
+        </div>
+      ) : kind === "shirt" ? (
         <>
           <div>
             <label className="label" htmlFor="club">Club or country</label>

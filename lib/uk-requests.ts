@@ -19,8 +19,10 @@ export const BOOK_FORMATS = ["Paperback", "Hardback", "Whichever is cheaper"] as
 export const SHIRT_TAG = "Football shirt";
 /** And every book request. */
 export const BOOK_TAG = "Book";
+/** And anything else somebody wants brought from the UK. */
+export const OTHER_TAG = "From the UK";
 
-export type UkKind = "shirt" | "book";
+export type UkKind = "shirt" | "book" | "other";
 
 export type Composed =
   | { ok: true; wanted: string }
@@ -78,11 +80,27 @@ export function composeBook(input: {
   return { ok: true, wanted };
 }
 
+/**
+ * Anything else from the UK, in whatever words they have.
+ *
+ * Shirts and books are the two the shop is bringing in on purpose, and
+ * there is far more people want than that: a perfume, a gadget, a Boots
+ * order, something they saw on a website. So this takes it as it comes,
+ * a few words or a link, and the quote is agreed on WhatsApp like the
+ * rest. Four characters is the least that can be acted on.
+ */
+export function composeOther(input: { what: string }): Composed {
+  const what = clean(input.what, 300);
+  if (what.length < 4) return { ok: false, error: "What do you want from the UK?" };
+  return { ok: true, wanted: `${OTHER_TAG} · ${what}` };
+}
+
 /** Whether a request in the inbox came from one of these forms. */
 export function ukKindOf(wanted: string): UkKind | null {
   const said = String(wanted ?? "");
   if (said.startsWith(`${SHIRT_TAG} · `)) return "shirt";
   if (said.startsWith(`${BOOK_TAG} · `)) return "book";
+  if (said.startsWith(`${OTHER_TAG} · `)) return "other";
   return null;
 }
 
@@ -90,6 +108,7 @@ export function ukKindOf(wanted: string): UkKind | null {
 export const UK_PATH: Record<UkKind, string> = {
   shirt: "/football-shirts",
   book: "/books",
+  other: "/from-the-uk",
 };
 
 /** Where it is going: the campus, or somewhere else in Lagos. */

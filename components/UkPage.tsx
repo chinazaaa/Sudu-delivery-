@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AlsoSee } from "@/components/Guide";
@@ -16,7 +17,10 @@ import { UK_PATH, type UkKind } from "@/lib/uk-requests";
  * front is when it arrives, and that is a line in admin, not a date in
  * this file.
  */
-const COPY: Record<UkKind, { ticket: string; title: string; on: "shirts_on" | "books_on"; blurb: "shirts_blurb" | "books_blurb" }> = {
+const COPY: Record<
+  UkKind,
+  { ticket: string; title: string; on: "shirts_on" | "books_on"; blurb: "shirts_blurb" | "books_blurb" }
+> = {
   shirt: {
     ticket: "From the UK",
     title: "Football shirts",
@@ -28,6 +32,15 @@ const COPY: Record<UkKind, { ticket: string; title: string; on: "shirts_on" | "b
     title: "Books",
     on: "books_on",
     blurb: "books_blurb",
+  },
+  // Open to anything, and not a switch of its own: it is there whenever
+  // either of the other two is, and shares their arrival line, so there is
+  // nothing extra to turn on and no way for the three to disagree.
+  other: {
+    ticket: "From the UK",
+    title: "Anything from the UK",
+    on: "shirts_on",
+    blurb: "shirts_blurb",
   },
 };
 
@@ -41,16 +54,33 @@ export default async function UkPage({
   const copy = COPY[kind];
   const [settings, hostels] = await Promise.all([safeSettings(), hostelNames()]);
 
-  // Off is a page that does not exist, not a page saying it is shut.
-  if (settings[copy.on] !== "on") notFound();
+  // Off is a page that does not exist, not a page saying it is shut. The
+  // open-ended one stands whenever either of the others does.
+  const anyOn = settings.shirts_on === "on" || settings.books_on === "on";
+  if (kind === "other" ? !anyOn : settings[copy.on] !== "on") notFound();
+
+  // The arrival line of whichever page is on, for the one that has none of
+  // its own.
+  const lead =
+    kind === "other"
+      ? settings.shirts_blurb || settings.books_blurb
+      : settings[copy.blurb];
 
   return (
     <div className="space-y-6 pb-10">
-      <PageHead
-        ticket={copy.ticket}
-        title={copy.title}
-        lead={settings[copy.blurb] || undefined}
-      />
+      <PageHead ticket={copy.ticket} title={copy.title} lead={lead || undefined}>
+        {/* Directly under the arrival date, so it is seen without a
+            scroll. Shirts and books are the two the shop is bringing on
+            purpose, and people want far more than that from the UK. */}
+        {kind !== "other" && (
+          <Link
+            href={UK_PATH.other}
+            className="max-w-[580px] text-[17px] font-semibold text-brand underline underline-offset-2 sm:text-lg"
+          >
+            If you want to get something else from the UK
+          </Link>
+        )}
+      </PageHead>
 
       {sent ? (
         <div className="card space-y-1">
