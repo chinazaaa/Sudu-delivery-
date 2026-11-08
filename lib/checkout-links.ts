@@ -32,6 +32,15 @@ export type CheckoutLink = {
   alternatives: CartLine[];
   /** A card link, so paying by card needs no message. */
   payment_link: string;
+  /**
+   * Opens as a starter cart rather than a fixed checkout.
+   *
+   * The dishes go into the visitor's own cart and they can take things
+   * out, add more and carry on shopping. What they change is changed in
+   * their own browser: nothing here is written to by a visitor, so one
+   * person editing it cannot change what the next person sees.
+   */
+  as_cart?: boolean;
   note: string;
   active: boolean;
   used: number;
@@ -75,21 +84,32 @@ export async function saveCheckoutLink(args: {
   couponCode: string | null;
   paymentLink: string;
   note: string;
+  /** A starter cart, which has no fee, run, coupon or card link of its own:
+   *  all of that is decided at the checkout the visitor ends up on. */
+  asCart?: boolean;
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   if (args.lines.length === 0) {
     return { ok: false, error: "Put something in it first." };
   }
 
+  /*
+   * A starter cart leaves the checkout's own settings empty, whatever was
+   * left in the form. Its fee, run, coupon and card link belong to a
+   * fixed checkout it never opens, and a stale fee sitting on a cart
+   * somebody switched over would be a figure nothing ever reads.
+   */
+  const asCart = args.asCart === true;
   const row = {
     label: args.label.slice(0, 80),
     lines: args.lines,
-    alternatives: args.alternatives,
-    batch_id: args.batchId,
-    deliver_at: args.deliverAt,
-    fee: args.fee,
-    coupon_code: args.couponCode?.trim() || null,
-    payment_link: args.paymentLink.trim().slice(0, 500),
+    alternatives: asCart ? [] : args.alternatives,
+    batch_id: asCart ? null : args.batchId,
+    deliver_at: asCart ? null : args.deliverAt,
+    fee: asCart ? null : args.fee,
+    coupon_code: asCart ? null : args.couponCode?.trim() || null,
+    payment_link: asCart ? "" : args.paymentLink.trim().slice(0, 500),
     note: args.note.trim().slice(0, 300),
+    as_cart: asCart,
   };
 
   if (args.id) {

@@ -2994,9 +2994,13 @@ export async function saveLink(form: FormData): Promise<{ ok: boolean; error?: s
     couponCode: String(form.get("coupon") ?? "").trim().toUpperCase() || null,
     paymentLink: String(form.get("payment_link") ?? ""),
     note: String(form.get("note") ?? ""),
+    asCart: form.get("as_cart") === "on",
   });
 
   revalidatePath("/admin", "layout");
+  // The front page shows these as tiles, so it has to hear about a change.
+  revalidatePath("/", "layout");
+  updateTag("menu");
   return result.ok ? { ok: true } : { ok: false, error: result.error };
 }
 

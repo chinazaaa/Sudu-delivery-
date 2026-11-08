@@ -106,6 +106,7 @@ export default async function LinksPage({
             coupon: editing.coupon_code ?? "",
             paymentLink: editing.payment_link,
             note: editing.note,
+            asCart: editing.as_cart === true,
           }
         }
         dishes={dishes}
@@ -123,7 +124,14 @@ export default async function LinksPage({
               <article key={link.id} className="card space-y-2">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className="font-bold">{link.label || "Untitled"}</h3>
+                    <h3 className="font-bold">
+                      {link.label || "Untitled"}
+                      {link.as_cart === true && (
+                        <span className="ml-2 rounded-full bg-brand-tint px-2 py-0.5 text-xs text-brand-dark">
+                          Starter cart
+                        </span>
+                      )}
+                    </h3>
                     <p className="text-sm text-muted">
                       {link.lines.reduce((sum, line) => sum + line.qty, 0)} item
                       {link.lines.reduce((sum, line) => sum + line.qty, 0) === 1 ? "" : "s"}

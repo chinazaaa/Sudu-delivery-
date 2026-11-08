@@ -72,6 +72,7 @@ export default function LinkBuilder({
     coupon: string;
     paymentLink: string;
     note: string;
+    asCart?: boolean;
   } | null;
   /** One dish to begin with, from somewhere else in admin. "Asked for"
    *  sends somebody here the moment a request becomes a product, and
@@ -248,6 +249,20 @@ export default function LinkBuilder({
           them rather than for yourself.
         </p>
       </div>
+
+      <label className="flex items-start gap-2 rounded-xl bg-brand-tint p-3 text-sm">
+        <input
+          type="checkbox"
+          name="as_cart"
+          defaultChecked={editing?.asCart ?? false}
+          className="mt-1"
+        />
+        <span>
+          <b>Starter cart.</b> Opens as their own cart with these dishes in it. They can
+          take things out, add more, and nobody else sees their changes. Delivery,
+          coupon and card link below are ignored.
+        </span>
+      </label>
 
       <div>
         <label className="label" htmlFor="dish">

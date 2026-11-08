@@ -61,6 +61,7 @@ export default function Home({
   arrivalFee = 0,
   arrivalWas = 0,
   todayOffer = null,
+  starters = [],
   areaExtras = [],
   award = "",
   where = "",
@@ -110,6 +111,8 @@ export default function Home({
   arrivalFee?: number;
   /** The promotion that is on today, for the card above the button. Null
    *  on a day nothing is on, and then nothing is drawn. */
+  /** Ready-made carts, so nobody has to start from the whole menu. */
+  starters?: { code: string; title: string; food: number; sample: string[]; more: number }[];
   todayOffer?: {
     badge: string;
     where: string;
@@ -442,6 +445,29 @@ export default function Home({
               )}
             </div>
           </section>
+
+          {starters.length > 0 && (
+            <section className="mt-6">
+              <h2 className="text-lg font-bold">Not sure what to order?</h2>
+              <p className="text-sm text-muted">Tap one. It goes in your cart and you can change it.</p>
+              <ul className="-mx-4 mt-3 flex gap-3 overflow-x-auto px-4 pb-2">
+                {starters.map((one) => (
+                  <li key={one.code} className="w-64 shrink-0">
+                    <Link href={`/c/${one.code}`} className="card block h-full space-y-1">
+                      <span className="block font-bold">{one.title}</span>
+                      <span className="block text-sm text-muted">
+                        {one.sample.join(", ")}
+                        {one.more > 0 ? ` and ${one.more} more` : ""}
+                      </span>
+                      <span className="block text-sm font-semibold text-brand">
+                        {naira(one.food)} of food
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {/*
               What you fancy, before whose shop it is.

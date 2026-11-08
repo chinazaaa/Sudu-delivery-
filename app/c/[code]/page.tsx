@@ -5,6 +5,8 @@ import { hostelNames } from "@/lib/hostels";
 import { safeSettings, whatsappLink } from "@/lib/settings";
 import { currentCustomer, customerDetails } from "@/lib/customer-auth";
 import LinkCheckout from "@/components/LinkCheckout";
+import StarterCart from "@/components/StarterCart";
+import { starterFor } from "@/lib/starter-carts";
 import HelpLine from "@/components/HelpLine";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +28,11 @@ export default async function CheckoutLinkPage({
   params: Promise<{ code: string }>;
 }) {
   const code = (await params).code;
+  // A starter cart is not a checkout: its dishes go into the visitor's own
+  // cart and they carry on from there.
+  const starter = await starterFor(code);
+  if (starter) return <StarterCart lines={starter.lines} />;
+
   const view = await linkView(code);
   const settings = await safeSettings();
 

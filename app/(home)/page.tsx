@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { starterTiles } from "@/lib/starter-carts";
 import { lagosToday } from "@/lib/time";
 import { boxesAcross, liveOccasions, onShelf } from "@/lib/boxes";
 import { readDoors, type DoorKey } from "@/lib/home-doors";
@@ -392,6 +393,7 @@ export default async function HomePage() {
           everything that was on this page is where it was, one row down. */}
       <LiveOrderStrip order={live} />
       <Home
+        starters={await starterTiles()}
       // What the shop's own Google profile says, as the shop typed it in.
       // Nothing is fetched: every part of this hides itself when it is not
       // set, so the page can never show a rating nobody gave.

@@ -8478,3 +8478,13 @@ test("anything else from the UK takes whatever words they have", () => {
   assert.equal(ukKindOf("From the UK · A bottle of perfume"), "other");
   assert.equal(ukKindOf("Football shirt · PSG home · M"), "shirt");
 });
+
+test("missingFrom adds only what the cart lacks and never removes", async () => {
+  const { missingFrom } = await import("../lib/starter-lines");
+  const mk = (itemId: string) =>
+    ({ itemId, optionIds: [], name: itemId, restaurantId: "r", restaurantName: "", imageUrl: "", unitPrice: 1, choices: [], choiceFees: [], qty: 1 }) as never;
+  const key = (id: string, o: string[]) => `${id}|${o.join(",")}`;
+  const out = missingFrom([mk("a"), mk("b")], [{ itemId: "a", optionIds: [] }], key);
+  assert.deepEqual(out.map((l: { itemId: string }) => l.itemId), ["b"]);
+  assert.equal(missingFrom([mk("a")], [{ itemId: "a", optionIds: [] }], key).length, 0);
+});
