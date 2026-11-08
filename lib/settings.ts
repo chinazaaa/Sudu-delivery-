@@ -197,22 +197,17 @@ export type Settings = {
   /** The skincare shop: on or off, what delivery costs on one of its orders,
    *  which day the car goes and when it stops taking orders that morning. */
   /*
-   * The bookstore, which is a shelf of its own and not a weekly car.
+   * The UK order pages, football shirts and books.
    *
-   * Its stock is carried in from the UK on one trip, so it has a date
-   * rather than a weekday: `books_date` is the day it lands, and orders
-   * close at `books_cut_off` on it. Everything else is the same shape as
-   * the other shelves, because it is the same machinery.
+   * Neither is a shelf: nothing on them has a price, because the price
+   * depends on the item and what it costs in the UK, and is sent on
+   * WhatsApp like every custom order. Each has a switch and one line
+   * saying when it arrives, so a date changes here and not in the code.
    */
+  shirts_on: string;
+  shirts_blurb: string;
   books_on: string;
-  books_fee: number;
-  books_day: number;
-  books_date: string;
-  books_cut_off: string;
-  books_window: string;
   books_blurb: string;
-  books_bands: string;
-  books_promise: string;
 
   skincare_on: string;
   skincare_fee: number;
@@ -380,15 +375,10 @@ export const EMPTY: Settings = {
   auto_headline: "",
   auto_lines: "",
   home_order: "",
+  shirts_on: "",
+  shirts_blurb: "",
   books_on: "",
-  books_fee: 0,
-  books_day: 6,
-  books_date: "",
-  books_cut_off: "08:00",
-  books_window: "",
   books_blurb: "",
-  books_bands: "",
-  books_promise: "",
 
   skincare_on: "",
   skincare_fee: 0,

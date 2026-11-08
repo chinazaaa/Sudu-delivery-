@@ -1672,6 +1672,66 @@ export default async function SettingsAdmin() {
           </Panel>
         </form>
 
+        <form id="uk-orders" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
+          <KeepFields />
+          <Panel
+            title="Football shirts and books from the UK"
+            detail={
+              <>
+                Two quote forms, not shelves. Nothing on them has a price:
+                somebody says what they want and you send the price on
+                WhatsApp. Requests land in the same list as custom orders.
+              </>
+            }
+          >
+            <div className="space-y-4">
+              <input type="hidden" name="shirts_on__asked" value="1" />
+              <input type="hidden" name="books_on__asked" value="1" />
+
+              {(
+                [
+                  ["shirts", "Football shirts", "/football-shirts"],
+                  ["books", "Books", "/books"],
+                ] as const
+              ).map(([key, label, path]) => (
+                <div key={key} className="space-y-2">
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      name={`${key}_on`}
+                      value="on"
+                      defaultChecked={settings[`${key}_on`] === "on"}
+                      className="mt-1 size-5 shrink-0 accent-brand"
+                    />
+                    <span>
+                      <span className="block font-semibold">{label}</span>
+                      <span className="block text-sm text-muted">
+                        Shows the page at {path} and links it from the footer.
+                        Off, and the page does not exist.
+                      </span>
+                    </span>
+                  </label>
+                  <div>
+                    <label className="label" htmlFor={`${key}_blurb`}>
+                      When it arrives
+                    </label>
+                    <input
+                      id={`${key}_blurb`}
+                      name={`${key}_blurb`}
+                      defaultValue={settings[`${key}_blurb`]}
+                      maxLength={80}
+                      placeholder="Delivery from 9th December"
+                      className="field"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              <SaveButton look="btn-admin-go">Save</SaveButton>
+            </div>
+          </Panel>
+        </form>
+
         <form id="same-day" action={saveSettings} className="lg:col-span-2 scroll-mt-4">
           <KeepFields />
           <Panel

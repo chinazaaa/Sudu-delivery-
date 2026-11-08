@@ -3481,6 +3481,8 @@ const SETTING_FIELDS = [
   "parcel_max_value",
   "parcel_blurb",
   "parcel_terms",
+  "shirts_blurb",
+  "books_blurb",
   "skincare_on",
   "skincare_fee",
   "skincare_day",
@@ -3538,6 +3540,8 @@ const SETTING_FIELDS = [
 const SETTING_BOOLS = ["show_perk_strip"] as const;
 
 const SETTING_BOXES = [
+  "shirts_on",
+  "books_on",
   "hide_footer",
   "hide_promoter_link",
   "abroad_on",

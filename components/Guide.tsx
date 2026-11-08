@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { safeSettings } from "@/lib/settings";
 
 /**
  * The parts a page written for a search is made of.
@@ -150,8 +151,25 @@ const PAGES: { href: string; said: string }[] = [
   { href: "/about", said: "Who Sudu is" },
 ];
 
-export function AlsoSee({ not }: { not: string }) {
-  const rest = PAGES.filter((one) => one.href !== not);
+export async function AlsoSee({ not }: { not: string }) {
+  /*
+   * The two UK pages, only while they are switched on.
+   *
+   * The list above is fixed, and a link to a page that is off is a link to
+   * a 404. These two are the shop's own and can be off, so they are read
+   * from the settings rather than written in. Already cached for the
+   * request, so asking costs nothing.
+   */
+  const settings = await safeSettings().catch(() => null);
+  const uk = [
+    ...(settings?.shirts_on === "on"
+      ? [{ href: "/football-shirts", said: "Football shirts, brought from the UK" }]
+      : []),
+    ...(settings?.books_on === "on"
+      ? [{ href: "/books", said: "Books, brought from the UK" }]
+      : []),
+  ];
+  const rest = [...PAGES, ...uk].filter((one) => one.href !== not);
 
   return (
     <Section title="Also worth reading">

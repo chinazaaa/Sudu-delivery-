@@ -17,6 +17,7 @@ import { cookingLine } from "../lib/push";
 import { otherWorthSaying } from "../lib/arrival";
 import { windowStart, worthACar } from "../lib/pick-a-day";
 import { easterSunday, motheringSunday, mothersDayMay, nextOf, valentines } from "../lib/feasts";
+import { composeBook, composeShirt, composeWhere, ukKindOf } from "../lib/uk-requests";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -8376,4 +8377,83 @@ test("the delivery's own hours are a gap in the day, not the end of it", () => {
 
   // With no end known it behaves as it did: only what is ahead of the run.
   assert.equal(carsBeforeTheRun([{ date: day, hour: 19 }], starts, 1).length, 0);
+});
+
+test("a shirt or a book request is worded so it can be quoted", () => {
+  // The shirt: which club, which one, which size. The style is the thing
+  // that decides the price, and Arsenal's away is not Arsenal's home.
+  const shirt = composeShirt({
+    club: "Arsenal",
+    style: "away",
+    look: "the blue one",
+    fit: "Men's",
+    size: "M",
+  });
+  assert.deepEqual(shirt, {
+    ok: true,
+    wanted: "Football shirt · Arsenal away (the blue one) · Men's M",
+  });
+
+  // Any club at all: the form is not a Premier League list.
+  const psg = composeShirt({ club: "PSG", style: "Home", look: "", fit: "Kids", size: "10-11 yrs" });
+  assert.equal(psg.ok && psg.wanted, "Football shirt · PSG home · Kids 10-11 yrs");
+
+  // A club and a size are the two things nobody can quote without.
+  assert.equal(composeShirt({ club: "", style: "Home", look: "", fit: "", size: "M" }).ok, false);
+  assert.equal(composeShirt({ club: "Bayern", style: "Home", look: "", fit: "", size: " " }).ok, false);
+
+  // A style that is not on the list is dropped rather than trusted.
+  const odd = composeShirt({ club: "Chelsea", style: "<script>", look: "", fit: "", size: "L" });
+  assert.equal(odd.ok && odd.wanted, "Football shirt · Chelsea · L");
+
+  // The book: title, who wrote it, and which edition.
+  assert.deepEqual(
+    composeBook({ title: "Atomic Habits", author: "James Clear", format: "paperback" }),
+    { ok: true, wanted: "Book · Atomic Habits by James Clear · Paperback" }
+  );
+  assert.equal(
+    composeBook({ title: "Atomic Habits", author: "", format: "" }).ok &&
+      (composeBook({ title: "Atomic Habits", author: "", format: "" }) as { wanted: string }).wanted,
+    "Book · Atomic Habits"
+  );
+  assert.equal(composeBook({ title: " ", author: "", format: "Hardback" }).ok, false);
+
+  // The inbox can tell where a request came from.
+  assert.equal(ukKindOf("Football shirt · PSG home · M"), "shirt");
+  assert.equal(ukKindOf("Book · Dune"), "book");
+  assert.equal(ukKindOf("Two jollof rice"), null);
+});
+
+test("a UK request says where it is going, on campus or in Lagos", () => {
+  // On campus it is a block from the list, kept where every order keeps it.
+  assert.deepEqual(
+    composeWhere({ where: "pau", hostel: "Block B", address: "", note: "Size is for my brother" }),
+    { ok: true, hostel: "Block B", note: "Size is for my brother" }
+  );
+
+  // Anywhere else in Lagos it is an address. That is longer than the
+  // hostel field holds, so the field says only Lagos and the address leads
+  // the note, where whoever is quoting reads it first.
+  assert.deepEqual(
+    composeWhere({
+      where: "lagos",
+      hostel: "Block B",
+      address: "12 Admiralty Way, Lekki Phase 1",
+      note: "Call on arrival",
+    }),
+    {
+      ok: true,
+      hostel: "Lagos",
+      note: "Deliver to: 12 Admiralty Way, Lekki Phase 1 · Call on arrival",
+    }
+  );
+
+  // Whichever is chosen, something is needed: a price for a delivery that
+  // has nowhere to go is a guess.
+  assert.equal(composeWhere({ where: "pau", hostel: " ", address: "", note: "" }).ok, false);
+  assert.equal(composeWhere({ where: "lagos", hostel: "", address: "Lekki", note: "" }).ok, false);
+
+  // A block left over from before the switch to Lagos is not carried along.
+  const switched = composeWhere({ where: "lagos", hostel: "Block B", address: "5 Ozumba Mbadiwe, VI", note: "" });
+  assert.equal(switched.ok && switched.hostel, "Lagos");
 });

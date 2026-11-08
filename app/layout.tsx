@@ -255,6 +255,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     ...(skincareOn(settings) ? ([["/skincare", "Skincare"]] as [string, string][]) : []),
     ...(pharmacyOn(settings) ? ([["/pharmacy", "Pharmacy"]] as [string, string][]) : []),
   ];
+  /*
+   * The two UK pages, for the footer and not the header.
+   *
+   * The header already carries eight links on a laptop, and a ninth and
+   * tenth would push the cart off the end. The footer has the room, and
+   * is where somebody looks for a page they have heard about.
+   */
+  const uk: [string, string][] = [
+    ...(settings.shirts_on === "on"
+      ? ([["/football-shirts", "Football shirts"]] as [string, string][])
+      : []),
+    ...(settings.books_on === "on" ? ([["/books", "Books"]] as [string, string][]) : []),
+  ];
   // Somebody who arrived on a promoter's own link, and what that link is
   // worth. Read off the coupon itself rather than a sentence typed beside
   // it, so the strip cannot go on promising ₦500 after the code has been
@@ -507,7 +520,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ShopOnly>
           {showFooter && (
             <SiteFooter
-              counters={counters}
+              counters={[...counters, ...uk]}
               seasons={seasons}
               line={settings.footer_line}
               instagram={instagram}

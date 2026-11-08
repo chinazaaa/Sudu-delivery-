@@ -308,8 +308,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ]
       : [];
 
+    // The two UK pages, only while they are switched on: a sitemap entry
+    // for a page that is off is a crawler told about a 404.
+    const uk = await safeSettings().catch(() => null);
+    const ukPages = [
+      ...(uk?.shirts_on === "on"
+        ? [{ url: `${site}/football-shirts`, changeFrequency: "monthly" as const, priority: 0.6 }]
+        : []),
+      ...(uk?.books_on === "on"
+        ? [{ url: `${site}/books`, changeFrequency: "monthly" as const, priority: 0.6 }]
+        : []),
+    ];
+
     return [
       ...home,
+      ...ukPages,
       ...skincare,
       ...pharmacy,
       ...packed
