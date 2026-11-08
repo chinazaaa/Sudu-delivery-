@@ -351,86 +351,119 @@ export default async function RequestsPage({
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-end gap-2">
-                {reply && (
-                  <a
-                    href={reply}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn-quiet px-3 py-2 text-sm"
-                  >
-                    Message them
-                  </a>
-                )}
+              {/*
+                What to do next, and nothing else.
 
-                {/* Only while there is something left to decide. Once the
-                    money is counted the ask is done, and four buttons that
-                    set it to what it already is read as broken: you press
-                    Done and the page comes back exactly as it was. */}
-                {/* The row wraps. A price box and four buttons in one unbroken
-                    row is wider than a phone, and it did not just clip: it
-                    dragged the whole page sideways, so the request's own
-                    words ran off the left of the screen. The form below
-                    already wraps for the same reason. */}
-                {!ask.money_id && !isClosed(ask.status) && (
-                <form action={markRequest} className="flex flex-wrap items-end gap-2">
-                  <input type="hidden" name="id" value={ask.id} />
-                  <div className="w-28">
-                    <label className="label" htmlFor={`quoted-${ask.id}`}>
-                      Priced at
-                    </label>
-                    <input
-                      id={`quoted-${ask.id}`}
-                      name="quoted"
-                      inputMode="numeric"
-                      defaultValue={ask.quoted ?? ""}
-                      placeholder="0"
-                      className="field py-2 text-sm"
-                    />
+                This used to be a row of a price box and four buttons on
+                every card, whatever state it was in, with the boxes for
+                counting the money open underneath. A request nobody had
+                answered looked identical to one already bought, and on a
+                phone the row was wider than the screen. Now there is one
+                thing to do, the way round it normally goes:
+
+                  new     message them, then put the price you quoted
+                  quoted  they said yes, so count it
+                  done    count it
+
+                and everything else is a tap away behind a plain question.
+              */}
+              {!ask.money_id && !isClosed(ask.status) && (
+                <div className="space-y-2.5">
+                  {reply && (
+                    <a
+                      href={reply}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`${
+                        ask.status === "new" ? "btn-primary" : "btn-quiet"
+                      } block w-full py-3 text-center text-sm`}
+                    >
+                      Message them on WhatsApp
+                    </a>
+                  )}
+
+                  {/* The price, where one has not been agreed. Once it is
+                      quoted the figure is on the card and the next step is
+                      counting, so the box is gone rather than left there
+                      to be changed by accident. */}
+                  {ask.status === "new" && (
+                    <form action={markRequest} className="flex items-end gap-2">
+                      <input type="hidden" name="id" value={ask.id} />
+                      <div className="min-w-0 flex-1">
+                        <label className="label" htmlFor={`quoted-${ask.id}`}>
+                          Price you quoted
+                        </label>
+                        <input
+                          id={`quoted-${ask.id}`}
+                          name="quoted"
+                          inputMode="numeric"
+                          defaultValue={ask.quoted ?? ""}
+                          placeholder="0"
+                          className="field py-2 text-sm"
+                        />
+                      </div>
+                      <ActionButton
+                        name="status"
+                        value="quoted"
+                        className="btn-quiet px-4 py-2 text-sm"
+                        busy="…"
+                        done="Saved ✓"
+                      >
+                        Save price
+                      </ActionButton>
+                    </form>
+                  )}
+                </div>
+              )}
+
+              {/* Still reachable once it is finished: a customer who comes
+                  back about an ask that is done should not mean digging out
+                  their number. */}
+              {(ask.money_id || isClosed(ask.status)) && reply && (
+                <a
+                  href={reply}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-quiet block w-full py-3 text-center text-sm sm:w-auto sm:px-5"
+                >
+                  Message them on WhatsApp
+                </a>
+              )}
+
+              {/* The ways out that count nothing here. Three buttons that
+                  each end the ask are not something to look at on every
+                  card, and Done in particular read as the same thing as
+                  counting it, which it is not: it finishes the ask and
+                  leaves the money alone. */}
+              {!ask.money_id && !isClosed(ask.status) && (
+                <details className="border-t border-black/5 pt-3">
+                  <summary className="cursor-pointer text-sm font-semibold text-muted">
+                    Not going ahead?
+                  </summary>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                    {(
+                      [
+                        ["converted", "They ordered it", "Filed ✓"],
+                        ["dropped", "Drop it", "Dropped ✓"],
+                        ["done", "Done, nothing to count", "Done ✓"],
+                      ] as const
+                    ).map(([value, said, done]) => (
+                      <form key={value} action={markRequest}>
+                        <input type="hidden" name="id" value={ask.id} />
+                        <ActionButton
+                          name="status"
+                          value={value}
+                          className="btn-quiet w-full px-3 py-2 text-sm"
+                          busy="…"
+                          done={done}
+                        >
+                          {said}
+                        </ActionButton>
+                      </form>
+                    ))}
                   </div>
-                  <ActionButton
-                    name="status"
-                    value="quoted"
-                    className="btn-quiet px-3 py-2 text-sm"
-                    busy="…"
-                    done="Priced ✓"
-                  >
-                    Priced
-                  </ActionButton>
-                  <ActionButton
-                    name="status"
-                    value="done"
-                    className="btn-primary px-3 py-2 text-sm"
-                    busy="…"
-                    done="Done ✓"
-                  >
-                    Done
-                  </ActionButton>
-                  {/* They went and placed it themselves. Finished, with
-                      nothing to count here: the money is on that order,
-                      and counting it twice is the one mistake this page
-                      could make that the books would carry. */}
-                  <ActionButton
-                    name="status"
-                    value="converted"
-                    className="btn-quiet px-3 py-2 text-sm"
-                    busy="…"
-                    done="Filed ✓"
-                  >
-                    They ordered it
-                  </ActionButton>
-                  <ActionButton
-                    name="status"
-                    value="dropped"
-                    className="btn-quiet px-3 py-2 text-sm"
-                    busy="…"
-                    done="Dropped ✓"
-                  >
-                    Drop
-                  </ActionButton>
-                </form>
-                )}
-              </div>
+                </details>
+              )}
 
               {/*
                 * A question, answered once and then answered for ever.
@@ -616,9 +649,34 @@ export default async function RequestsPage({
                   </p>
                 </div>
               ) : (
+                /*
+                  Four boxes for counting the money, shut until it is time.
+
+                  They were open on every card, including one nobody had
+                  answered, which made a request that had just arrived look
+                  as heavy as one being settled. Once they have said yes
+                  this is the next step and is drawn as the button, and it
+                  stays open on a request already marked done, which is
+                  waiting to be counted and nothing else.
+                */
+                <details
+                  className="border-t border-black/5 pt-3"
+                  open={ask.status === "done"}
+                >
+                  <summary
+                    className={`cursor-pointer list-none [&::-webkit-details-marker]:hidden ${
+                      ask.status === "quoted"
+                        ? "btn-primary block w-full py-3 text-center text-sm"
+                        : "text-sm font-semibold text-muted"
+                    }`}
+                  >
+                    {ask.status === "quoted"
+                      ? "They said yes: count it"
+                      : "Bought it? Count the money"}
+                  </summary>
                 <form
                   action={settleRequest}
-                  className="flex flex-wrap items-end gap-2 border-t border-black/5 pt-3"
+                  className="mt-3 flex flex-wrap items-end gap-2"
                 >
                   <input type="hidden" name="id" value={ask.id} />
                   <div className="w-20">
@@ -681,6 +739,7 @@ export default async function RequestsPage({
                     Put that as the price and leave the rest empty.
                   </p>
                 </form>
+                </details>
               )}
 
               {/* And the other way: a thing worth stocking, because three
