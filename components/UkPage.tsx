@@ -6,6 +6,7 @@ import PageHead from "@/components/PageHead";
 import UkRequestForm from "@/components/UkRequestForm";
 import { hostelNames } from "@/lib/hostels";
 import { safeSettings } from "@/lib/settings";
+import { waLink } from "@/lib/whatsapp";
 import { UK_PATH, type UkKind } from "@/lib/uk-requests";
 
 /**
@@ -66,6 +67,22 @@ export default async function UkPage({
       ? settings.shirts_blurb || settings.books_blurb
       : settings[copy.blurb];
 
+  /*
+   * For anybody who would rather not fill in a form.
+   *
+   * At the top, before the form, because somebody who has seen a form and
+   * does not want one should not have to read it to find the other way.
+   * The message is written for them and sent by them: nothing here
+   * messages anybody. The small link under the form is the other half,
+   * which carries whatever they had already typed.
+   */
+  const direct = waLink(
+    settings.whatsapp_number || null,
+    `Hi Sudu, I would like ${
+      kind === "book" ? "a book" : kind === "other" ? "something" : "a football shirt"
+    } from the UK.`
+  );
+
   return (
     <div className="space-y-6 pb-10">
       <PageHead ticket={copy.ticket} title={copy.title} lead={lead || undefined}>
@@ -81,6 +98,20 @@ export default async function UkPage({
           </Link>
         )}
       </PageHead>
+
+      {!sent && direct && (
+        <div className="space-y-2">
+          <a
+            href={direct}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary block w-full py-3.5 text-center"
+          >
+            Message us on WhatsApp
+          </a>
+          <p className="text-center text-sm font-semibold text-muted">Or fill this in</p>
+        </div>
+      )}
 
       {sent ? (
         <div className="card space-y-1">

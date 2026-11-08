@@ -367,8 +367,13 @@ export default async function RequestsPage({
                     money is counted the ask is done, and four buttons that
                     set it to what it already is read as broken: you press
                     Done and the page comes back exactly as it was. */}
+                {/* The row wraps. A price box and four buttons in one unbroken
+                    row is wider than a phone, and it did not just clip: it
+                    dragged the whole page sideways, so the request's own
+                    words ran off the left of the screen. The form below
+                    already wraps for the same reason. */}
                 {!ask.money_id && !isClosed(ask.status) && (
-                <form action={markRequest} className="flex items-end gap-2">
+                <form action={markRequest} className="flex flex-wrap items-end gap-2">
                   <input type="hidden" name="id" value={ask.id} />
                   <div className="w-28">
                     <label className="label" htmlFor={`quoted-${ask.id}`}>
