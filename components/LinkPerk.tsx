@@ -6,7 +6,7 @@ import { ownsThePage } from "@/lib/chrome";
 import { useEffect, useState } from "react";
 
 /**
- * "Claire sent you. ₦500 off your first delivery."
+ * "Claire sent you."
  *
  * A quiet strip rather than a modal. Somebody who has just tapped a friend's
  * link in a group chat is on their way to look at food, and a box they have
@@ -17,7 +17,7 @@ import { useEffect, useState } from "react";
  * applies at the checkout whether or not this is on screen, and somebody who
  * comes back tomorrow having forgotten is worth reminding.
  */
-export default function LinkPerk({ who, line }: { who: string; line: string }) {
+export default function LinkPerk({ who, line = "" }: { who: string; line?: string }) {
   const [shut, setShut] = useState(true);
   const path = usePathname();
 
@@ -41,8 +41,14 @@ export default function LinkPerk({ who, line }: { who: string; line: string }) {
     <div className="border-b border-brand/20 bg-brand-tint/60">
       <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2">
         <p className="min-w-0 flex-1 text-sm leading-snug text-brand-dark">
-          <span className="font-bold">{who} sent you.</span>{" "}
-          <span>{line}, added at the checkout.</span>
+          <span className="font-bold">{who} sent you.</span>
+          {/* Only the name, unless there is something to say. The strip
+              used to carry the amount, and a strip that names a figure
+              has to stay true to it: while the shop runs a bigger offer on
+              somebody's link, a smaller number beside it is the wrong
+              promise on the first page they see. The name is always true,
+              and the welcome still applies at the checkout either way. */}
+          {line !== "" && <span> {line}, added at the checkout.</span>}
         </p>
         <button
           type="button"

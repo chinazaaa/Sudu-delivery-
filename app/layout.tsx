@@ -286,14 +286,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
    * somebody's link and would rather not put a smaller number beside it.
    */
   const sentBy = jar.get(WHO_COOKIE)?.value ?? "";
-  const [welcome, perkFrom, running] = sentBy && settings.show_perk_strip
-    ? await Promise.all([
-        publicOffer(settings.promoter_perk_code),
-        promoterCalledName(sentBy),
-        liveOffers().catch(() => []),
-      ])
-    : [null, "", []];
-  const perk = running.length > 0 ? null : welcome;
+  const perkFrom =
+    sentBy && settings.show_perk_strip ? await promoterCalledName(sentBy) : "";
+  /*
+   * The strip says who sent them and never what it is worth.
+   *
+   * The name is always true and can never contradict a price. A figure
+   * can: the same link can be worth ₦500 one week and ₦2,000 the next,
+   * and a strip naming the smaller one beside the bigger is the wrong
+   * promise on the first page somebody sees. The welcome still applies at
+   * the checkout whether or not it is announced, so leaving the number
+   * off costs the customer nothing.
+   */
+  const showPerkName = Boolean(sentBy && settings.show_perk_strip && perkFrom);
 
   /*
    * The promotion that is on today, along the top of every page.
@@ -485,7 +490,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </ShopOnly>
         {/* Above the header, because it is about why they are here at all
             rather than about anything on the page under it. */}
-        {perk && perkFrom && <LinkPerk who={perkFrom} line={perk.line} />}
+        {showPerkName && <LinkPerk who={perkFrom} />}
         <SiteHeader tagline={settings.tagline || "Your Fav Foods to PAU"} counters={counters} />
         {/* Directly under the header, so being in a group is the first thing
             read on every page rather than something found at checkout. */}
