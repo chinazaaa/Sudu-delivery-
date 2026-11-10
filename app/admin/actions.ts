@@ -3452,6 +3452,7 @@ const SETTING_FIELDS = [
   "same_day_urgent_extra",
   "group_fee_floor",
   "menu_aisles",
+  "home_tiles",
   "plans_paused_until",
   "plan_lead_days",
   "same_day_on",

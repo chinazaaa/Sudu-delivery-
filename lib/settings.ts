@@ -136,6 +136,8 @@ export type Settings = {
   group_fee_floor: string;
   /** The aisles the whole shop is browsed by, one per line, in order. */
   menu_aisles: string;
+  /** The tiles on the front page, one per line. See lib/home-tiles. */
+  home_tiles: string;
   /** Every standing plan held at once, for the holidays. A date, or empty. */
   plans_paused_until: string;
   /** How many days before it lands a plan's order is raised. */
@@ -361,6 +363,7 @@ export const EMPTY: Settings = {
   same_day_urgent_extra: "",
   group_fee_floor: "",
   menu_aisles: "",
+  home_tiles: "",
   plans_paused_until: "",
   plan_lead_days: "",
   same_day_first_hour: "",

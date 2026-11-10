@@ -154,7 +154,7 @@ export default function Home({
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
-  const [building, setBuilding] = useState<{ label: string; aisle?: string; q?: string; category?: string } | null>(null);
+  const [building, setBuilding] = useState<{ label: string; tile?: string; aisle?: string; q?: string; category?: string } | null>(null);
   const showHero = false;
   // Kinds the picker tiles above already cover, so this row only offers
   // what is not there: a kind is covered when one of those aisles holds its
@@ -363,7 +363,7 @@ export default function Home({
                     <li key={one.aisle}>
                       <button
                         type="button"
-                        onClick={() => setBuilding({ label: one.aisle, aisle: one.aisle })}
+                        onClick={() => setBuilding({ label: one.aisle, tile: one.aisle })}
                         className="flex h-full w-full flex-col justify-between gap-2 rounded-2xl border-2 border-ink bg-white p-3.5 text-left shadow-[3px_3px_0_0_#111]"
                       >
                         <span className="block size-16 overflow-hidden">

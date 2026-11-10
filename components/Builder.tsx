@@ -25,7 +25,7 @@ export default function Builder({
   kind,
   onClose,
 }: {
-  kind: { label: string; aisle?: string; q?: string; category?: string };
+  kind: { label: string; tile?: string; aisle?: string; q?: string; category?: string };
   onClose: () => void;
 }) {
   const aisle = kind.label;
@@ -43,6 +43,7 @@ export default function Builder({
   useEffect(() => {
     let live = true;
     const asked = new URLSearchParams();
+    if (kind.tile) asked.set("tile", kind.tile);
     if (kind.aisle) asked.set("aisle", kind.aisle);
     if (kind.q) asked.set("q", kind.q);
     if (kind.category) asked.set("category", kind.category);
@@ -62,7 +63,7 @@ export default function Builder({
     return () => {
       live = false;
     };
-  }, [kind.aisle, kind.q, kind.category]);
+  }, [kind.tile, kind.aisle, kind.q, kind.category]);
 
   // Drinks are offered after the food, so they are fetched while somebody
   // is still choosing it.

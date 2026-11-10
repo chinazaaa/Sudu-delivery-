@@ -1505,6 +1505,31 @@ export default async function SettingsAdmin() {
               <SaveButton look="btn-admin-go">Save aisles</SaveButton>
             </div>
           </Panel>
+          <Panel
+            title="Front page tiles"
+            detail={
+              <>
+                The big tiles under &quot;Start from here&quot;, one per line, in
+                order. Write: <b>Name | where it comes from | counters</b>. Where it
+                comes from is one or more of <b>aisle:Pizza</b>, <b>q:shawarma</b>{" "}
+                (a word in the dish name) or <b>category:Small Chops</b>, separated
+                by semicolons. The counters part is optional and keeps the tile to
+                those places, separated by semicolons.
+              </>
+            }
+          >
+            <div className="space-y-3">
+              <textarea
+                name="home_tiles"
+                rows={6}
+                defaultValue={settings.home_tiles}
+                placeholder={"Pizza | aisle:Pizza\nBurgers & shawarma | aisle:Burgers & wraps; q:shawarma"}
+                className="field font-mono text-sm"
+              />
+              <p className="hint">Leave it empty and the tiles follow your first aisles.</p>
+              <SaveButton look="btn-admin-go">Save tiles</SaveButton>
+            </div>
+          </Panel>
         </form>
 
         <form id="plans" action={saveSettings} className="lg:col-span-2 scroll-mt-4">

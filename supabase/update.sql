@@ -1271,6 +1271,7 @@ alter table settings add column if not exists group_fee_floor text not null defa
 -- their own menus say.
 alter table menu_categories add column if not exists aisle text not null default '';
 alter table settings add column if not exists menu_aisles text not null default '';
+alter table settings add column if not exists home_tiles text not null default '';
 
 -- What actually sells, so the everything list can open with it rather than
 -- with 5 Alive, 7UP and Aquafina. A trigger keeps it, so nothing in the app

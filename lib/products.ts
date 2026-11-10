@@ -538,7 +538,13 @@ export type AisleShop = {
  * list with no extra rule. Capped per shop: it is a way to choose, and the
  * whole menu is a tap away.
  */
-export type KindFilter = { aisle?: string; q?: string; category?: string };
+export type KindSource = { aisle?: string; q?: string; category?: string };
+export type KindFilter = KindSource & {
+  /** Several of them at once: a tile that is rice and chicken, say. */
+  sources?: KindSource[];
+  /** Only these counters, by name. */
+  shops?: string[];
+};
 
 export async function aisleShops(aisle: string, perShop = 40): Promise<AisleShop[]> {
   return kindShops({ aisle }, perShop);
@@ -546,37 +552,50 @@ export async function aisleShops(aisle: string, perShop = 40): Promise<AisleShop
 
 /** The same, for a kind of food the shop files by word or by category. */
 export async function kindShops(filter: KindFilter, perShop = 40): Promise<AisleShop[]> {
-  const places = await foodPlaces();
-  const aisle = (filter.aisle ?? "").trim();
-  const word = (filter.q ?? "").trim().replace(/[%_,()]/g, " ").trim();
-  const category = (filter.category ?? "").trim();
-  if (places.length === 0 || (aisle === "" && word === "" && category === "")) return [];
+  const everyone = await foodPlaces();
+  const only = (filter.shops ?? []).map((one) => one.trim().toLowerCase()).filter(Boolean);
+  const places =
+    only.length === 0 ? everyone : everyone.filter((one) => only.includes(one.name.toLowerCase()));
+  const sources = (filter.sources ?? [{ aisle: filter.aisle, q: filter.q, category: filter.category }]).filter(
+    (one) => (one.aisle ?? "").trim() !== "" || (one.q ?? "").trim() !== "" || (one.category ?? "").trim() !== ""
+  );
+  if (places.length === 0 || sources.length === 0) return [];
 
-  let query = db()
-    .from("menu_items")
-    .select("*")
-    .in("restaurant_id", places.map((one) => one.id))
-    .eq("available", true)
-    .gt("price_food", 0);
+  const found = new Map<string, MenuItem>();
+  for (const source of sources) {
+    const aisle = (source.aisle ?? "").trim();
+    const word = (source.q ?? "").trim().replace(/[%_,()]/g, " ").trim();
+    const category = (source.category ?? "").trim();
 
-  if (aisle !== "" || category !== "") {
-    let cats = db()
-      .from("menu_categories")
-      .select("id")
-      .in("restaurant_id", places.map((one) => one.id));
-    cats = aisle !== "" ? cats.eq("aisle", aisle) : cats.eq("name", category);
-    const { data: found } = await cats;
-    const ids = ((found ?? []) as { id: string }[]).map((one) => one.id);
-    if (ids.length === 0) return [];
-    query = query.in("category_id", ids);
-  } else {
-    query = query.ilike("name", `%${word}%`);
+    let query = db()
+      .from("menu_items")
+      .select("*")
+      .in("restaurant_id", places.map((one) => one.id))
+      .eq("available", true)
+      .gt("price_food", 0);
+
+    if (aisle !== "" || category !== "") {
+      let cats = db()
+        .from("menu_categories")
+        .select("id")
+        .in("restaurant_id", places.map((one) => one.id));
+      cats = aisle !== "" ? cats.eq("aisle", aisle) : cats.eq("name", category);
+      const { data: hit } = await cats;
+      const ids = ((hit ?? []) as { id: string }[]).map((one) => one.id);
+      if (ids.length === 0) continue;
+      query = query.in("category_id", ids);
+    } else {
+      query = query.ilike("name", `%${word}%`);
+    }
+
+    const { data: rows } = await query.limit(2000);
+    for (const row of (rows ?? []) as MenuItem[]) found.set(row.id, row);
   }
 
-  const { data } = await query
-    .order("ordered_count", { ascending: false })
-    .order("sort_order", { ascending: true })
-    .limit(2000);
+  const data = [...found.values()].sort(
+    (a, b) =>
+      (b.ordered_count ?? 0) - (a.ordered_count ?? 0) || (a.sort_order ?? 0) - (b.sort_order ?? 0)
+  );
 
   const shops = new Map<string, AisleShop>();
   const prices = new Map<string, number[]>();
