@@ -8495,3 +8495,10 @@ test("startsFrom ignores small items filed beside the real thing", async () => {
   assert.equal(startsFrom([2100, 2900, 4150]), 2100);
   assert.equal(startsFrom([]), 0);
 });
+
+test("arrivalShort squeezes a delivery window into a pill", async () => {
+  const { arrivalShort } = await import("../lib/arrival-short");
+  assert.equal(arrivalShort("between 5pm and 7pm today"), "Today 5-7pm");
+  assert.equal(arrivalShort("Between 11am and 1pm tomorrow"), "Tomorrow 11am-1pm");
+  assert.equal(arrivalShort("around 4:30pm today"), "around 4:30pm today");
+});

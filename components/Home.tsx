@@ -7,6 +7,7 @@ import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
 import ArrivalStrip from "./ArrivalStrip";
 import Builder from "./Builder";
+import { arrivalShort } from "@/lib/arrival-short";
 import TodaysOffer from "./TodaysOffer";
 import Drawing from "./Drawing";
 import GoogleSays, { GoogleChip } from "./GoogleSays";
@@ -339,13 +340,13 @@ export default function Home({
           {starters.length > 0 && (
             <section>
               <div className="shell space-y-3 pb-2 pt-5">
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                  <h2 className="font-display text-3xl font-black uppercase leading-none">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="font-display text-[1.7rem] font-black uppercase leading-none">
                     Start from here
                   </h2>
                   {arriving !== "" && (
-                    <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-shell">
-                      Delivery {arriving.charAt(0).toLowerCase() + arriving.slice(1)}
+                    <span className="shrink-0 whitespace-nowrap rounded-full bg-ink px-3 py-1 text-xs font-bold text-shell">
+                      {arrivalShort(arriving)}
                     </span>
                   )}
                 </div>
