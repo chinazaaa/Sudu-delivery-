@@ -11,7 +11,7 @@ import { naira } from "@/lib/money";
 import type { AisleShop } from "@/lib/products";
 import type { ItemView } from "@/lib/view";
 
-type Step = "shop" | "dish" | "added";
+type Step = "shop" | "dish" | "drink" | "added";
 type Dish = AisleShop["items"][number];
 
 /**
@@ -27,7 +27,8 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
   const [step, setStep] = useState<Step>("shop");
   const [shop, setShop] = useState<AisleShop | null>(null);
   const [all, setAll] = useState(false);
-  const [open, setOpen] = useState<{ item: ItemView; shop: AisleShop } | null>(null);
+  const [open, setOpen] = useState<{ item: ItemView; shop: AisleShop; drink?: boolean } | null>(null);
+  const [drinks, setDrinks] = useState<AisleShop[]>([]);
   const [loading, setLoading] = useState("");
   const cart = useCart();
   const before = useRef(0);
@@ -43,6 +44,19 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
     };
   }, [aisle]);
 
+  // Drinks are offered after the food, so they are fetched while somebody
+  // is still choosing it.
+  useEffect(() => {
+    let live = true;
+    fetch(`/api/builder?aisle=${encodeURIComponent("Drinks")}`)
+      .then((r) => r.json())
+      .then((d) => live && setDrinks(d.shops ?? []))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -50,7 +64,7 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
     };
   }, []);
 
-  async function pick(dish: Dish, from: AisleShop) {
+  async function pick(dish: Dish, from: AisleShop, drink = false) {
     setLoading(dish.id);
     let groups: ItemView["groups"] = [];
     try {
@@ -62,6 +76,7 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
     setLoading("");
     before.current = cartCount(cart);
     setOpen({
+      drink,
       shop: from,
       item: {
         id: dish.id,
@@ -79,12 +94,12 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
     });
   }
 
-  const dots: Step[] = ["shop", "dish", "added"];
+  const dots: Step[] = ["shop", "dish", "drink", "added"];
   const back = () => {
     if (step === "dish") {
       setStep("shop");
       setAll(false);
-    } else if (step === "added") setStep("dish");
+    } else if (step === "drink" || step === "added") setStep("dish");
   };
 
   const list = shop?.items ?? [];
@@ -92,11 +107,11 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
   const top = popular.length > 0 ? popular : list.slice(0, 3);
   const rest = list.filter((d) => !top.includes(d));
 
-  const card = (dish: Dish, from: AisleShop, tag?: string) => (
+  const card = (dish: Dish, from: AisleShop, tag?: string, drink = false) => (
     <button
       key={dish.id}
       type="button"
-      onClick={() => pick(dish, from)}
+      onClick={() => pick(dish, from, drink)}
       className="relative flex flex-col overflow-hidden rounded-2xl border-2 border-ink bg-white text-left shadow-[3px_3px_0_0_#111]"
     >
       <span className="block aspect-[4/3] w-full">
@@ -110,7 +125,7 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
       <span className="flex min-w-0 flex-col items-start gap-1.5 p-2.5">
         <span className="text-sm font-bold leading-tight">{dish.name}</span>
         <span className="whitespace-nowrap rounded-full bg-brand px-2 py-0.5 text-sm font-extrabold text-white">
-          {loading === dish.id ? "…" : naira(dish.price)}
+          {loading === dish.id ? "…" : `${dish.varies ? "from " : ""}${naira(dish.price)}`}
         </span>
       </span>
     </button>
@@ -200,6 +215,22 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
           </div>
         )}
 
+        {step === "drink" && shop && (
+          <div className="mx-auto max-w-lg space-y-3">
+            <h2 className="font-display text-3xl font-black uppercase leading-none">
+              Add a drink?
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              {(drinks.find((one) => one.id === shop.id)?.items ?? [])
+                .slice(0, 8)
+                .map((dish) => card(dish, shop, undefined, true))}
+            </div>
+            <button type="button" onClick={() => setStep("added")} className="btn-quiet w-full">
+              No thanks
+            </button>
+          </div>
+        )}
+
         {step === "added" && (
           <div className="mx-auto max-w-lg space-y-4 pt-6 text-center">
             <p
@@ -246,7 +277,11 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
                   0
                 )
               );
-              if (now > before.current) setStep("added");
+              if (now > before.current) {
+                const mine = open?.item.groups.some((g) => /drink/i.test(g.name)) ?? false;
+                const has = (drinks.find((one) => one.id === open?.shop.id)?.items.length ?? 0) > 0;
+                setStep(!open?.drink && !mine && has ? "drink" : "added");
+              }
             }, 0);
           }}
         />

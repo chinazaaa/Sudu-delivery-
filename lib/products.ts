@@ -6,6 +6,7 @@ import { aislesFrom, NOT_DINNER } from "./aisles";
 import { safeSettings } from "./settings";
 import { onTheMenu } from "./shelf";
 import { pctOf } from "./containers";
+import { optionGroupsFor } from "./menu";
 import type { MenuItem } from "./types";
 
 /**
@@ -523,6 +524,9 @@ export type AisleShop = {
     imageUrl: string;
     containerPct: number;
     orderedCount: number;
+    /** Its choices can change the price (a size, a bigger pizza), so what is
+     *  shown is where it starts, not what it will cost. */
+    varies: boolean;
   }[];
 };
 
@@ -577,10 +581,21 @@ export async function aisleShops(aisle: string, perShop = 40): Promise<AisleShop
         imageUrl: row.image_url ?? "",
         containerPct: pctOf(row),
         orderedCount: row.ordered_count ?? 0,
+        varies: false,
       });
     }
     shops.set(place.id, shop);
   }
   for (const shop of shops.values()) shop.from = startsFrom(prices.get(shop.id) ?? []);
+
+  // Which dishes have a choice that moves the price, so the card can say
+  // "from" rather than quote the smallest as if it were the price.
+  const kept = [...shops.values()].flatMap((shop) => shop.items);
+  const groups = await optionGroupsFor(kept.map((one) => one.id));
+  for (const dish of kept) {
+    dish.varies = (groups.get(dish.id) ?? []).some((group) =>
+      group.options.some((option) => option.priceDelta > 0 || option.asItem)
+    );
+  }
   return [...shops.values()].sort((a, b) => b.count - a.count);
 }
