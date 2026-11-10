@@ -6,6 +6,7 @@ import CartBar from "./CartBar";
 import ItemRow from "./ItemRow";
 import ItemSheet from "./ItemSheet";
 import ArrivalStrip from "./ArrivalStrip";
+import Builder from "./Builder";
 import TodaysOffer from "./TodaysOffer";
 import Drawing from "./Drawing";
 import GoogleSays, { GoogleChip } from "./GoogleSays";
@@ -152,6 +153,7 @@ export default function Home({
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
+  const [building, setBuilding] = useState<string | null>(null);
   // A dish whose choices are still on their way. The sheet waits for them
   // rather than opening on a half of itself: a sheet with no sizes on it is
   // a sheet that adds the wrong thing to the cart.
@@ -332,6 +334,7 @@ export default function Home({
               nothing to the half of campus who were sent a link. */}
           {/* First thing seen: people who open the shop not knowing what to
               pick get a ready answer, and a person to ask if it is not one. */}
+          {building !== null && <Builder aisle={building} onClose={() => setBuilding(null)} />}
           {starters.length > 0 && (
             <section>
               <div className="shell space-y-3 pb-2 pt-5">
@@ -341,15 +344,19 @@ export default function Home({
                 <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {starters.map((one) => (
                     <li key={one.aisle}>
-                      <Link
-                        href={`/products?aisle=${encodeURIComponent(one.aisle)}`}
-                        className="flex h-full flex-col justify-between gap-2 rounded-2xl border-2 border-ink bg-white p-3.5 shadow-[3px_3px_0_0_#111]"
+                      <button
+                        type="button"
+                        onClick={() => setBuilding(one.aisle)}
+                        className="flex h-full w-full flex-col justify-between gap-2 rounded-2xl border-2 border-ink bg-white p-3.5 text-left shadow-[3px_3px_0_0_#111]"
                       >
+                        <span className="block size-16 overflow-hidden">
+                          <Thumb src="" name={one.aisle} category={one.aisle} variant="tile" />
+                        </span>
                         <span className="text-lg font-extrabold leading-tight">{one.aisle}</span>
                         <span className="text-sm font-bold text-brand">
                           from {naira(one.from)} <span aria-hidden>→</span>
                         </span>
-                      </Link>
+                      </button>
                     </li>
                   ))}
                 </ul>

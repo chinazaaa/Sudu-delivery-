@@ -90,10 +90,10 @@ export type Facets = {
  */
 const foodPlaces = cache(async function foodPlaces(
   all = false
-): Promise<{ id: string; name: string; slug: string }[]> {
+): Promise<{ id: string; name: string; slug: string; logoUrl: string; brandHex: string }[]> {
   const { data } = await db()
     .from("restaurants")
-    .select("id, name, slug, kind, active")
+    .select("id, name, slug, kind, active, logo_url, brand_hex")
     .order("sort_order", { ascending: true });
 
   return ((data ?? []) as any[])
@@ -102,6 +102,8 @@ const foodPlaces = cache(async function foodPlaces(
       id: one.id as string,
       name: one.name as string,
       slug: (one.slug as string) ?? "",
+      logoUrl: (one.logo_url as string) ?? "",
+      brandHex: (one.brand_hex as string) ?? "",
     }));
 });
 
@@ -485,4 +487,81 @@ export async function aisleFromPrices(aisles: string[]): Promise<Record<string, 
     if (!out[aisle] || row.price_food < out[aisle]) out[aisle] = row.price_food;
   }
   return out;
+}
+
+export type AisleShop = {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string;
+  brandHex: string;
+  from: number;
+  count: number;
+  items: {
+    id: string;
+    href: string;
+    name: string;
+    description: string;
+    price: number;
+    imageUrl: string;
+    containerPct: number;
+    orderedCount: number;
+  }[];
+};
+
+/**
+ * Who sells an aisle, and what, for the step-by-step picker on the front page.
+ *
+ * Shops come back with the one selling the most first, and each shop's dishes
+ * with the most ordered first, so "what do you recommend" is the top of the
+ * list with no extra rule. Capped per shop: it is a way to choose, and the
+ * whole menu is a tap away.
+ */
+export async function aisleShops(aisle: string, perShop = 40): Promise<AisleShop[]> {
+  const places = await foodPlaces();
+  if (places.length === 0 || aisle.trim() === "") return [];
+
+  const { data: cats } = await db()
+    .from("menu_categories")
+    .select("id")
+    .in("restaurant_id", places.map((one) => one.id))
+    .eq("aisle", aisle.trim());
+  const ids = ((cats ?? []) as { id: string }[]).map((one) => one.id);
+  if (ids.length === 0) return [];
+
+  const { data } = await db()
+    .from("menu_items")
+    .select("*")
+    .in("category_id", ids)
+    .eq("available", true)
+    .gt("price_food", 0)
+    .order("ordered_count", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .limit(2000);
+
+  const shops = new Map<string, AisleShop>();
+  for (const row of (data ?? []) as MenuItem[]) {
+    const place = places.find((one) => one.id === row.restaurant_id);
+    if (!place) continue;
+    const shop =
+      shops.get(place.id) ??
+      { id: place.id, name: place.name, slug: place.slug, logoUrl: place.logoUrl, brandHex: place.brandHex, from: 0, count: 0, items: [] };
+    const price = sellingNow(row);
+    shop.count += 1;
+    shop.from = shop.from === 0 ? price : Math.min(shop.from, price);
+    if (shop.items.length < perShop) {
+      shop.items.push({
+        id: row.id,
+        href: row.slug || row.id,
+        name: row.name,
+        description: row.description ?? "",
+        price,
+        imageUrl: row.image_url ?? "",
+        containerPct: pctOf(row),
+        orderedCount: row.ordered_count ?? 0,
+      });
+    }
+    shops.set(place.id, shop);
+  }
+  return [...shops.values()].sort((a, b) => b.count - a.count);
 }
