@@ -330,6 +330,50 @@ export default function Home({
           {/* Hero. What the shop is on the left, what it is doing tonight on
               the right: the page used to open on the run alone, which says
               nothing to the half of campus who were sent a link. */}
+          {/* First thing seen: people who open the shop not knowing what to
+              pick get a ready answer, and a person to ask if it is not one. */}
+          {starters.length > 0 && (
+            <section className="border-b-2 border-ink">
+              <div className="shell space-y-3 py-5">
+                <h2 className="font-display text-3xl font-black uppercase leading-none">
+                  Not sure what to order?
+                </h2>
+                <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {starters.map((one) => (
+                    <li key={one.code}>
+                      <Link
+                        href={`/c/${one.code}`}
+                        className="flex h-full flex-col justify-between gap-2 rounded-2xl border-2 border-ink bg-white p-3.5 shadow-[3px_3px_0_0_#111]"
+                      >
+                        <span className="text-lg font-extrabold leading-tight">{one.title}</span>
+                        <span className="text-sm font-bold text-brand">
+                          {naira(one.food)} <span aria-hidden>→</span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new Event("sudu:open-bot"))}
+                    className="btn-primary w-full"
+                  >
+                    Chat with our bot
+                  </button>
+                  <a
+                    href={askUs || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-quiet w-full text-center"
+                  >
+                    Message us
+                  </a>
+                </div>
+              </div>
+            </section>
+          )}
+
           <section className="border-b-2 border-ink">
             <div className="shell grid gap-6 py-5 sm:gap-8 sm:py-12 lg:grid-cols-2 lg:items-center lg:gap-14 lg:py-16">
               <div className="flex flex-col gap-3.5 sm:gap-7">
@@ -419,40 +463,6 @@ export default function Home({
                     Order as a parent
                   </Link>
                 </div>
-
-          {starters.length > 0 && (
-            <section className="pt-1">
-              <h2 className="text-lg font-bold">Not sure what to order?</h2>
-              <p className="text-sm text-muted">Tap one to start. Change it any time.</p>
-              <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {starters.map((one) => (
-                  <li key={one.code}>
-                    <Link href={`/c/${one.code}`} className="card block h-full space-y-1">
-                      <span className="block font-bold">{one.title}</span>
-                      <span className="block text-sm text-muted">
-                        {one.sample.join(", ")}
-                        {one.more > 0 ? ` and ${one.more} more` : ""}
-                      </span>
-                      <span className="block text-sm font-semibold text-brand">
-                        {naira(one.food)} of food
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2 text-sm text-muted">
-                Still unsure? Ask the chat bubble, or{" "}
-                {askUs !== "" ? (
-                  <a href={askUs} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand">
-                    message us on WhatsApp
-                  </a>
-                ) : (
-                  "message us on WhatsApp"
-                )}
-                .
-              </p>
-            </section>
-          )}
               </div>
 
               {arriving !== "" && (

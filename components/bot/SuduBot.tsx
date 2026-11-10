@@ -258,6 +258,15 @@ const EMPTY: Held = {
 export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
   const [open, setOpen] = useState(false);
   const [teasing, setTeasing] = useState(false);
+  // The front page has a button that opens the bot, so it asks from outside.
+  useEffect(() => {
+    const show = () => {
+      setTeasing(false);
+      setOpen(true);
+    };
+    window.addEventListener("sudu:open-bot", show);
+    return () => window.removeEventListener("sudu:open-bot", show);
+  }, []);
   const [lines, setLines] = useState<Line[]>([]);
   const [ask, setAsk] = useState<Ask>({ of: "nothing" });
   const [at, setAt] = useState(0);
