@@ -450,9 +450,9 @@ export default function Home({
             <section className="mt-6">
               <h2 className="text-lg font-bold">Not sure what to order?</h2>
               <p className="text-sm text-muted">Tap one. It goes in your cart and you can change it.</p>
-              <ul className="-mx-4 mt-3 flex gap-3 overflow-x-auto px-4 pb-2">
+              <ul className="mt-3 grid gap-3 sm:grid-cols-3">
                 {starters.map((one) => (
-                  <li key={one.code} className="w-64 shrink-0">
+                  <li key={one.code}>
                     <Link href={`/c/${one.code}`} className="card block h-full space-y-1">
                       <span className="block font-bold">{one.title}</span>
                       <span className="block text-sm text-muted">
