@@ -94,8 +94,8 @@ async function readTiles(): Promise<StarterTile[]> {
       .select("id, short")
       .eq("active", true)
       .eq("as_cart", true)
-      .order("created_at", { ascending: false })
-      .limit(3);
+      .order("created_at", { ascending: true })
+      .limit(4);
     if (error) return [];
 
     const found = await Promise.all(

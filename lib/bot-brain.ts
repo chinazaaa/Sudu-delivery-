@@ -252,7 +252,7 @@ export function worthActingOn(reading: Reading): boolean {
 /**
  * Which model reads the sentences.
  *
- * Haiku by default, because the job is small and sharply bounded: one
+ * Sonnet by default, because the bot has to read as sharply as a person. (Originally Haiku, because the job is small and sharply bounded: one
  * short message, a fixed set of fields, and a schema the API enforces on
  * the way out. That is the shape of task the smallest model is for, and it
  * is roughly forty times cheaper than the largest, which on a shop doing a
@@ -273,11 +273,11 @@ export const BOT_MODELS = {
 
 export function botModel(asked: string | undefined | null): string {
   const said = String(asked ?? "").trim().toLowerCase();
-  if (said === "") return BOT_MODELS.haiku;
+  if (said === "") return BOT_MODELS.sonnet;
   // A full model id passes through, so a model released after this was
   // written can be used without changing it.
   if (said.startsWith("claude-")) return said;
-  return (BOT_MODELS as Record<string, string>)[said] ?? BOT_MODELS.haiku;
+  return (BOT_MODELS as Record<string, string>)[said] ?? BOT_MODELS.sonnet;
 }
 
 /**

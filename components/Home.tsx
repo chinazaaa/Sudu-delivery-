@@ -62,6 +62,7 @@ export default function Home({
   arrivalWas = 0,
   todayOffer = null,
   starters = [],
+  askUs = "",
   areaExtras = [],
   award = "",
   where = "",
@@ -112,6 +113,8 @@ export default function Home({
   /** The promotion that is on today, for the card above the button. Null
    *  on a day nothing is on, and then nothing is drawn. */
   /** Ready-made carts, so nobody has to start from the whole menu. */
+  /** WhatsApp link for somebody who still cannot decide. */
+  askUs?: string;
   starters?: { code: string; title: string; food: number; sample: string[]; more: number }[];
   todayOffer?: {
     badge: string;
@@ -450,7 +453,7 @@ export default function Home({
             <section className="mt-6">
               <h2 className="text-lg font-bold">Not sure what to order?</h2>
               <p className="text-sm text-muted">Tap one. It goes in your cart and you can change it.</p>
-              <ul className="mt-3 grid gap-3 sm:grid-cols-3">
+              <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {starters.map((one) => (
                   <li key={one.code}>
                     <Link href={`/c/${one.code}`} className="card block h-full space-y-1">
@@ -466,6 +469,17 @@ export default function Home({
                   </li>
                 ))}
               </ul>
+              <p className="mt-2 text-sm text-muted">
+                Still unsure? Ask the chat bubble, or{" "}
+                {askUs !== "" ? (
+                  <a href={askUs} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand">
+                    message us on WhatsApp
+                  </a>
+                ) : (
+                  "message us on WhatsApp"
+                )}
+                .
+              </p>
             </section>
           )}
 

@@ -5498,9 +5498,9 @@ test("the shop brief says only what is true tonight", () => {
 test("the reading model is the small one, and moving up is a setting", () => {
   // Unset is the ordinary case and must land somewhere sensible rather
   // than on whatever was most recently fashionable.
-  assert.equal(botModel(undefined), "claude-haiku-5-5");
-  assert.equal(botModel(""), "claude-haiku-5-5");
-  assert.equal(botModel("   "), "claude-haiku-5-5");
+  assert.equal(botModel(undefined), "claude-sonnet-5-5");
+  assert.equal(botModel(""), "claude-sonnet-5-5");
+  assert.equal(botModel("   "), "claude-sonnet-5-5");
 
   // Short names, because the person typing this into a dashboard at
   // midnight should not have to remember a version number.
@@ -5514,8 +5514,8 @@ test("the reading model is the small one, and moving up is a setting", () => {
 
   // Anything else falls back rather than failing: a typo in a dashboard
   // must not stop the bot reading anything at all.
-  assert.equal(botModel("gpt-4"), "claude-haiku-5-5");
-  assert.equal(botModel("nonsense"), "claude-haiku-5-5");
+  assert.equal(botModel("gpt-4"), "claude-sonnet-5-5");
+  assert.equal(botModel("nonsense"), "claude-sonnet-5-5");
 });
 
 test("a sentence about a person is not searched against the menu", () => {

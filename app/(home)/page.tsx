@@ -19,6 +19,7 @@ import {
   activeBands,
   googleLinks,
   safeSettings,
+  whatsappLink,
   hoursByDay,
   sameDayPricing,
 } from "@/lib/settings";
@@ -394,6 +395,7 @@ export default async function HomePage() {
       <LiveOrderStrip order={live} />
       <Home
         starters={await starterTiles()}
+        askUs={whatsappLink(settings.whatsapp_number, "Hi Sudu, I'm not sure what to order") ?? ""}
       // What the shop's own Google profile says, as the shop typed it in.
       // Nothing is fetched: every part of this hides itself when it is not
       // set, so the page can never show a rating nobody gave.
