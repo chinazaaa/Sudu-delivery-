@@ -8488,3 +8488,10 @@ test("missingFrom adds only what the cart lacks and never removes", async () => 
   assert.deepEqual(out.map((l: { itemId: string }) => l.itemId), ["b"]);
   assert.equal(missingFrom([mk("a")], [{ itemId: "a", optionIds: [] }], key).length, 0);
 });
+
+test("startsFrom ignores small items filed beside the real thing", async () => {
+  const { startsFrom } = await import("../lib/products");
+  assert.equal(startsFrom([1050, 9900, 10550, 10850, 11300]), 9900);
+  assert.equal(startsFrom([2100, 2900, 4150]), 2100);
+  assert.equal(startsFrom([]), 0);
+});

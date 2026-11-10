@@ -458,6 +458,21 @@ export async function giftyDishes(): Promise<string[]> {
  * The cheapest dish in each of the given aisles, over the counters that sell
  * food. Zero where an aisle has nothing on sale, so a caller can leave it out.
  */
+/**
+ * What a thing "starts from", without the small stuff.
+ *
+ * A pocket or a sauce can be filed in the same aisle as a whole pizza, and
+ * the cheapest of them is not what anybody means by "pizza from". So prices
+ * well under the usual one (a rough middle) are left out of the starting
+ * figure. Worked out from the prices themselves, so no dish is named.
+ */
+export function startsFrom(prices: number[]): number {
+  const sorted = prices.filter((n) => n > 0).sort((a, b) => a - b);
+  if (sorted.length === 0) return 0;
+  const middle = sorted[Math.floor(sorted.length / 2)];
+  return sorted.find((n) => n >= middle * 0.4) ?? sorted[0];
+}
+
 export async function aisleFromPrices(aisles: string[]): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
   if (aisles.length === 0) return out;
@@ -481,11 +496,13 @@ export async function aisleFromPrices(aisles: string[]): Promise<Record<string, 
     .eq("available", true)
     .gt("price_food", 0)
     .limit(5000);
+  const seen: Record<string, number[]> = {};
   for (const row of (items ?? []) as { category_id: string; price_food: number }[]) {
     const aisle = aisleOf.get(row.category_id);
     if (!aisle) continue;
-    if (!out[aisle] || row.price_food < out[aisle]) out[aisle] = row.price_food;
+    (seen[aisle] ??= []).push(row.price_food);
   }
+  for (const [aisle, prices] of Object.entries(seen)) out[aisle] = startsFrom(prices);
   return out;
 }
 
@@ -540,6 +557,7 @@ export async function aisleShops(aisle: string, perShop = 40): Promise<AisleShop
     .limit(2000);
 
   const shops = new Map<string, AisleShop>();
+  const prices = new Map<string, number[]>();
   for (const row of (data ?? []) as MenuItem[]) {
     const place = places.find((one) => one.id === row.restaurant_id);
     if (!place) continue;
@@ -548,7 +566,7 @@ export async function aisleShops(aisle: string, perShop = 40): Promise<AisleShop
       { id: place.id, name: place.name, slug: place.slug, logoUrl: place.logoUrl, brandHex: place.brandHex, from: 0, count: 0, items: [] };
     const price = sellingNow(row);
     shop.count += 1;
-    shop.from = shop.from === 0 ? price : Math.min(shop.from, price);
+    (prices.get(place.id) ?? prices.set(place.id, []).get(place.id)!).push(price);
     if (shop.items.length < perShop) {
       shop.items.push({
         id: row.id,
@@ -563,5 +581,6 @@ export async function aisleShops(aisle: string, perShop = 40): Promise<AisleShop
     }
     shops.set(place.id, shop);
   }
+  for (const shop of shops.values()) shop.from = startsFrom(prices.get(shop.id) ?? []);
   return [...shops.values()].sort((a, b) => b.count - a.count);
 }
