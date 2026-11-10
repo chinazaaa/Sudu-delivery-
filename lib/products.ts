@@ -451,3 +451,38 @@ export async function giftyDishes(): Promise<string[]> {
     return [];
   }
 }
+
+/**
+ * The cheapest dish in each of the given aisles, over the counters that sell
+ * food. Zero where an aisle has nothing on sale, so a caller can leave it out.
+ */
+export async function aisleFromPrices(aisles: string[]): Promise<Record<string, number>> {
+  const out: Record<string, number> = {};
+  if (aisles.length === 0) return out;
+  const places = await foodPlaces();
+  if (places.length === 0) return out;
+
+  const { data: cats } = await db()
+    .from("menu_categories")
+    .select("id, aisle")
+    .in("restaurant_id", places.map((one) => one.id))
+    .in("aisle", aisles);
+  const aisleOf = new Map(
+    ((cats ?? []) as { id: string; aisle: string }[]).map((one) => [one.id, String(one.aisle).trim()])
+  );
+  if (aisleOf.size === 0) return out;
+
+  const { data: items } = await db()
+    .from("menu_items")
+    .select("category_id, price_food")
+    .in("category_id", [...aisleOf.keys()])
+    .eq("available", true)
+    .gt("price_food", 0)
+    .limit(5000);
+  for (const row of (items ?? []) as { category_id: string; price_food: number }[]) {
+    const aisle = aisleOf.get(row.category_id);
+    if (!aisle) continue;
+    if (!out[aisle] || row.price_food < out[aisle]) out[aisle] = row.price_food;
+  }
+  return out;
+}

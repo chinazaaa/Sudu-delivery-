@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { starterTiles } from "@/lib/starter-carts";
+import { aisleTiles } from "@/lib/aisle-tiles";
 import { lagosToday } from "@/lib/time";
 import { boxesAcross, liveOccasions, onShelf } from "@/lib/boxes";
 import { readDoors, type DoorKey } from "@/lib/home-doors";
@@ -394,7 +394,7 @@ export default async function HomePage() {
           everything that was on this page is where it was, one row down. */}
       <LiveOrderStrip order={live} />
       <Home
-        starters={await starterTiles()}
+        starters={await aisleTiles()}
         askUs={whatsappLink(settings.whatsapp_number, "Hi Sudu, I'm not sure what to order") ?? ""}
       // What the shop's own Google profile says, as the shop typed it in.
       // Nothing is fetched: every part of this hides itself when it is not

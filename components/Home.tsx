@@ -115,7 +115,7 @@ export default function Home({
   /** Ready-made carts, so nobody has to start from the whole menu. */
   /** WhatsApp link for somebody who still cannot decide. */
   askUs?: string;
-  starters?: { code: string; title: string; food: number; sample: string[]; more: number }[];
+  starters?: { aisle: string; from: number }[];
   todayOffer?: {
     badge: string;
     where: string;
@@ -340,14 +340,14 @@ export default function Home({
                 </h2>
                 <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {starters.map((one) => (
-                    <li key={one.code}>
+                    <li key={one.aisle}>
                       <Link
-                        href={`/c/${one.code}`}
+                        href={`/products?aisle=${encodeURIComponent(one.aisle)}`}
                         className="flex h-full flex-col justify-between gap-2 rounded-2xl border-2 border-ink bg-white p-3.5 shadow-[3px_3px_0_0_#111]"
                       >
-                        <span className="text-lg font-extrabold leading-tight">{one.title}</span>
+                        <span className="text-lg font-extrabold leading-tight">{one.aisle}</span>
                         <span className="text-sm font-bold text-brand">
-                          {naira(one.food)} <span aria-hidden>→</span>
+                          from {naira(one.from)} <span aria-hidden>→</span>
                         </span>
                       </Link>
                     </li>
