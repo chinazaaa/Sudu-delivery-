@@ -471,7 +471,7 @@ export function startsFrom(prices: number[]): number {
   const sorted = prices.filter((n) => n > 0).sort((a, b) => a - b);
   if (sorted.length === 0) return 0;
   const middle = sorted[Math.floor(sorted.length / 2)];
-  return sorted.find((n) => n >= middle * 0.4) ?? sorted[0];
+  return sorted.find((n) => n >= middle * 0.25) ?? sorted[0];
 }
 
 export async function aisleFromPrices(aisles: string[]): Promise<Record<string, number>> {
@@ -615,5 +615,6 @@ export async function kindShops(filter: KindFilter, perShop = 40): Promise<Aisle
       group.options.some((option) => option.priceDelta > 0 || option.asItem)
     );
   }
-  return [...shops.values()].sort((a, b) => b.count - a.count);
+  // Cheapest way in first, so the shop with the lowest starting price leads.
+  return [...shops.values()].sort((a, b) => a.from - b.from);
 }

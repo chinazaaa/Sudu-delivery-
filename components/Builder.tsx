@@ -36,6 +36,7 @@ export default function Builder({
   const [open, setOpen] = useState<{ item: ItemView; shop: AisleShop; drink?: boolean } | null>(null);
   const [drinks, setDrinks] = useState<AisleShop[]>([]);
   const [loading, setLoading] = useState("");
+  const [cheapest, setCheapest] = useState(false);
   const cart = useCart();
   const before = useRef(0);
 
@@ -123,8 +124,10 @@ export default function Builder({
 
   const list = shop?.items ?? [];
   const popular = list.filter((d) => d.orderedCount > 0).slice(0, 3);
-  const top = popular.length > 0 ? popular : list.slice(0, 3);
-  const rest = list.filter((d) => !top.includes(d));
+  const top = cheapest ? [] : popular.length > 0 ? popular : list.slice(0, 3);
+  const rest = (cheapest ? [...list].sort((a, b) => a.price - b.price) : list).filter(
+    (d) => !top.includes(d)
+  );
 
   const card = (dish: Dish, from: AisleShop, tag?: string, drink = false) => (
     <button
@@ -219,6 +222,23 @@ export default function Builder({
             <h2 className="font-display text-3xl font-black uppercase leading-none">
               {shop.name}
             </h2>
+            <div className="flex gap-2">
+              {[
+                [false, "Most ordered"],
+                [true, "Cheapest"],
+              ].map(([value, label]) => (
+                <button
+                  key={String(label)}
+                  type="button"
+                  onClick={() => setCheapest(value as boolean)}
+                  className={`rounded-full border-2 border-ink px-3 py-1 text-sm font-bold ${
+                    cheapest === value ? "bg-ink text-shell" : "bg-white"
+                  }`}
+                >
+                  {label as string}
+                </button>
+              ))}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               {top.map((dish, at) => card(dish, shop, "★ Most ordered"))}
               {rest.map((dish) => card(dish, shop))}
