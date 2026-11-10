@@ -154,8 +154,16 @@ export default function Home({
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
-  const [building, setBuilding] = useState<string | null>(null);
+  const [building, setBuilding] = useState<{ label: string; aisle?: string; q?: string; category?: string } | null>(null);
   const showHero = false;
+  // Kinds the picker tiles above already cover, so this row only offers
+  // what is not there: a kind is covered when one of those aisles holds its
+  // word or is its aisle.
+  const covered = (kind: (typeof FOOD_KINDS)[number]) => {
+    const names = starters.map((one) => one.aisle.toLowerCase());
+    const word = (kind.aisle ?? kind.q ?? kind.label).toLowerCase();
+    return names.some((name) => name === word || name.includes(word));
+  };
   // A dish whose choices are still on their way. The sheet waits for them
   // rather than opening on a half of itself: a sheet with no sizes on it is
   // a sheet that adds the wrong thing to the cart.
@@ -336,7 +344,7 @@ export default function Home({
               nothing to the half of campus who were sent a link. */}
           {/* First thing seen: people who open the shop not knowing what to
               pick get a ready answer, and a person to ask if it is not one. */}
-          {building !== null && <Builder aisle={building} onClose={() => setBuilding(null)} />}
+          {building !== null && <Builder kind={building} onClose={() => setBuilding(null)} />}
           {starters.length > 0 && (
             <section>
               <div className="shell space-y-3 pb-2 pt-5">
@@ -355,7 +363,7 @@ export default function Home({
                     <li key={one.aisle}>
                       <button
                         type="button"
-                        onClick={() => setBuilding(one.aisle)}
+                        onClick={() => setBuilding({ label: one.aisle, aisle: one.aisle })}
                         className="flex h-full w-full flex-col justify-between gap-2 rounded-2xl border-2 border-ink bg-white p-3.5 text-left shadow-[3px_3px_0_0_#111]"
                       >
                         <span className="block size-16 overflow-hidden">
@@ -527,19 +535,20 @@ export default function Home({
           <section aria-label="What kind of food" className="shell flex flex-col gap-6 pb-10 pt-12">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <h2 className="section-title">
-                What are you
+                Something
                 <br />
-                in the mood for?
+                else?
               </h2>
               <Link href="/products" className="pb-1 font-bold underline">
                 Browse the full menu
               </Link>
             </div>
             <ul className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-              {FOOD_KINDS.map((kind) => (
+              {FOOD_KINDS.filter((kind) => !covered(kind)).map((kind) => (
                 <li key={kind.label}>
-                  <Link
-                    href={kindHref(kind)}
+                  <button
+                    type="button"
+                    onClick={() => setBuilding(kind)}
                     /* Smaller tiles, same grid. Nine of them at a hundred
                        and four pixels each is a whole phone screen for a
                        row of signposts, and what is under them, what
@@ -548,7 +557,7 @@ export default function Home({
                        nine, which is the wrong trade for the one control
                        that is the way into the menu: all nine fit in half
                        the height instead. */
-                    className="flex h-full min-h-[76px] flex-col items-start justify-between gap-1 rounded-xl border-2 border-ink bg-paper p-2.5 transition active:translate-x-0.5 active:translate-y-0.5 sm:min-h-[96px] sm:gap-2 sm:p-4"
+                    className="flex h-full min-h-[76px] w-full flex-col text-left items-start justify-between gap-1 rounded-xl border-2 border-ink bg-paper p-2.5 transition active:translate-x-0.5 active:translate-y-0.5 sm:min-h-[96px] sm:gap-2 sm:p-4"
                   >
                     <span aria-hidden className="text-xl leading-none sm:text-3xl">
                       {kind.emoji}
@@ -556,7 +565,7 @@ export default function Home({
                     <span className="font-display text-[15px] font-extrabold uppercase leading-[1.05] sm:text-[19px]">
                       {kind.label}
                     </span>
-                  </Link>
+                  </button>
                 </li>
               ))}
             </ul>

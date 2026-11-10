@@ -21,7 +21,14 @@ type Dish = AisleShop["items"][number];
  * usual sheet for size and drink. Everything it shows comes from the menu,
  * so a new counter or dish appears here with no change to this.
  */
-export default function Builder({ aisle, onClose }: { aisle: string; onClose: () => void }) {
+export default function Builder({
+  kind,
+  onClose,
+}: {
+  kind: { label: string; aisle?: string; q?: string; category?: string };
+  onClose: () => void;
+}) {
+  const aisle = kind.label;
   const [shops, setShops] = useState<AisleShop[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [step, setStep] = useState<Step>("shop");
@@ -34,14 +41,27 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
 
   useEffect(() => {
     let live = true;
-    fetch(`/api/builder?aisle=${encodeURIComponent(aisle)}`)
+    const asked = new URLSearchParams();
+    if (kind.aisle) asked.set("aisle", kind.aisle);
+    if (kind.q) asked.set("q", kind.q);
+    if (kind.category) asked.set("category", kind.category);
+    fetch(`/api/builder?${asked.toString()}`)
       .then((r) => r.json())
-      .then((d) => live && setShops(d.shops ?? []))
+      .then((d) => {
+        if (!live) return;
+        const found: AisleShop[] = d.shops ?? [];
+        setShops(found);
+        // One place sells it, so there is nothing to choose between.
+        if (found.length === 1) {
+          setShop(found[0]);
+          setStep("dish");
+        }
+      })
       .catch(() => live && setFailed(true));
     return () => {
       live = false;
     };
-  }, [aisle]);
+  }, [kind.aisle, kind.q, kind.category]);
 
   // Drinks are offered after the food, so they are fetched while somebody
   // is still choosing it.
@@ -96,6 +116,7 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
   const dots: Step[] = ["shop", "dish", "drink", "added"];
   const back = () => {
     if (step === "dish") {
+      if ((shops?.length ?? 0) === 1) return onClose();
       setStep("shop");
     } else if (step === "drink" || step === "added") setStep("dish");
   };

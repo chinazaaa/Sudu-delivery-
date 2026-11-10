@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 
-import { aisleShops } from "@/lib/products";
+import { kindShops } from "@/lib/products";
 
 export const dynamic = "force-dynamic";
 
-/** The shops and dishes behind one aisle, for the step-by-step picker. */
+/** The shops and dishes behind one aisle, word or category, for the picker. */
 export async function GET(request: Request) {
-  const aisle = new URL(request.url).searchParams.get("aisle") ?? "";
-  return NextResponse.json({ shops: await aisleShops(aisle) });
+  const asked = new URL(request.url).searchParams;
+  return NextResponse.json({
+    shops: await kindShops({
+      aisle: asked.get("aisle") ?? "",
+      q: asked.get("q") ?? "",
+      category: asked.get("category") ?? "",
+    }),
+  });
 }
