@@ -202,7 +202,8 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
             </h2>
             <div className="grid grid-cols-2 gap-3">
               {top.map((dish, at) => card(dish, shop, at === 0 ? "★ Most ordered" : undefined))}
-              </div>
+              {all && rest.map((dish) => card(dish, shop))}
+            </div>
             {rest.length > 0 && !all && (
               <button
                 type="button"
