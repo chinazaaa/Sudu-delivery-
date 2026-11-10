@@ -384,10 +384,7 @@ export default function Home({
                     phrase anybody searches, and neither did this. It reads
                     the same out loud and now carries it. */}
                 <p className="max-w-[520px] text-[17px] leading-normal text-ink/80 sm:text-xl">
-                  Food delivery to Pan-Atlantic University, from {said(menu)}
-                  {" "}and more{where !== "" ? ` in ${where}` : ""}. Mix
-                  restaurants in one order, pay once, and collect it at your
-                  hostel block.
+                  Restaurant food, to your hostel block.
                 </p>
                 {/* Above the button, because somebody who came here off a
                     flyer came for this rather than for the headline. */}
@@ -423,36 +420,10 @@ export default function Home({
                   </Link>
                 </div>
 
-              </div>
-
-              {arriving !== "" && (
-                <div className="relative pl-4 pt-4 sm:pl-7 sm:pt-7">
-                  <span
-                    aria-hidden
-                    className="absolute left-0 top-0 h-[70%] w-[72%] opacity-90"
-                    style={{
-                      background:
-                        "repeating-linear-gradient(-60deg,#e5321d 0 7px,transparent 7px 16px)",
-                    }}
-                  />
-                  <ArrivalStrip
-                    said={arriving}
-                    also={alsoArriving}
-                    closesAt={closesAt}
-                    lastMinute={lastMinute}
-                    from={runFrom}
-                    feeFrom={arrivalFee || (fees[0]?.fee ?? 0)}
-                    feeWas={arrivalWas}
-                  />
-                </div>
-              )}
-            </div>
-          </section>
-
           {starters.length > 0 && (
-            <section className="mt-6">
+            <section className="pt-1">
               <h2 className="text-lg font-bold">Not sure what to order?</h2>
-              <p className="text-sm text-muted">Tap one. It goes in your cart and you can change it.</p>
+              <p className="text-sm text-muted">Tap one to start. Change it any time.</p>
               <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {starters.map((one) => (
                   <li key={one.code}>
@@ -482,6 +453,31 @@ export default function Home({
               </p>
             </section>
           )}
+              </div>
+
+              {arriving !== "" && (
+                <div className="relative pl-4 pt-4 sm:pl-7 sm:pt-7">
+                  <span
+                    aria-hidden
+                    className="absolute left-0 top-0 h-[70%] w-[72%] opacity-90"
+                    style={{
+                      background:
+                        "repeating-linear-gradient(-60deg,#e5321d 0 7px,transparent 7px 16px)",
+                    }}
+                  />
+                  <ArrivalStrip
+                    said={arriving}
+                    also={alsoArriving}
+                    closesAt={closesAt}
+                    lastMinute={lastMinute}
+                    from={runFrom}
+                    feeFrom={arrivalFee || (fees[0]?.fee ?? 0)}
+                    feeWas={arrivalWas}
+                  />
+                </div>
+              )}
+            </div>
+          </section>
 
           {/*
               What you fancy, before whose shop it is.
