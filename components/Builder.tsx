@@ -26,7 +26,6 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
   const [failed, setFailed] = useState(false);
   const [step, setStep] = useState<Step>("shop");
   const [shop, setShop] = useState<AisleShop | null>(null);
-  const [all, setAll] = useState(false);
   const [open, setOpen] = useState<{ item: ItemView; shop: AisleShop; drink?: boolean } | null>(null);
   const [drinks, setDrinks] = useState<AisleShop[]>([]);
   const [loading, setLoading] = useState("");
@@ -98,7 +97,6 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
   const back = () => {
     if (step === "dish") {
       setStep("shop");
-      setAll(false);
     } else if (step === "drink" || step === "added") setStep("dish");
   };
 
@@ -201,18 +199,9 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
               {shop.name}
             </h2>
             <div className="grid grid-cols-2 gap-3">
-              {top.map((dish, at) => card(dish, shop, at === 0 ? "★ Most ordered" : undefined))}
-              {all && rest.map((dish) => card(dish, shop))}
+              {top.map((dish, at) => card(dish, shop, "★ Most ordered"))}
+              {rest.map((dish) => card(dish, shop))}
             </div>
-            {rest.length > 0 && !all && (
-              <button
-                type="button"
-                onClick={() => setAll(true)}
-                className="btn-quiet w-full"
-              >
-                See all {shop.count} →
-              </button>
-            )}
           </div>
         )}
 
@@ -253,7 +242,6 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
               type="button"
               onClick={() => {
                 setStep("shop");
-                setAll(false);
               }}
               className="btn-quiet w-full"
             >
