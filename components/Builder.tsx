@@ -107,9 +107,9 @@ export default function Builder({ aisle, onClose }: { aisle: string; onClose: ()
           {tag}
         </span>
       )}
-      <span className="flex items-start justify-between gap-2 p-2.5">
+      <span className="flex min-w-0 flex-col items-start gap-1.5 p-2.5">
         <span className="text-sm font-bold leading-tight">{dish.name}</span>
-        <span className="shrink-0 rounded-full bg-brand px-2 py-0.5 text-sm font-extrabold text-white">
+        <span className="whitespace-nowrap rounded-full bg-brand px-2 py-0.5 text-sm font-extrabold text-white">
           {loading === dish.id ? "…" : naira(dish.price)}
         </span>
       </span>
