@@ -333,8 +333,8 @@ export default function Home({
           {/* First thing seen: people who open the shop not knowing what to
               pick get a ready answer, and a person to ask if it is not one. */}
           {starters.length > 0 && (
-            <section className="border-b-2 border-ink">
-              <div className="shell space-y-3 py-5">
+            <section>
+              <div className="shell space-y-3 pb-2 pt-5">
                 <h2 className="font-display text-3xl font-black uppercase leading-none">
                   Not sure what to order?
                 </h2>
@@ -415,7 +415,7 @@ export default function Home({
                     banner, the ribbon and the header had taken their 290,
                     and everything that sells was under the fold. It is
                     still the biggest thing on the page. */}
-                <h1 className="font-display text-[min(14vw,3.5rem)] font-black uppercase leading-[0.86] tracking-[-0.005em] sm:text-[clamp(4rem,9vw,8rem)]">
+                <h1 className="font-display text-[min(10vw,2.5rem)] font-black uppercase leading-[0.9] tracking-[-0.005em] sm:text-[clamp(4rem,9vw,8rem)]">
                   Outside food.
                   <br />
                   <span className="text-brand">Inside PAU.</span>
@@ -427,9 +427,7 @@ export default function Home({
                     but "Outside food. Inside PAU." does not contain the
                     phrase anybody searches, and neither did this. It reads
                     the same out loud and now carries it. */}
-                <p className="max-w-[520px] text-[17px] leading-normal text-ink/80 sm:text-xl">
-                  Restaurant food, to your hostel block.
-                </p>
+                
                 {/* Above the button, because somebody who came here off a
                     flyer came for this rather than for the headline. */}
                 {todayOffer && (
