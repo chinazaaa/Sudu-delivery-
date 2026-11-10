@@ -154,6 +154,7 @@ export default function Home({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<{ item: ItemView; place: MenuView } | null>(null);
   const [building, setBuilding] = useState<string | null>(null);
+  const showHero = false;
   // A dish whose choices are still on their way. The sheet waits for them
   // rather than opening on a half of itself: a sheet with no sizes on it is
   // a sheet that adds the wrong thing to the cart.
@@ -338,9 +339,16 @@ export default function Home({
           {starters.length > 0 && (
             <section>
               <div className="shell space-y-3 pb-2 pt-5">
-                <h2 className="font-display text-3xl font-black uppercase leading-none">
-                  Not sure what to order?
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                  <h2 className="font-display text-3xl font-black uppercase leading-none">
+                    Start from here
+                  </h2>
+                  {arriving !== "" && (
+                    <span className="rounded-full bg-ink px-3 py-1 text-xs font-bold text-shell">
+                      Delivery {arriving.charAt(0).toLowerCase() + arriving.slice(1)}
+                    </span>
+                  )}
+                </div>
                 <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {starters.map((one) => (
                     <li key={one.aisle}>
@@ -381,6 +389,10 @@ export default function Home({
             </section>
           )}
 
+          {/* The old headline, offer card, buttons, badges and delivery
+              ticket are switched off while the page opens on the picker.
+              Set showHero to true to bring them all back unchanged. */}
+          {showHero && (
           <section className="border-b-2 border-ink">
             <div className="shell grid gap-6 py-5 sm:gap-8 sm:py-12 lg:grid-cols-2 lg:items-center lg:gap-14 lg:py-16">
               <div className="flex flex-col gap-3.5 sm:gap-7">
@@ -493,6 +505,7 @@ export default function Home({
               )}
             </div>
           </section>
+          )}
 
           {/*
               What you fancy, before whose shop it is.
