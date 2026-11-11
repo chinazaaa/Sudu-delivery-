@@ -618,7 +618,10 @@ export async function kindShops(filter: KindFilter, perShop = 40): Promise<Aisle
     return leadGroups.every((group) => group.some((word) => text.includes(word)));
   };
 
-  const data = [...found.values()].sort(
+  // A tile that names what it is (rice and chicken) shows only that: plain
+  // rice and plain chicken are other tiles.
+  const pool = [...found.values()].filter((row) => leadGroups.length === 0 || leads(row));
+  const data = pool.sort(
     (a, b) =>
       Number(leads(b)) - Number(leads(a)) ||
       // What a tile leads with comes cheapest first: somebody looking for

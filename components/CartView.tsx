@@ -596,7 +596,11 @@ export default function CartView({
       cart.every((line) => opensOn(openDaysOf[line.restaurantId], one.runDate))
   );
   const carDays = canGoSameDay(cartAreas)
-    ? slots.filter((one) => carGoesOn(cartAreas, one.date, opensOn))
+    ? slots.filter(
+        (one) =>
+          carGoesOn(cartAreas, one.date, opensOn) &&
+          cart.every((line) => opensOn(openDaysOf[line.restaurantId], one.date))
+      )
     : [];
   /*
    * What the cart quotes for, and what the checkout will open on.

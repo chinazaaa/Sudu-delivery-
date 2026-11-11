@@ -55,7 +55,9 @@ export async function deliveryFor(ids: string[]): Promise<Record<string, ShopDel
         opensOn(openDaysOf[id], run.runDate)
     );
     const cars = canGoSameDay(area)
-      ? slots.filter((slot) => carGoesOn(area, slot.date, opensOn))
+      ? slots.filter(
+          (slot) => carGoesOn(area, slot.date, opensOn) && opensOn(openDaysOf[id], slot.date)
+        )
       : [];
     // The earliest way it can get there, a shared run or a car of its own:
     // somebody asking when it comes wants the soonest day, not the cheapest.
