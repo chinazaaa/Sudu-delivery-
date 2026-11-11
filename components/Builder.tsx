@@ -390,7 +390,8 @@ export default function Builder({
                       {line.restaurantName} · {naira(line.unitPrice * line.qty)}
                     </span>
                     {line.choices.length > 0 && (
-                      <span className="block truncate text-xs text-muted">
+                      <span className="block text-xs text-muted">
+                        {(line.choiceFees ?? []).some((fee) => fee > 0) ? "Price includes " : ""}
                         {choicesSaid(line.choices, line.choiceFees, naira).join(", ")}
                       </span>
                     )}
