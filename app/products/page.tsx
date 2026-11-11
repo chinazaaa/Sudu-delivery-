@@ -9,6 +9,8 @@ import { optionGroupsFor } from "@/lib/menu";
 
 import { browseProducts, productFacets, shelfNames, PER_PAGE } from "@/lib/products";
 import ProductSearch from "@/components/ProductSearch";
+import StartTiles from "@/components/StartTiles";
+import { aisleTiles } from "@/lib/aisle-tiles";
 
 export const dynamic = "force-dynamic";
 
@@ -120,7 +122,9 @@ export default async function ProductsPage({
   if (unfilled(asked.q)) permanentRedirect(withoutQuery(asked));
   const page = Math.max(1, Number(asked.page ?? 1) || 1);
 
-  const [{ products, total }, facets, saleOn] = await Promise.all([
+  // Nothing chosen yet: open on the photo tiles, as the front page does.
+  const fresh = !asked.q && !asked.place && !asked.category && !asked.aisle && page === 1;
+  const [{ products, total }, facets, saleOn, tiles] = await Promise.all([
     browseProducts({
       query: asked.q,
       place: asked.place,
@@ -136,6 +140,7 @@ export default async function ProductsPage({
     }),
     productFacets(asked.place),
     dealsOn(),
+    fresh ? aisleTiles().catch(() => []) : Promise.resolve([]),
   ]);
 
   /*
@@ -224,6 +229,9 @@ export default async function ProductsPage({
 
   return (
     <div className="-mt-4 space-y-4 pb-10">
+      {fresh && tiles.length > 0 ? (
+        <StartTiles tiles={tiles} />
+      ) : (
       <header className="bleed relative overflow-hidden border-b-2 border-ink">
         <span
           aria-hidden
@@ -254,6 +262,7 @@ export default async function ProductsPage({
 
         </div>
       </header>
+      )}
 
       {/* The board's filter bar, stuck to the top: what kind on one line,
           which kitchen and the sort on the next.
