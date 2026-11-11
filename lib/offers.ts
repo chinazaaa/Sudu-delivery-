@@ -342,7 +342,7 @@ export type NearMiss = {
 export function nearMiss(
   offers: LiveOffer[],
   lines: CartItem[],
-  context: { batchId: string; deliverAt?: string | null; returning: boolean }
+  context: { batchId: string; deliverAt?: string | null; onDay?: string; returning: boolean }
 ): NearMiss | null {
   if (lines.length === 0) return null;
   const found: NearMiss[] = [];
@@ -351,6 +351,10 @@ export function nearMiss(
     if (offer.firstOrderOnly && context.returning) continue;
     if (offer.runs.length > 0 && !offer.runs.includes(context.batchId)) continue;
     if (context.deliverAt && !offer.sameDay) continue;
+    // Only an offer that is on the day the food really arrives: a Friday
+    // offer is not a thing to mention to somebody whose food comes on a
+    // Saturday, or whose cart is being looked at on a Wednesday.
+    if (context.onDay !== undefined && !dayMatches(offer.onDays, context.onDay)) continue;
 
     const qualifies = (line: CartItem) =>
       (offer.places.length === 0 || offer.places.includes(line.restaurantId)) &&

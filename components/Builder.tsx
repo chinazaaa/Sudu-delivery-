@@ -11,6 +11,22 @@ import { naira } from "@/lib/money";
 import type { AisleShop } from "@/lib/products";
 import type { ItemView } from "@/lib/view";
 
+/** When a counter's food arrives: green when it is today, amber when it is not. */
+function DayPill({ delivery }: { delivery?: { said: string; today: boolean } }) {
+  if (!delivery) return null;
+  return (
+    <span
+      className={`inline-block rounded-full border-2 px-2.5 py-0.5 text-xs font-bold ${
+        delivery.today
+          ? "border-green-700/40 bg-green-100 text-green-900"
+          : "border-amber-700/40 bg-amber-100 text-amber-900"
+      }`}
+    >
+      {delivery.said}
+    </span>
+  );
+}
+
 type Step = "shop" | "dish" | "drink" | "added";
 type Dish = AisleShop["items"][number];
 
@@ -215,6 +231,7 @@ export default function Builder({
                   <span className="rounded-full bg-brand px-2.5 py-0.5 text-sm font-extrabold text-white">
                     from {naira(one.from)}
                   </span>
+                  <DayPill delivery={one.delivery} />
                 </button>
               ))}
             </div>
@@ -226,6 +243,7 @@ export default function Builder({
             <h2 className="font-display text-3xl font-black uppercase leading-none">
               {shop.name}
             </h2>
+            <DayPill delivery={shop.delivery} />
             <div className="flex gap-2">
               {[
                 [false, "Most ordered"],

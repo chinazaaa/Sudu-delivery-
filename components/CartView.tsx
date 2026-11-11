@@ -532,20 +532,6 @@ export default function CartView({
     finalisedAs !== "" &&
     JSON.stringify(toServerLines(cart)) !== finalisedAs;
 
-  // An offer this cart nearly has. From the inside, a qualifying dish with
-  // something else beside it looks like the offer simply not working, so it
-  // says which is which and leaves the choice to them.
-  const missed = nearMiss(
-    offers,
-    cart.map((line) => ({
-      itemId: line.itemId,
-      restaurantId: line.restaurantId,
-      name: line.name,
-      choices: line.choices,
-    })),
-    { batchId: nextRunId, deliverAt: null, returning: false }
-  );
-
   const kitchensIn = [...new Set(cart.map((line) => line.restaurantId))];
   const cartAreas = areasIn(areas, kitchensIn, areaOf);
   const dearest = dearestArea(areas, kitchensIn, areaOf);
@@ -665,6 +651,28 @@ export default function CartView({
     onDay: goingOn,
     returning: false,
   });
+
+  // An offer this cart nearly has, on the delivery it will really get: the
+  // day the food is going, not the soonest run anywhere.
+  // An offer this cart nearly has. From the inside, a qualifying dish with
+  // something else beside it looks like the offer simply not working, so it
+  // says which is which and leaves the choice to them.
+  const missed = nearMiss(
+    offers,
+    cart.map((line) => ({
+      itemId: line.itemId,
+      restaurantId: line.restaurantId,
+      name: line.name,
+      choices: line.choices,
+    })),
+    {
+      batchId: going?.runId || nextRunId,
+      deliverAt: onItsOwn ? (going?.at ?? null) : null,
+      onDay: goingOn,
+      returning: false,
+    }
+  );
+
 
   const shutLines = cart.filter(
     (line) => !opensOn(openDaysOf[line.restaurantId], goingOn)

@@ -513,6 +513,8 @@ export type AisleShop = {
   slug: string;
   logoUrl: string;
   brandHex: string;
+  /** When it next arrives, said as a pill. Filled in by the picker's route. */
+  delivery?: { said: string; today: boolean };
   from: number;
   count: number;
   items: {
