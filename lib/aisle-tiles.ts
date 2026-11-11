@@ -9,6 +9,7 @@ import {
   type HomeTile,
 } from "./home-tiles";
 import { kindShops } from "./products";
+import { db } from "./supabase";
 import { safeSettings } from "./settings";
 
 /** A tile on the front page: what it says, and what it starts at. */
@@ -177,9 +178,18 @@ async function readKitchens(): Promise<KitchenTile[]> {
         orders: shop.items.reduce((total, dish) => total + dish.orderedCount, 0),
       });
     }
-    // The kitchen people order from most first; ties by name.
+    // Restaurants people have ordered from first, most ordered on top. The
+    // shop's own counter is not a restaurant, so it sits after those and
+    // before the ones nobody has ordered from yet.
+    const { data } = await db().from("restaurants").select("id, kind");
+    const kind = new Map(((data ?? []) as { id: string; kind: string | null }[]).map((r) => [r.id, r.kind ?? "food"]));
+    const tier = (one: { id: string; orders: number }) =>
+      (kind.get(one.id) ?? "food") !== "food" ? 1 : one.orders > 0 ? 0 : 2;
     return out
-      .sort((a, b) => b.orders - a.orders || a.name.localeCompare(b.name))
+      .sort(
+        (a, b) =>
+          tier(a) - tier(b) || b.orders - a.orders || a.name.localeCompare(b.name)
+      )
       .map(({ orders: _orders, ...tile }) => tile);
   } catch {
     return [];
