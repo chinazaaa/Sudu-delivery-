@@ -51,7 +51,9 @@ export default async function CartPage({
     settings.same_day_on === "on"
       ? hoursByDay().then((hours) =>
           slotsWorthOffering(
-            deliverySlots(new Date(), hours),
+            // As far ahead as the checkout offers, so the cart and the checkout
+            // name the same days.
+            deliverySlots(new Date(), hours, settings.order_horizon_days || 7),
             batches.map((one) => ({
               run_date: one.run_date,
               window: one.delivery_window_text,

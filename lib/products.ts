@@ -612,6 +612,10 @@ export async function kindShops(filter: KindFilter, perShop = 40): Promise<Aisle
   const data = [...found.values()].sort(
     (a, b) =>
       Number(leads(b)) - Number(leads(a)) ||
+      // What a tile leads with comes cheapest first: somebody looking for
+      // rice and chicken wants the least they can spend on it before
+      // anything else.
+      (leads(a) && leads(b) ? a.price_food - b.price_food : 0) ||
       (b.ordered_count ?? 0) - (a.ordered_count ?? 0) ||
       (a.sort_order ?? 0) - (b.sort_order ?? 0)
   );

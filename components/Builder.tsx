@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import ItemSheet from "./ItemSheet";
 import Thumb from "./Thumb";
-import { cartCount, cartSubtotal, useCart } from "@/lib/cart";
+import { cartCount, cartSubtotal, setQty, useCart } from "@/lib/cart";
 import { naira } from "@/lib/money";
 import type { AisleShop } from "@/lib/products";
 import type { ItemView } from "@/lib/view";
@@ -54,6 +54,8 @@ export default function Builder({
   const [loading, setLoading] = useState("");
   const [cheapest, setCheapest] = useState(false);
   const [last, setLast] = useState<Dish | null>(null);
+  // Everything added in this visit, so the last screen shows the lot.
+  const [added, setAdded] = useState<Dish[]>([]);
   const cart = useCart();
   const before = useRef(0);
 
@@ -287,15 +289,40 @@ export default function Builder({
 
         {step === "added" && (
           <div className="mx-auto max-w-lg space-y-4 pt-2">
-            <div className="flex items-center gap-3 rounded-2xl border-2 border-ink bg-white p-3 shadow-[3px_3px_0_0_#111]">
-              <span className="block size-16 shrink-0 overflow-hidden rounded-xl">
-                <Thumb src={last?.imageUrl ?? ""} name={last?.name ?? ""} category={aisle} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="ticket mb-0.5 block text-brand-dark">✓ Added</span>
-                <span className="block truncate font-bold leading-tight">{last?.name}</span>
-              </span>
-            </div>
+            <ul className="max-h-[42vh] space-y-2 overflow-y-auto rounded-2xl border-2 border-ink bg-white p-3 shadow-[3px_3px_0_0_#111]">
+              {cart.map((line) => (
+                <li key={line.key} className="flex items-center gap-3">
+                  <span className="block size-12 shrink-0 overflow-hidden rounded-lg">
+                    <Thumb src={line.imageUrl} name={line.name} category={aisle} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold leading-tight">{line.name}</span>
+                    <span className="block text-xs text-muted">
+                      {line.restaurantName} · {naira(line.unitPrice * line.qty)}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      type="button"
+                      aria-label="One less"
+                      onClick={() => setQty(line.key, line.qty - 1)}
+                      className="size-7 rounded-full border-2 border-ink text-base font-bold leading-none"
+                    >
+                      −
+                    </button>
+                    <span className="w-4 text-center text-sm font-bold">{line.qty}</span>
+                    <button
+                      type="button"
+                      aria-label="One more"
+                      onClick={() => setQty(line.key, line.qty + 1)}
+                      className="size-7 rounded-full border-2 border-ink bg-ink text-base font-bold leading-none text-shell"
+                    >
+                      +
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ul>
             <p className="text-center text-sm font-semibold text-muted">
               In your cart: {cartCount(cart)} {cartCount(cart) === 1 ? "item" : "items"} ·{" "}
               {naira(cartSubtotal(cart))}
@@ -333,6 +360,7 @@ export default function Builder({
                 )
               );
               if (now > before.current) {
+                if (last) setAdded((was) => (was.some((d) => d.id === last.id) ? was : [...was, last]));
                 const mine = open?.item.groups.some((g) => /drink/i.test(g.name)) ?? false;
                 const has = (drinks.find((one) => one.id === open?.shop.id)?.items.length ?? 0) > 0;
                 setStep(!open?.drink && !mine && has ? "drink" : "added");

@@ -41,7 +41,7 @@ export async function deliveryFor(ids: string[]): Promise<Record<string, ShopDel
   const slots =
     settings.same_day_on === "on"
       ? slotsWorthOffering(
-          deliverySlots(new Date(), await hoursByDay()),
+          deliverySlots(new Date(), await hoursByDay(), settings.order_horizon_days || 7),
           batches.map((one) => ({ run_date: one.run_date, window: one.delivery_window_text }))
         )
       : [];

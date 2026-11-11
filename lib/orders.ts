@@ -230,7 +230,11 @@ async function checkSameDay(
   // By the moment rather than by the text: a time kept in the database comes
   // back written differently from the one the code wrote, and comparing the
   // strings refused an order for a slot that was hours away.
-  const slot = deliverySlots(new Date(), await hoursByDay()).find((one) =>
+  const slot = deliverySlots(
+    new Date(),
+    await hoursByDay(),
+    (await safeSettings()).order_horizon_days || 7
+  ).find((one) =>
     sameInstant(one.at, wanted)
   );
   if (!slot) {
