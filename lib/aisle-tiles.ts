@@ -138,7 +138,7 @@ async function readMore(everything = false): Promise<AisleTile[]> {
             )
         : undefined;
       out.push({ aisle, from, image: named?.imageUrl ?? (await sharpest(mostOrdered(shops))) });
-      if (!everything && out.length === 6) break;
+      if (!everything && out.length === 8) break;
     }
     return out;
   } catch {
