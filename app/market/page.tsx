@@ -63,11 +63,11 @@ export default async function MarketPage({
             tag="Market list"
             back="/market"
             simple
-            rows={10}
+            rows={9}
             opening="Hi Sudu, here is my market list."
             lead="Open WhatsApp and paste your list. We agree the time and the price there."
             label="Your market list"
-            placeholder={"Egusi, 1 kg\n5 pepper\nTomatoes x 10\nUgu, 2 bunches, cut it\nUgu, 2 bunches, do not cut\nIndomie, 1 carton (chicken)\nPeak milk, 2 tins\nDangote sugar, 1 kg\nFish x 2, cleaned and cut\nCrayfish, N2,000 worth"}
+            placeholder={"Egusi, 1 kg\n5 pepper\nTomatoes x 10\nUgu, 2 bunches, do not cut\nIndomie, 1 carton (chicken)\nPeak milk, 2 tins\nDangote sugar, 1 kg\nFish x 2, cleaned and cut\nCrayfish, N2,000 worth"}
             help="Say exactly what you want: the brand, the size, cut or not cut. One to a line."
             send="Send us my list"
           />
