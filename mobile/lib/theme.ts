@@ -110,11 +110,22 @@ const SEASONS: Record<string, Partial<typeof ORDINARY>> = {
     tint: "#fdeddd",
     volt: "#b6e82a",
   },
+  christmas: {
+    // The website's Christmas colours: a deeper red and a dark green ground.
+    brand: "#c1121f",
+    brandDark: "#8d0c17",
+    ink: "#10361f",
+    ink2: "#1a4a2c",
+    inkLine: "#2c6040",
+    tint: "#fdeaea",
+    volt: "#f2c14e",
+  },
 };
 
 /** What is drawn over the page on top of the colours, where anything is. */
 export const SEASON_ART: Record<string, string[]> = {
   halloween: ["🎃", "🦇", "👻", "🕸️"],
+  christmas: ["🎄", "🎁", "⭐", "❄️", "🔔"],
 };
 
 /** Dress the palette for a season, or put it back to the ordinary shop. */

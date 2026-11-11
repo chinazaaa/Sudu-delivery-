@@ -49,6 +49,7 @@ const SHOW_OLD_HOME = false;
 export default function Home() {
   const router = useRouter();
   const [shop, setShop] = useState<Shop | null>(null);
+  const [searching, setSearching] = useState(false);
   /** Whether the shop itself has answered, as opposed to the copy kept on
    *  the phone having been drawn while we wait. */
   const [settled, setSettled] = useState(false);
@@ -327,11 +328,33 @@ export default function Home() {
             keyboard straight over it: you could not see what you were
             typing. Those three arrive at their own speed as well, so the box
             moved under your thumb as you reached for it. */}
-        {shop && (
+        {shop && !searching && query === "" && (
+          <View style={{ alignItems: "flex-end", marginBottom: -6 }}>
+            <Pressable
+              onPress={() => setSearching(true)}
+              accessibilityLabel="Search"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 999,
+                borderWidth: 2,
+                borderColor: T.ink,
+                backgroundColor: T.paper,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="search" size={20} color={T.ink} />
+            </Pressable>
+          </View>
+        )}
+
+        {shop && (searching || query !== "") && (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <TextInput
               value={query}
               onChangeText={setQuery}
+              autoFocus
               placeholder="Search chicken, pizza, wings…"
               placeholderTextColor={T.muted}
               returnKeyType="search"
@@ -343,17 +366,21 @@ export default function Home() {
                 borderColor: T.ink,
                 borderRadius: T.radius,
                 paddingHorizontal: 16,
-                paddingVertical: 14,
+                paddingVertical: 12,
                 fontSize: 16,
                 fontFamily: F.body,
                 color: T.ink,
               }}
             />
-            {query !== "" && (
-              <Pressable onPress={() => setQuery("")} style={{ paddingHorizontal: 8 }}>
-                <Text style={{ color: T.muted, fontFamily: F.bodyBold }}>Clear</Text>
-              </Pressable>
-            )}
+            <Pressable
+              onPress={() => {
+                setQuery("");
+                setSearching(false);
+              }}
+              style={{ paddingHorizontal: 8 }}
+            >
+              <Text style={{ color: T.muted, fontFamily: F.bodyBold }}>Close</Text>
+            </Pressable>
           </View>
         )}
 
