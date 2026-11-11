@@ -286,6 +286,11 @@ async function orderPage(id: string, said: string) {
                 {doorTag((order as { source?: string }).source ?? "")}
               </span>
             )}
+            {((order as { via?: string }).via ?? "") !== "" && (
+              <span className="tag ml-2 align-middle">
+                {(order as { via?: string }).via}
+              </span>
+            )}
           </>
         }
         /* Two people on a gift, and the driver needs the second one.

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 import { addLine, lineKey, useCart } from "@/lib/cart";
+import { setVia } from "@/lib/via";
 import { missingFrom, type StarterLine } from "@/lib/starter-lines";
 
 /**
@@ -38,6 +39,7 @@ export default function StarterCart({ lines }: { lines: StarterLine[] }) {
         ""
       );
     }
+    setVia("starter cart");
     router.replace("/cart");
     // Read once on arrival: the cart changing as it fills must not rerun this.
     // eslint-disable-next-line react-hooks/exhaustive-deps

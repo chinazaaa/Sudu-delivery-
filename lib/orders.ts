@@ -126,6 +126,9 @@ export type PlaceOrderInput = {
    *  place, not a person, and nobody is paid for it. Worked out from the
    *  link they arrived on or the site that sent them. */
   cameFrom?: string;
+  /** How they found their way to this food on the site: "picker: Pizza",
+   *  "starter cart". A label for the shop to read, never a rule. */
+  via?: string;
   /**
    * A code nobody typed: the one a promoter's own link carries.
    *
@@ -764,6 +767,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
           coupon: earned,
           source: input.source,
           cameFrom: input.cameFrom,
+          via: input.via,
           payCurrency: input.payCurrency,
           joinRootId: sameDay ? null : joinRootId,
           sharedGroupId,
@@ -1388,6 +1392,8 @@ async function placeSingleOrder(args: {
   source?: "app" | "web" | "bot" | "desk";
   /** The channel that brought them. A place, never a person. */
   cameFrom?: string;
+  /** How they found the food on the site. A label only. */
+  via?: string;
   /** The money a card link will be made out in. */
   payCurrency?: "GBP" | "USD";
   /** The delivery being joined, already resolved back to the order that
@@ -1498,6 +1504,7 @@ async function placeSingleOrder(args: {
     customer_note: args.customerNote,
     source: args.source,
     cameFrom: args.cameFrom,
+    via: args.via,
     pay_currency: args.payCurrency,
     shared_with: args.joinRootId,
     lines,
@@ -1741,6 +1748,7 @@ async function insertOrder(args: {
   source?: "app" | "web" | "bot" | "desk";
   /** The channel that brought them. A place, never a person. */
   cameFrom?: string;
+  via?: string;
   /** The money a card link will be made out in. */
   pay_currency?: "GBP" | "USD";
   /** The order whose delivery this one is joining, if any. */
@@ -1773,6 +1781,7 @@ async function insertOrder(args: {
       ...(args.box_id ? { box_id: args.box_id } : {}),
       ...(args.source ? { source: args.source } : {}),
       ...(args.cameFrom ? { came_from: args.cameFrom } : {}),
+      ...(args.via ? { via: args.via } : {}),
       ...(args.pay_currency ? { pay_currency: args.pay_currency } : {}),
     })
     .select("id")
@@ -1784,7 +1793,7 @@ async function insertOrder(args: {
   // worse than losing the label.
   if (
     error &&
-    (args.gift || args.box_id || args.source || args.cameFrom || args.pay_currency)
+    (args.gift || args.box_id || args.source || args.cameFrom || args.via || args.pay_currency)
   ) {
     return insertOrder({
       ...args,
@@ -1792,6 +1801,7 @@ async function insertOrder(args: {
       box_id: null,
       source: undefined,
       cameFrom: undefined,
+      via: undefined,
       pay_currency: undefined,
     });
   }

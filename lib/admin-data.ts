@@ -52,6 +52,8 @@ export type FeedOrder = Order & {
   promoter: { code: string; name: string } | null;
   /** The app or the website. Empty on orders taken before it was recorded. */
   source: string;
+  /** How they found the food on the site: "picker: Pizza", "starter cart". */
+  via: string;
   /** GBP or USD where somebody abroad is paying by card. */
   payCurrency: string;
 };
@@ -200,6 +202,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       // Older orders have no column and no answer, which reads as empty and
       // is simply not shown.
       source: (order as { source?: string }).source ?? "",
+      via: (order as { via?: string }).via ?? "",
       payCurrency: (order as { pay_currency?: string }).pay_currency ?? "",
     };
   });

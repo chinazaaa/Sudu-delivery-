@@ -93,6 +93,7 @@ export async function submitOrder(
 
   const result = await placeOrder({
     cameFrom: saidChannel || (await cameFromNow()),
+    via: String(form.get("via") ?? "").trim().slice(0, 60),
     autoCoupon: await linkCouponNow(saidHeard),
     source: await whichDoor(),
     batchId: String(form.get("batch_id") ?? ""),

@@ -76,6 +76,7 @@ export type OrderCardData = {
   /** Which front door it came through: "app", "web", or empty for the
    *  orders taken before the shop wrote it down. */
   source: string;
+  via?: string;
   /** "Every month", where they asked for it again. Empty otherwise. */
   repeats: string;
   /** A box nobody has picked a day for yet. */
@@ -245,6 +246,8 @@ export default function OrderCard({
                   {doorTag(order.source)}
                 </span>
               )}
+
+              {(order.via ?? "") !== "" && <Tag tone="volt">{order.via}</Tag>}
 
               {order.parcel && <Tag tone="volt">Parcel · {order.parcel.route}</Tag>}
               {/* Before the link is made, not after: a Stripe link in the

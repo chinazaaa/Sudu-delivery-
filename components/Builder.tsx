@@ -8,6 +8,7 @@ import ItemSheet from "./ItemSheet";
 import Thumb from "./Thumb";
 import { cartCount, cartSubtotal, choicesSaid, setQty, useCart } from "@/lib/cart";
 import { naira } from "@/lib/money";
+import { setVia } from "@/lib/via";
 import type { AisleShop } from "@/lib/products";
 import type { ItemView } from "@/lib/view";
 
@@ -510,6 +511,7 @@ export default function Builder({
                 )
               );
               if (now > before.current) {
+                setVia(`picker: ${kind.label}`);
                 if (last) setAdded((was) => (was.some((d) => d.id === last.id) ? was : [...was, last]));
                 const via = open?.via ?? "dish";
                 const here = open?.shop;

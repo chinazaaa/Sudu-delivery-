@@ -51,6 +51,7 @@ import {
 } from "@/components/GroupLink";
 import { slotsWorthOffering, type Slot } from "@/lib/same-day";
 import { carsClearOfRuns, lagosHourOf } from "@/lib/one-driver";
+import { clearVia, readVia } from "@/lib/via";
 import { pairsInCart, type PairDeal } from "@/lib/deals";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import FillDetails from "@/components/FillDetails";
@@ -692,6 +693,15 @@ export default function Checkout({
   // Set once, when the page is drawn, rather than read at submit: what
   // matters is how long it was open.
   const [openedAt] = useState(() => Date.now());
+  // How they found this food on the site, written on the order for the shop.
+  const [via, setViaState] = useState("");
+  useEffect(() => {
+    setViaState(readVia());
+  }, []);
+  // The cart emptying means the order went through: the tag has done its job.
+  useEffect(() => {
+    if (cart.length === 0) clearVia();
+  }, [cart.length]);
   const [applied, setApplied] = useState<{ code: string; discount: number } | null>(null);
   /*
    * Their referral wallet, and whether they want it on this order.
@@ -1941,6 +1951,7 @@ export default function Checkout({
       <input type="hidden" name="party_leader" value={joinedLink ? "" : "1"} />
       <input type="hidden" name="deliver_at" value={deliverAt} />
       <input type="hidden" name="people" value={JSON.stringify(people)} />
+      <input type="hidden" name="via" value={via} />
 
       {/* A heading the size of a heading. Two lines of BOOK YOUR RUN at
           sixteen percent of the screen is most of a phone, on the page
