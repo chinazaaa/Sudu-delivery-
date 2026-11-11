@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { cache } from "react";
 
 import { db } from "./supabase";
@@ -454,20 +455,35 @@ export const EMPTY: Settings = {
  * setting still takes effect on the very next page load, which is the
  * whole reason these are read live rather than baked in.
  */
+/*
+ * Shared between requests for twenty seconds.
+ *
+ * Every page, every API call and every app open read this one row, so a day
+ * of visitors was a day of identical queries and the server time to make
+ * them. Saving settings in admin clears it at once; edits made any other
+ * way take at most twenty seconds to show.
+ */
+const readSettingsRow = unstable_cache(
+  async (): Promise<Partial<Settings>> => {
+    const { data, error } = await db()
+      .from("settings")
+      .select("*")
+      .eq("id", true)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return (data ?? {}) as Partial<Settings>;
+  },
+  ["settings-row"],
+  { revalidate: 20, tags: ["settings"] }
+);
+
 export const getSettings = cache(async function getSettings(): Promise<Settings> {
   // Every column, rather than a list of them. Naming each one means that
   // adding a setting to the code and forgetting to add the column makes the
   // whole row come back empty, and every setting on the site quietly reverts
   // to its default. One missing column should cost one setting, not all of
   // them.
-  const { data, error } = await db()
-    .from("settings")
-    .select("*")
-    .eq("id", true)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-
-  return { ...EMPTY, ...((data ?? {}) as Partial<Settings>) };
+  return { ...EMPTY, ...(await readSettingsRow()) };
 });
 
 export async function safeSettings(): Promise<Settings> {

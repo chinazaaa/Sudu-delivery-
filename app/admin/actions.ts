@@ -3686,6 +3686,9 @@ export async function saveSettings(form: FormData): Promise<void> {
 
   revalidatePath("/admin", "layout");
   updateTag("menu");
+  // The settings row is cached across requests for a few seconds; saving
+  // them must show at once.
+  updateTag("settings");
   revalidatePath("/", "layout");
 }
 

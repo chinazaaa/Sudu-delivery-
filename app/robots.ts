@@ -16,6 +16,13 @@ const PRIVATE = [
   // driving with. There is nothing here for a search engine and a great
   // deal here for anybody else.
   "/run/",
+  // The app's own calls, and every search or sorting of a list: the same
+  // page in another order, which a crawler fetches in full each time.
+  "/api/",
+  "/*?q=",
+  "/*?sort=",
+  "/*?page=",
+  "/*?view=",
 ];
 
 /**
