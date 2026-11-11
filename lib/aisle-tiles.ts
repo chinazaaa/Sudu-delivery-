@@ -222,7 +222,13 @@ async function readFeatured(): Promise<FeaturedTile | null> {
     return {
       aisle: shelf.name,
       from: from.get(shelf.id) ?? 0,
-      image: photo[shelf.id] || shelf.image_url || "",
+      // One of the hampers' own pictures first: they are the thing being
+      // sold, where a dish photo from inside one is a part of it.
+      image:
+        boxes.find((box) => (box.image_url ?? "").trim() !== "")?.image_url ||
+        photo[shelf.id] ||
+        shelf.image_url ||
+        "",
       href: `/collections/${shelf.slug}`,
     };
   } catch {
