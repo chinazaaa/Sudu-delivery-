@@ -61,7 +61,7 @@ export async function GET(): Promise<NextResponse> {
         : null,
       arriving: decided?.said ? arrivalShort(decided.said) : "",
       whatsapp:
-        whatsappLink(settings.whatsapp_number, "Hi Sudu, I'm not sure what to order") ?? "",
+        whatsappLink(settings.whatsapp_number, "Hi Sudu, I'd like to order: ") ?? "",
     });
   } catch (error) {
     return NextResponse.json(

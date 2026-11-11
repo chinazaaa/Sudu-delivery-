@@ -397,7 +397,7 @@ export default async function HomePage() {
         starters={await aisleTiles()}
         more={await moreTiles()}
         featured={await featuredTile()}
-        askUs={whatsappLink(settings.whatsapp_number, "Hi Sudu, I'm not sure what to order") ?? ""}
+        askUs={whatsappLink(settings.whatsapp_number, "Hi Sudu, I'd like to order: ") ?? ""}
       // What the shop's own Google profile says, as the shop typed it in.
       // Nothing is fetched: every part of this hides itself when it is not
       // set, so the page can never show a rating nobody gave.

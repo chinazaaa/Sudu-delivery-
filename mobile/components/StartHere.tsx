@@ -46,7 +46,7 @@ export default function StartHere() {
   const message = () => {
     const link = home.whatsapp.startsWith("http")
       ? home.whatsapp
-      : whatsappTo(home.whatsapp, "Hi Sudu, I'm not sure what to order");
+      : whatsappTo(home.whatsapp, "Hi Sudu, I'd like to order: ");
     if (link === "") router.push("/ask" as never);
     else void Linking.openURL(link).catch(() => {});
   };
