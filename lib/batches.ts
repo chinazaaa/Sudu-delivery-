@@ -574,29 +574,18 @@ export type OpenBatch = Batch & {
  * query that fails answers "nobody is out", which is how the shop worked
  * before this existed.
  */
-/**
- * Whether the one-driver rule is enforced at all.
- *
- * Switched off: a car and a run on the same hours is not something the
- * shop forbids, it is something it sorts out with the customer on WhatsApp
- * when it happens. With the rule on, a quiet day lost its cars to a run
- * that could not even carry the cart. Set to true to bring it back.
- */
-const ONE_DRIVER_RULE = false;
-
 export async function carsOnOffer<T extends { date: string; at: string }>(
   slots: T[]
 ): Promise<T[]> {
-  if (!ONE_DRIVER_RULE || slots.length === 0) return slots;
+  if (slots.length === 0) return slots;
 
-  // A car at the run's own hour is a dearer way to get the same food at
-  // the same time. A car hours before it is a different trip, and she
-  // can make it and be back in time to load the run.
+  // Whether a run makes a car pointless depends on whether that run could
+  // carry the cart, which this does not know. The checkout, the cart and the
+  // shop pills ask that against the cart (see carsClearOfRuns in
+  // lib/one-driver.ts). What is settled here is only the driver being out.
   const days = [...new Set(slots.map((one) => one.date))];
-  const [starts, ends] = await Promise.all([runStartsOn(days), runEndsOn(days)]);
-  const timed = slots.map((one) => ({ date: one.date, hour: hourOf(one.at), one }));
-  const left = carsBeforeTheRun(timed, starts, undefined, ends);
-
+  const ends = await runEndsOn(days);
+  const left = slots.map((one) => ({ date: one.date, hour: hourOf(one.at), one }));
   /*
    * And while she is out, only the times she can still make.
    *
@@ -619,12 +608,9 @@ export async function carsOnOffer<T extends { date: string; at: string }>(
  * is spoken for.
  */
 export async function nobodyToDrive(date: string, at?: string): Promise<boolean> {
-  if (!ONE_DRIVER_RULE) return false;
-  const starts = (await runStartsOn([date]))[date];
-  if (starts !== undefined) {
-    if (at === undefined) return true;
-    if (hourOf(at) > starts - BACK_IN_TIME_HOURS) return true;
-  }
+  // Whether a run is going that day is no longer a reason to refuse a car:
+  // it depends on whether that run could carry the cart, and an overlap that
+  // does happen is sorted out with the customer on WhatsApp.
   if (date !== lagosToday()) return false;
   return someoneIsDriving();
 }

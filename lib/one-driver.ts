@@ -1,3 +1,5 @@
+import { windowHours } from "./same-day";
+
 /**
  * One driver, one trip at a time.
  *
@@ -154,4 +156,46 @@ export function carsBeforeTheRun<T extends { date: string; hour: number }>(
     const ends = runEnd[one.date];
     return ends === undefined ? false : one.hour >= ends + gap;
   });
+}
+
+/**
+ * The car times still worth offering, given the runs that could carry THIS
+ * cart.
+ *
+ * A car is a dearer version of a run only where a run could actually have
+ * taken the food. A Friday run that goes to Sangotedo and not to Ajah is no
+ * alternative to a car for an Ajah cart, so it hides nothing for that cart:
+ * the car is the only way there, and it is offered. Where a run that does
+ * reach the cart is going, the old rule applies on that day: a car lands
+ * before it or after it, not in the middle.
+ *
+ * Passed the runs that could carry the cart, so the question of whether one
+ * could is asked once by whoever knows what is in the cart.
+ */
+export function carsClearOfRuns<T extends { date: string; at: string }>(
+  slots: T[],
+  carrying: { runDate: string; window: string }[],
+  hourOf: (at: string) => number
+): T[] {
+  const starts: Record<string, number> = {};
+  const ends: Record<string, number> = {};
+  for (const run of carrying) {
+    const hours = windowHours(run.window);
+    if (!hours || run.runDate === "") continue;
+    starts[run.runDate] = Math.min(starts[run.runDate] ?? hours.from, hours.from);
+    ends[run.runDate] = Math.max(ends[run.runDate] ?? hours.to, hours.to);
+  }
+  const timed = slots.map((one) => ({ date: one.date, hour: hourOf(one.at), one }));
+  return carsBeforeTheRun(timed, starts, undefined, ends).map((row) => row.one);
+}
+
+/** The hour of the day an instant falls on, where the shop is. */
+export function lagosHourOf(at: string): number {
+  return Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Africa/Lagos",
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date(at))
+  );
 }

@@ -50,6 +50,7 @@ import {
   readGroup,
 } from "@/components/GroupLink";
 import { slotsWorthOffering, type Slot } from "@/lib/same-day";
+import { carsClearOfRuns, lagosHourOf } from "@/lib/one-driver";
 import { pairsInCart, type PairDeal } from "@/lib/deals";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import FillDetails from "@/components/FillDetails";
@@ -239,13 +240,18 @@ export default function Checkout({
   // run that does not reach Ajah, or does not stop at The Place, is no
   // alternative for a cart with The Place in it, so it must not hide the car
   // that is the only way of getting it there.
-  const allSlots = slotsWorthOffering(
-    slotsBeforeRuns,
-    batches
-      .filter(
-        (b) => !b.closed && !b.full && runCovers(b.areas, cartAreas) && runCarries(b.onlyPlaces, kitchens)
-      )
-      .map((b) => ({ run_date: b.runDate, window: b.deliveryWindow }))
+  const carryingRuns = batches
+    .filter(
+      (b) => !b.closed && !b.full && runCovers(b.areas, cartAreas) && runCarries(b.onlyPlaces, kitchens)
+    )
+    .map((b) => ({ runDate: b.runDate, window: b.deliveryWindow }));
+  const allSlots = carsClearOfRuns(
+    slotsWorthOffering(
+      slotsBeforeRuns,
+      carryingRuns.map((run) => ({ run_date: run.runDate, window: run.window }))
+    ),
+    carryingRuns,
+    lagosHourOf
   );
   const area = dearestArea(areas, kitchens, areaOf);
   // The dearest area sets the distance; every area after the first is a

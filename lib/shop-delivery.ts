@@ -6,6 +6,7 @@ import { runCarries } from "./run-places";
 import { opensOn } from "./open-days";
 import { hoursByDay, safeSettings } from "./settings";
 import { deliverySlots, slotsWorthOffering } from "./same-day";
+import { carsClearOfRuns, lagosHourOf } from "./one-driver";
 import { dayAfter } from "./pick-a-day";
 import { lagosToday } from "./time";
 import { toBatchView } from "./view";
@@ -56,9 +57,14 @@ export async function deliveryFor(ids: string[]): Promise<Record<string, ShopDel
         opensOn(openDaysOf[id], run.runDate)
     );
     // A run covers a window only if it could carry this counter's food.
-    const slots = slotsWorthOffering(
-      rawSlots,
-      usable.map((run) => ({ run_date: run.runDate, window: run.when }))
+    const carrying = usable.map((run) => ({ runDate: run.runDate, window: run.when }));
+    const slots = carsClearOfRuns(
+      slotsWorthOffering(
+        rawSlots,
+        carrying.map((run) => ({ run_date: run.runDate, window: run.window }))
+      ),
+      carrying,
+      lagosHourOf
     );
     const cars = canGoSameDay(area)
       ? slots.filter(

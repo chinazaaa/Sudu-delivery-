@@ -8541,3 +8541,16 @@ test("dishes with every word are offered before dishes with one", async () => {
   const got = find("rice and chicken", menu);
   assert.deepEqual(got.hits.slice(0, 2).map((h) => h.id).sort(), ["3", "4"]);
 });
+
+test("a run only hides cars if it could carry the cart", async () => {
+  const { carsClearOfRuns } = await import("../lib/one-driver");
+  const car = (date: string, hour: number) => ({ date, at: `${date}T${String(hour).padStart(2, "0")}:00:00+01:00` });
+  const hourOf = (at: string) => Number(at.slice(11, 13));
+  const slots = [car("2026-11-13", 18), car("2026-11-13", 12), car("2026-11-14", 17)];
+  // The Friday run goes 5 to 7pm and could carry this cart: a car at 6pm sits in the middle of it.
+  const carried = carsClearOfRuns(slots, [{ runDate: "2026-11-13", window: "Between 5pm and 7pm" }], hourOf);
+  assert.deepEqual(carried.map((s) => hourOf(s.at)), [12, 17]);
+  // The same run could not carry an Ajah cart, so it is not given: nothing is hidden.
+  const alone = carsClearOfRuns(slots, [], hourOf);
+  assert.equal(alone.length, 3);
+});

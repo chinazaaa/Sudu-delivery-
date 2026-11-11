@@ -4,6 +4,7 @@ import GroupLink, { PARTY_CHANGED, readGroup } from "./GroupLink";
 import Sheet from "./Sheet";
 import { useRouter } from "next/navigation";
 import { slotsWorthOffering, type Slot } from "@/lib/same-day";
+import { carsClearOfRuns, lagosHourOf } from "@/lib/one-driver";
 import { nextArrival, type ArrivalRun } from "@/lib/arrival";
 import {
   areasIn,
@@ -596,9 +597,14 @@ export default function CartView({
       cart.every((line) => opensOn(openDaysOf[line.restaurantId], one.runDate))
   );
   // A window a run covers is left out only if that run could carry this cart.
-  const carSlots = slotsWorthOffering(
-    slots,
-    usableRuns.map((one) => ({ run_date: one.runDate, window: one.when }))
+  const carrying = usableRuns.map((one) => ({ runDate: one.runDate, window: one.when }));
+  const carSlots = carsClearOfRuns(
+    slotsWorthOffering(
+      slots,
+      carrying.map((run) => ({ run_date: run.runDate, window: run.window }))
+    ),
+    carrying,
+    lagosHourOf
   );
   const carDays = canGoSameDay(cartAreas)
     ? carSlots.filter(
