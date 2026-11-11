@@ -536,13 +536,13 @@ export default function Home({
               to: nobody arrives wanting a restaurant, they arrive hungry.
           */}
           {more.length > 0 && (
-            <section aria-label="Something else" className="shell flex flex-col gap-4 pb-10 pt-8">
-              <h2 className="font-display text-[1.7rem] font-black uppercase leading-none">
+            <section aria-label="Something else" className="flex flex-col gap-2 pb-8 pt-3">
+              <h2 className="shell w-full font-display text-2xl font-black uppercase leading-none">
                 Something else?
               </h2>
-              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <ul className="flex gap-2 overflow-x-auto px-4 pb-2 sm:px-6">
                 {more.map((one) => (
-                  <li key={one.aisle}>
+                  <li key={one.aisle} className="w-[42%] shrink-0 sm:w-48">
                     <button
                       type="button"
                       onClick={() => setBuilding({ label: one.aisle, aisle: one.aisle })}
