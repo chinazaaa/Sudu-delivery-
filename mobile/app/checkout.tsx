@@ -940,7 +940,7 @@ export default function Checkout() {
           {(
             [
               ["one_payer", "I pay for everything", "Friends pay you back however you like."],
-              ["split", "Everyone pays their own", "Each person gets their own order and their own number to pay with."],
+              ["split", "Everyone pays their own", "Each person pays for their own food."],
             ] as const
           ).map(([value, title, detail]) => (
             <Pressable
@@ -1088,8 +1088,7 @@ export default function Checkout() {
       <Card style={{ gap: 10 }}>
         {sharing.length > 0 && !ownFood && !bagsToMe && (
           <Text style={{ color: T.muted, fontFamily: F.body, fontSize: 14, lineHeight: 20 }}>
-            Nothing in this cart is coming to you, but we still need somebody to call if a
-            bag cannot be handed over.
+            Nothing here comes to you, but we need somebody to call.
           </Text>
         )}
         <Field label="Your name" value={name} onChange={setName} />
@@ -1201,9 +1200,7 @@ export default function Checkout() {
             Is somebody abroad paying?
           </Text>
           <Text style={{ color: T.muted, fontFamily: F.body, fontSize: 13, lineHeight: 19 }}>
-            We send a card link in their money. The order is still {naira(owed)};
-            the amount on the link is worked out at our rate, so it is close
-            rather than exact.
+            You get a card link in their money to pass on. About {naira(owed)}.
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {[{ code: "", label: "No, naira" }, ...(shop.monies ?? [])].map((one) => (
@@ -1293,7 +1290,7 @@ export default function Checkout() {
               ]}
               here={-1}
               total={{ label: "Delivery", fee }}
-              note="Two errands on one trip. The market shopping is priced by what it comes to, because a trip to the market is one trip whether it is two bags or five. The kitchens are priced by how much room the food takes in the car. One fee either way, however many places are in it."
+              note="The market is priced by what it comes to, the kitchens by the room they take."
             />
           ) : (
             <FeeWhy
@@ -1459,7 +1456,7 @@ export default function Checkout() {
 
       {splitNotReady && (
         <Text style={{ color: T.brandDark, fontFamily: F.bodySemi, fontSize: 14, lineHeight: 20 }}>
-          Splitting needs somebody other than you to have food in the cart. Tap a name under each item.
+          Tap a name under each item to split.
         </Text>
       )}
 
