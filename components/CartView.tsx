@@ -1008,37 +1008,15 @@ export default function CartView({
       </div>
 
       {missed && (
-        <div className="rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-3">
+        <div className="rounded-2xl border-2 border-brand/30 bg-brand-tint px-4 py-2.5">
           <p className="text-sm text-ink/85">
             <span className="font-extrabold text-brand-dark">
               {missed.fee === 0 ? "Free delivery" : `${naira(missed.fee)} delivery`}
             </span>{" "}
-            is on for part of this cart.{" "}
-            {/* Naming the two things in the way beats naming them when there
-                are six: past that it is a list nobody reads, and the shorter
-                truth is which food the offer is actually for. */}
-            {missed.blocking.length <= 2
-              ? `${missed.blocking.join(" and ")} ${
-                  missed.blocking.length === 1 ? "is" : "are"
-                } not in it, so it does not apply.`
-              : missed.qualifying.length <= 2
-                ? `Only the ${missed.qualifying.join(" and ")} ${
-                    missed.qualifying.length === 1 ? "is" : "are"
-                  } in it, so everything else would have to come out.`
-                : `Only ${missed.qualifying.length} of your items are in it, and the other ${
-                    missed.blocking.length
-                  } would have to come out.`}
-          </p>
-          <p className="mt-1 text-xs text-ink/70">
-            Keeping them is often the better deal anyway: the usual fee covers
-            the lot, and this only pays off if the rest was going another time.
+            only applies to {missed.qualifying.length <= 2 ? missed.qualifying.join(" and ") : `${missed.qualifying.length} of your items`}.
           </p>
         </div>
       )}
-
-
-
-
 
       {group !== "" && (
         <h2 className="ticket text-muted">
@@ -1061,18 +1039,11 @@ export default function CartView({
           they hit after the food is already chosen.
        */}
       {runOnlyLines.length > 0 && goingWord !== "today" && (
-        <div className="rounded-2xl border border-brand/30 bg-brand-tint px-4 py-3">
-          <p className="text-sm text-brand-dark">
-            <span className="font-bold">
-              We are not going to {runOnlyAreasSaid || runOnlyArea} today
-              {goingWord !== "" ? `, we are going ${goingWord}` : ""}.
-            </span>{" "}
-            {runOnlyWhereSaid || runOnlySaid}
-            {runOnlyLines.length < cart.length
-              ? ", and the whole order comes together, so all of it comes then. Take those out and the rest can come sooner."
-              : goingWord !== ""
-                ? ", so that is when it comes."
-                : ", and we do not have the next day for it yet. Message us and we will say."}
+        <div className="rounded-2xl border border-brand/30 bg-brand-tint px-4 py-2.5">
+          <p className="text-sm font-bold text-brand-dark">
+            {goingWord !== ""
+              ? `${runOnlySaid} comes ${goingWord}, so the whole order does.`
+              : `We have no day for ${runOnlySaid} yet. Message us.`}
           </p>
         </div>
       )}
@@ -1082,18 +1053,14 @@ export default function CartView({
           is a warning, because the cart is the screen where somebody still
           has their hand on the thing they would take out. */}
       {shutLines.length > 0 && (
-        <div className="rounded-2xl border border-brand/30 bg-brand-tint px-4 py-3">
-          <p className="text-sm text-brand-dark">
-            <span className="font-bold">
-              {shutSaid} {shutNames.length === 1 ? "is" : "are"} closed on{" "}
-              {DAY_NAMES[weekdayOf(goingOn)]}s.
-            </span>{" "}
-            {shutRest.length > 0
-              ? `Everything else is fine for ${goingOn === today ? "today" : DAY_NAMES[weekdayOf(goingOn)]}. `
-              : ""}
+        <div className="rounded-2xl border border-brand/30 bg-brand-tint px-4 py-2.5">
+          <p className="text-sm font-bold text-brand-dark">
+            {shutSaid} {shutNames.length === 1 ? "is" : "are"} closed on{" "}
+            {DAY_NAMES[weekdayOf(goingOn)]}s
             {shutAgain && shutAgain !== goingOn
-              ? `${shutNames.length === 1 ? "It opens" : "They open"} again on ${DAY_NAMES[weekdayOf(shutAgain)]}, so order everything then, or take ${shutNames.length === 1 ? "it" : "them"} out and the rest goes sooner.`
+              ? `, back ${DAY_NAMES[weekdayOf(shutAgain)]}`
               : ""}
+            .
           </p>
         </div>
       )}
