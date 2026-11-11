@@ -36,6 +36,43 @@ export async function moreAisles(): Promise<string[]> {
   );
 }
 
+
+/**
+ * The sharpest of a few candidate photos, judged by file size.
+ *
+ * Some dishes have a small or smeared picture, and the most ordered dish
+ * under a tile is not always the one with a good one. A bigger file is a
+ * sharper picture, so the biggest of the most ordered few wears the tile.
+ * Anything that cannot be measured counts as nothing, and the first
+ * candidate is used if none can be.
+ */
+async function sharpest(urls: string[]): Promise<string> {
+  if (urls.length <= 1) return urls[0] ?? "";
+  const sizes = await Promise.all(
+    urls.map(async (url) => {
+      try {
+        const reply = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(2500) });
+        return Number(reply.headers.get("content-length") ?? 0);
+      } catch {
+        return 0;
+      }
+    })
+  );
+  let best = 0;
+  sizes.forEach((size, at) => {
+    if (size > sizes[best]) best = at;
+  });
+  return urls[best];
+}
+
+const mostOrdered = (shops: { items: { imageUrl: string; orderedCount: number }[] }[]) =>
+  shops
+    .flatMap((shop) => shop.items)
+    .filter((dish) => dish.imageUrl !== "")
+    .sort((a, b) => b.orderedCount - a.orderedCount)
+    .slice(0, 6)
+    .map((dish) => dish.imageUrl);
+
 async function readTiles(): Promise<AisleTile[]> {
   try {
     const defs = await homeTileDefs();
@@ -54,14 +91,14 @@ async function readTiles(): Promise<AisleTile[]> {
         .flatMap((shop) => shop.items)
         .filter((dish) => dish.imageUrl !== "");
       // The dish the tile asks for by name, else whatever is most ordered.
-      const photo =
-        (dishWord
-          ? pictured.find((dish) => dish.name.toLowerCase().includes(dishWord.toLowerCase()))
-          : undefined) ??
-        [...shops.flatMap((shop) => shop.items).filter((dish) => dish.imageUrl !== "")].sort(
-          (a, b) => b.orderedCount - a.orderedCount
-        )[0];
-      out.push({ aisle: one.label, from, image: photo?.imageUrl ?? "" });
+      const named = dishWord
+        ? pictured.find((dish) => dish.name.toLowerCase().includes(dishWord.toLowerCase()))
+        : undefined;
+      out.push({
+        aisle: one.label,
+        from,
+        image: named?.imageUrl ?? (await sharpest(mostOrdered(shops))),
+      });
       if (out.length === 4) break;
     }
     return out;
@@ -77,11 +114,7 @@ async function readMore(): Promise<AisleTile[]> {
       const shops = await kindShops({ aisle }, 8);
       const from = Math.min(...shops.map((shop) => shop.from).filter((n) => n > 0));
       if (!Number.isFinite(from)) continue;
-      const photo = shops
-        .flatMap((shop) => shop.items)
-        .filter((dish) => dish.imageUrl !== "")
-        .sort((a, b) => b.orderedCount - a.orderedCount)[0];
-      out.push({ aisle, from, image: photo?.imageUrl ?? "" });
+      out.push({ aisle, from, image: await sharpest(mostOrdered(shops)) });
       if (out.length === 6) break;
     }
     return out;
