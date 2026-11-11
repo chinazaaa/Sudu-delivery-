@@ -706,4 +706,8 @@ export const UPSELL_KINDS: Record<string, { label: string; sources: KindSource[]
   // By section name, as the kitchens file them: a soup is not a swallow.
   soup: { label: "soup", sources: [{ category: "Soups" }] },
   swallow: { label: "swallow", sources: [{ category: "Swallows" }] },
+  // Chips go with a burger. "burger" is only here so the picker can tell a
+  // burger from anything else; it is never offered.
+  side: { label: "side", sources: [{ q: "chips" }, { q: "fries" }] },
+  burger: { label: "burger", sources: [{ aisle: "Burgers & wraps" }] },
 };

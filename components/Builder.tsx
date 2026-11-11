@@ -27,8 +27,15 @@ function DayPill({ delivery }: { delivery?: { said: string; today: boolean } }) 
   );
 }
 
-type Offer = "chicken" | "rice" | "soup" | "swallow";
-const UPSELL_KINDS_ASKED: Offer[] = ["chicken", "rice", "soup", "swallow"];
+type Offer = "chicken" | "rice" | "soup" | "swallow" | "side";
+const UPSELL_KINDS_ASKED = ["chicken", "rice", "soup", "swallow", "side", "burger"];
+const OFFER_SAID: Record<Offer, string> = {
+  chicken: "chicken",
+  rice: "rice",
+  soup: "soup",
+  swallow: "swallow",
+  side: "a side",
+};
 
 type Step = "shop" | "dish" | "more" | "drink" | "added";
 type Dish = AisleShop["items"][number];
@@ -322,7 +329,7 @@ export default function Builder({
         {step === "more" && shop && offer !== "" && (
           <div className="mx-auto max-w-lg space-y-3">
             <h2 className="font-display text-3xl font-black uppercase leading-none">
-              Add {offer}?
+              Add {OFFER_SAID[offer]}?
             </h2>
             <div className="grid grid-cols-2 gap-3">
               {[...(pairs[offer]?.find((one) => one.id === shop.id)?.items ?? [])]
@@ -484,7 +491,7 @@ export default function Builder({
                 const name = (open?.item.name ?? "").toLowerCase();
                 const hasRice = /rice|jollof/.test(name);
                 const hasChicken = /chicken/.test(name);
-                const inKind = (kind: Offer) =>
+                const inKind = (kind: Offer | "burger") =>
                   (pairs[kind] ?? []).some((one) => one.items.some((d) => d.id === open?.item.id));
                 const asks: Offer | "" =
                   via !== "dish" || (hasRice && hasChicken)
@@ -497,7 +504,10 @@ export default function Builder({
                           ? "swallow"
                           : inKind("swallow")
                             ? "soup"
-                            : "";
+                            : inKind("burger") &&
+                                !open?.item.groups.some((g) => /side|chips|fries/i.test(g.name))
+                              ? "side"
+                              : "";
                 const food = asks !== "" && !!here && ((pairs[asks]?.find((one) => one.id === here.id)?.items.length ?? 0) > 0);
                 if (via === "dish" && food) {
                   setOffer(asks);
