@@ -251,6 +251,22 @@ export default function Builder({
             />
           ))}
         </div>
+        {cartCount(cart) > 0 && (
+          <Link
+            href="/cart"
+            onClick={onClose}
+            aria-label={`Cart, ${cartCount(cart)} items`}
+            className="relative flex size-9 items-center justify-center rounded-full border-2 border-ink"
+          >
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M6 8h12l-1 12H7L6 8Z" />
+              <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+            </svg>
+            <span className="absolute -right-1.5 -top-1.5 flex min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold leading-5 text-white">
+              {cartCount(cart)}
+            </span>
+          </Link>
+        )}
         <button
           type="button"
           onClick={onClose}
