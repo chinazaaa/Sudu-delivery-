@@ -286,9 +286,39 @@ export default function Home() {
           <RefreshControl refreshing={pulling} onRefresh={() => load(true)} tintColor={T.brand} />
         }
       >
-        {/* The picker's front door, first on the page. Hidden while a search
-            is showing results, so the results are not pushed down. */}
-        {found === null && <StartHere />}
+        {/* Whatever is true today, written in admin, the same line the
+            website carries along its top. The app had no way to announce
+            anything at all: a new shelf opened and the only people who knew
+            were the ones who happened to scroll past it. Above the order
+            card, because an announcement below the fold is a leaflet in a
+            drawer. */}
+        {(shop?.shop.ribbon ?? "") !== "" && (
+          <Pressable
+            onPress={() => {
+              const to = shop?.shop.ribbonTo ?? "";
+              if (to !== "") router.push(to as never);
+            }}
+            // Not pressable when there is nowhere to go, so a claim like
+            // "since 2018" does not look like a door that is broken.
+            disabled={(shop?.shop.ribbonTo ?? "") === ""}
+            style={{
+              backgroundColor: T.ink,
+              borderRadius: T.radius,
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <Text style={{ color: T.paper, fontFamily: F.bodyBold, flex: 1, lineHeight: 20 }}>
+              {shop!.shop.ribbon}
+            </Text>
+            {(shop?.shop.ribbonTo ?? "") !== "" && (
+              <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>See</Text>
+            )}
+          </Pressable>
+        )}
 
         {/* First, and above every banner.
 
@@ -326,6 +356,10 @@ export default function Home() {
             )}
           </View>
         )}
+
+        {/* The picker's front door, first on the page. Hidden while a search
+            is showing results, so the results are not pushed down. */}
+        {found === null && <StartHere />}
 
         {found !== null && (
           <View style={{ gap: 10 }}>
@@ -383,41 +417,7 @@ export default function Home() {
           </View>
         )}
 
-        {/* Whatever is true today, written in admin, the same line the
-            website carries along its top. The app had no way to announce
-            anything at all: a new shelf opened and the only people who knew
-            were the ones who happened to scroll past it. Above the order
-            card, because an announcement below the fold is a leaflet in a
-            drawer. */}
-        {(shop?.shop.ribbon ?? "") !== "" && (
-          <Pressable
-            onPress={() => {
-              const to = shop?.shop.ribbonTo ?? "";
-              if (to !== "") router.push(to as never);
-            }}
-            // Not pressable when there is nowhere to go, so a claim like
-            // "since 2018" does not look like a door that is broken.
-            disabled={(shop?.shop.ribbonTo ?? "") === ""}
-            style={{
-              backgroundColor: T.ink,
-              borderRadius: T.radius,
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <Text style={{ color: T.paper, fontFamily: F.bodyBold, flex: 1, lineHeight: 20 }}>
-              {shop!.shop.ribbon}
-            </Text>
-            {(shop?.shop.ribbonTo ?? "") !== "" && (
-              <Text style={{ color: T.brand, fontFamily: F.bodyBold }}>See</Text>
-            )}
-          </Pressable>
-        )}
-
-        {latest && (
+        {SHOW_OLD_HOME && latest && (
           <Pressable
             onPress={() => router.push(`/order/${latest.id}`)}
             style={{
@@ -643,7 +643,7 @@ export default function Home() {
           only other thing on a card, in Volt on the dark ones, because a box
           is bought on the price and the name.
         */}
-        {shelves.length > 0 && (
+        {SHOW_OLD_HOME && shelves.length > 0 && (
           <>
             <View
               style={{
@@ -708,6 +708,7 @@ export default function Home() {
           cards. A door admin has switched off is not drawn, which is why
           each one asks before it appears.
         */}
+        {SHOW_OLD_HOME && (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           <Door
             label="Group order"
@@ -753,6 +754,7 @@ export default function Home() {
             onPress={() => router.push("/ask" as never)}
           />
         </View>
+        )}
       </ScrollView>
 
       {/* The pumpkins, when the shop is dressed for them.
