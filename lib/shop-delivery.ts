@@ -1,7 +1,7 @@
 import { allAreas, areaOfEach, openDaysOfEach } from "./areas-server";
 import { canGoSameDay, carGoesOn, runCovers } from "./areas";
 import { runArrival } from "./arrival";
-import { openBatches } from "./batches";
+import { carsOnOffer, openBatches } from "./batches";
 import { runCarries } from "./run-places";
 import { opensOn } from "./open-days";
 import { hoursByDay, safeSettings } from "./settings";
@@ -38,11 +38,15 @@ export async function deliveryFor(ids: string[]): Promise<Record<string, ShopDel
     .map(toBatchView)
     .filter((view) => !view.closed && !view.full)
     .map(runArrival);
+  // The same cars the checkout will offer: with the one driver already
+  // booked on a day's run, the times she cannot make are not times at all.
   const slots =
     settings.same_day_on === "on"
-      ? slotsWorthOffering(
+      ? await carsOnOffer(
+          slotsWorthOffering(
           deliverySlots(new Date(), await hoursByDay(), settings.order_horizon_days || 7),
           batches.map((one) => ({ run_date: one.run_date, window: one.delivery_window_text }))
+          )
         )
       : [];
 
