@@ -3,7 +3,7 @@
 import GroupLink, { PARTY_CHANGED, readGroup } from "./GroupLink";
 import Sheet from "./Sheet";
 import { useRouter } from "next/navigation";
-import type { Slot } from "@/lib/same-day";
+import { slotsWorthOffering, type Slot } from "@/lib/same-day";
 import { nextArrival, type ArrivalRun } from "@/lib/arrival";
 import {
   areasIn,
@@ -595,8 +595,13 @@ export default function CartView({
       runCarries(one.onlyPlaces ?? "", kitchensIn) &&
       cart.every((line) => opensOn(openDaysOf[line.restaurantId], one.runDate))
   );
+  // A window a run covers is left out only if that run could carry this cart.
+  const carSlots = slotsWorthOffering(
+    slots,
+    usableRuns.map((one) => ({ run_date: one.runDate, window: one.when }))
+  );
   const carDays = canGoSameDay(cartAreas)
-    ? slots.filter(
+    ? carSlots.filter(
         (one) =>
           carGoesOn(cartAreas, one.date, opensOn) &&
           cart.every((line) => opensOn(openDaysOf[line.restaurantId], one.date))

@@ -49,7 +49,7 @@ import {
   PARTY_CHANGED,
   readGroup,
 } from "@/components/GroupLink";
-import { type Slot } from "@/lib/same-day";
+import { slotsWorthOffering, type Slot } from "@/lib/same-day";
 import { pairsInCart, type PairDeal } from "@/lib/deals";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import FillDetails from "@/components/FillDetails";
@@ -127,7 +127,7 @@ export default function Checkout({
   today,
   adding,
   you,
-  sameDaySlots: allSlots,
+  sameDaySlots: slotsBeforeRuns,
   sameDayBands: baseSameDayBands,
   urgentExtra,
   bands: baseBands,
@@ -218,6 +218,19 @@ export default function Checkout({
   // the number on the bill.
   const kitchens = [...new Set(cart.map((line) => line.restaurantId))];
   const cartAreas = areasIn(areas, kitchens, areaOf);
+  // A window a run already covers is not offered: the run gets there at the
+  // same hour for less. But only a run that could carry THIS cart counts: a
+  // run that does not reach Ajah, or does not stop at The Place, is no
+  // alternative for a cart with The Place in it, so it must not hide the car
+  // that is the only way of getting it there.
+  const allSlots = slotsWorthOffering(
+    slotsBeforeRuns,
+    batches
+      .filter(
+        (b) => !b.closed && !b.full && runCovers(b.areas, cartAreas) && runCarries(b.onlyPlaces, kitchens)
+      )
+      .map((b) => ({ run_date: b.runDate, window: b.deliveryWindow }))
+  );
   const area = dearestArea(areas, kitchens, areaOf);
   // The dearest area sets the distance; every area after the first is a
   // second shop to find, park at and queue in, and costs the same whichever

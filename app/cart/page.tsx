@@ -20,7 +20,7 @@ import { hostelNames } from "@/lib/hostels";
 import { liveOffers } from "@/lib/coupons";
 import { openBatches } from "@/lib/batches";
 import { activeBands, hoursByDay, safeSettings, sameDayPricing } from "@/lib/settings";
-import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
+import { deliverySlots } from "@/lib/same-day";
 import { toBatchView } from "@/lib/view";
 import { runArrival } from "@/lib/arrival";
 import { lagosToday } from "@/lib/time";
@@ -50,15 +50,10 @@ export default async function CartPage({
     // so a page left open all morning cannot offer a time that has gone.
     settings.same_day_on === "on"
       ? hoursByDay().then((hours) =>
-          slotsWorthOffering(
-            // As far ahead as the checkout offers, so the cart and the checkout
-            // name the same days.
-            deliverySlots(new Date(), hours, settings.order_horizon_days || 7),
-            batches.map((one) => ({
-              run_date: one.run_date,
-              window: one.delivery_window_text,
-            }))
-          )
+          // As far ahead as the checkout offers, so the cart and the checkout
+          // name the same days. Not thinned out by the runs: the cart does
+          // that against the runs that could carry what is in it.
+          deliverySlots(new Date(), hours, settings.order_horizon_days || 7)
         )
       : Promise.resolve([]),
     activeBands(),

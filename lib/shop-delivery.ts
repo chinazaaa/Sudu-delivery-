@@ -40,13 +40,10 @@ export async function deliveryFor(ids: string[]): Promise<Record<string, ShopDel
     .map(runArrival);
   // The same cars the checkout will offer: with the one driver already
   // booked on a day's run, the times she cannot make are not times at all.
-  const slots =
+  const rawSlots =
     settings.same_day_on === "on"
       ? await carsOnOffer(
-          slotsWorthOffering(
-          deliverySlots(new Date(), await hoursByDay(), settings.order_horizon_days || 7),
-          batches.map((one) => ({ run_date: one.run_date, window: one.delivery_window_text }))
-          )
+          deliverySlots(new Date(), await hoursByDay(), settings.order_horizon_days || 7)
         )
       : [];
 
@@ -57,6 +54,11 @@ export async function deliveryFor(ids: string[]): Promise<Record<string, ShopDel
         runCovers(run.areas ?? "", area) &&
         runCarries(run.onlyPlaces ?? "", [id]) &&
         opensOn(openDaysOf[id], run.runDate)
+    );
+    // A run covers a window only if it could carry this counter's food.
+    const slots = slotsWorthOffering(
+      rawSlots,
+      usable.map((run) => ({ run_date: run.runDate, window: run.when }))
     );
     const cars = canGoSameDay(area)
       ? slots.filter(

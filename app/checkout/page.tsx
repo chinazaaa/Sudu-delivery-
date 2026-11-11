@@ -20,7 +20,7 @@ import { whoIsSignedIn } from "@/lib/customer";
 import { db } from "@/lib/supabase";
 import { openBatches, recentlyClosedBatch, carsOnOffer } from "@/lib/batches";
 import { existingLoad } from "@/lib/orders";
-import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
+import { deliverySlots } from "@/lib/same-day";
 import { livePairDeals } from "@/lib/deals";
 import { SYMBOL, moniesOn, rateFor } from "@/lib/abroad";
 import { normalisePhone } from "@/lib/phone";
@@ -156,29 +156,17 @@ export default async function CheckoutPage({
         // See lib/one-driver.ts: the clock allows both, one person does not.
         (await safeSettings()).same_day_on === "on"
           ? await carsOnOffer(
-              slotsWorthOffering(
-                /*
-                 * As far ahead as the shop is open, not just today and
-                 * tomorrow.
-                 *
-                 * The checkout asks which day somebody wants their food, and
-                 * a day with no run on it is a car of its own. Two days of
-                 * windows meant that past tomorrow the dropdown had runs and
-                 * nothing else, so a week with no Monday run had no way to
-                 * offer Monday at all.
-                 */
+              /*
+               * Not thinned out by the runs here: whether a run makes a car
+               * pointless depends on where this cart is going, and a run that
+               * does not reach Ajah is no alternative for an Ajah cart. The
+               * checkout does that once it knows what is in the cart.
+               */
                 deliverySlots(
                   new Date(),
                   await hoursByDay(),
                   (await safeSettings()).order_horizon_days || 7
-                ),
-                // A window a run already covers is not offered: the run gets
-                // there at the same hour for two and a half thousand less.
-                batches.map((one) => ({
-                  run_date: one.run_date,
-                  window: one.delivery_window_text,
-                }))
-              )
+                )
             )
           : []
       }
