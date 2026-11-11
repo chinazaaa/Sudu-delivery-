@@ -27,7 +27,9 @@ function DayPill({ delivery }: { delivery?: { said: string; today: boolean } }) 
   );
 }
 
-type Step = "shop" | "dish" | "drink" | "added";
+const UPSELL_WORD = { chicken: "chicken", rice: "rice" } as const;
+
+type Step = "shop" | "dish" | "more" | "drink" | "added";
 type Dish = AisleShop["items"][number];
 
 /**
@@ -49,7 +51,10 @@ export default function Builder({
   const [failed, setFailed] = useState(false);
   const [step, setStep] = useState<Step>("shop");
   const [shop, setShop] = useState<AisleShop | null>(null);
-  const [open, setOpen] = useState<{ item: ItemView; shop: AisleShop; drink?: boolean } | null>(null);
+  const [open, setOpen] = useState<{ item: ItemView; shop: AisleShop; via?: "dish" | "more" | "drink" } | null>(null);
+  // What goes with the dish just added: chicken with rice, rice with chicken.
+  const [pairs, setPairs] = useState<Record<string, AisleShop[]>>({});
+  const [offer, setOffer] = useState<"chicken" | "rice" | "">("");
   const [drinks, setDrinks] = useState<AisleShop[]>([]);
   const [loading, setLoading] = useState("");
   const [cheapest, setCheapest] = useState(false);
@@ -84,6 +89,19 @@ export default function Builder({
     };
   }, [kind.tile, kind.aisle, kind.q, kind.category]);
 
+  useEffect(() => {
+    let live = true;
+    for (const kindName of ["chicken", "rice"]) {
+      fetch(`/api/builder?upsell=${kindName}`)
+        .then((r) => r.json())
+        .then((d) => live && setPairs((was) => ({ ...was, [kindName]: d.shops ?? [] })))
+        .catch(() => {});
+    }
+    return () => {
+      live = false;
+    };
+  }, []);
+
   // Drinks are offered after the food, so they are fetched while somebody
   // is still choosing it.
   useEffect(() => {
@@ -104,7 +122,7 @@ export default function Builder({
     };
   }, []);
 
-  async function pick(dish: Dish, from: AisleShop, drink = false) {
+  async function pick(dish: Dish, from: AisleShop, via: "dish" | "more" | "drink" = "dish") {
     setLoading(dish.id);
     let groups: ItemView["groups"] = [];
     try {
@@ -117,7 +135,7 @@ export default function Builder({
     before.current = cartCount(cart);
     setLast(dish);
     setOpen({
-      drink,
+      via,
       shop: from,
       item: {
         id: dish.id,
@@ -135,12 +153,15 @@ export default function Builder({
     });
   }
 
+  const drinkOn = (from: AisleShop) =>
+    (drinks.find((one) => one.id === from.id)?.items.length ?? 0) > 0;
   const dots: Step[] = ["shop", "dish", "drink", "added"];
+  // "Add chicken?" shares the dot with "Add a drink?": both are the extras.
   const back = () => {
     if (step === "dish") {
       if ((shops?.length ?? 0) === 1) return onClose();
       setStep("shop");
-    } else if (step === "drink" || step === "added") setStep("dish");
+    } else if (step === "more" || step === "drink" || step === "added") setStep("dish");
   };
 
   const list = shop?.items ?? [];
@@ -153,11 +174,11 @@ export default function Builder({
     .sort((a, b) => a.price - b.price)
     .filter((d) => !top.includes(d));
 
-  const card = (dish: Dish, from: AisleShop, tag?: string, drink = false) => (
+  const card = (dish: Dish, from: AisleShop, tag?: string, via: "dish" | "more" | "drink" = "dish") => (
     <button
       key={dish.id}
       type="button"
-      onClick={() => pick(dish, from, drink)}
+      onClick={() => pick(dish, from, via)}
       className="relative flex flex-col overflow-hidden rounded-2xl border-2 border-ink bg-white text-left shadow-[3px_3px_0_0_#111]"
     >
       <span className="block aspect-[4/3] w-full">
@@ -193,7 +214,9 @@ export default function Builder({
           {dots.map((one) => (
             <span
               key={one}
-              className={`h-2 rounded-full ${one === step ? "w-6 bg-brand" : "w-2 bg-ink/20"}`}
+              className={`h-2 rounded-full ${
+                one === step || (one === "drink" && step === "more") ? "w-6 bg-brand" : "w-2 bg-ink/20"
+              }`}
             />
           ))}
         </div>
@@ -272,6 +295,23 @@ export default function Builder({
           </div>
         )}
 
+        {step === "more" && shop && offer !== "" && (
+          <div className="mx-auto max-w-lg space-y-3">
+            <h2 className="font-display text-3xl font-black uppercase leading-none">
+              Add {UPSELL_WORD[offer]}?
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              {[...(pairs[offer === "chicken" ? "chicken" : "rice"]?.find((one) => one.id === shop.id)?.items ?? [])]
+                .sort((a, b) => a.price - b.price)
+                .slice(0, 6)
+                .map((dish) => card(dish, shop, undefined, "more"))}
+            </div>
+            <button type="button" onClick={() => setStep(drinkOn(shop) ? "drink" : "added")} className="btn-quiet w-full">
+              No thanks
+            </button>
+          </div>
+        )}
+
         {step === "drink" && shop && (
           <div className="mx-auto max-w-lg space-y-3">
             <h2 className="font-display text-3xl font-black uppercase leading-none">
@@ -281,7 +321,7 @@ export default function Builder({
               {[...(drinks.find((one) => one.id === shop.id)?.items ?? [])]
                 .sort((a, b) => a.price - b.price)
                 .slice(0, 8)
-                .map((dish) => card(dish, shop, undefined, true))}
+                .map((dish) => card(dish, shop, undefined, "drink"))}
             </div>
             <button type="button" onClick={() => setStep("added")} className="btn-quiet w-full">
               No thanks
@@ -363,9 +403,30 @@ export default function Builder({
               );
               if (now > before.current) {
                 if (last) setAdded((was) => (was.some((d) => d.id === last.id) ? was : [...was, last]));
+                const via = open?.via ?? "dish";
+                const here = open?.shop;
                 const mine = open?.item.groups.some((g) => /drink/i.test(g.name)) ?? false;
-                const has = (drinks.find((one) => one.id === open?.shop.id)?.items.length ?? 0) > 0;
-                setStep(!open?.drink && !mine && has ? "drink" : "added");
+                const canDrink = !!here && drinkOn(here) && !mine;
+                // Chicken with rice, rice with chicken, from the same place, and
+                // only once: a combo that already has both is not asked.
+                const name = (open?.item.name ?? "").toLowerCase();
+                const hasRice = /rice|jollof/.test(name);
+                const hasChicken = /chicken/.test(name);
+                const asks: "chicken" | "rice" | "" =
+                  via !== "dish" || (hasRice && hasChicken)
+                    ? ""
+                    : hasRice
+                      ? "chicken"
+                      : hasChicken || (pairs.chicken ?? []).some((one) => one.items.some((d) => d.id === open?.item.id))
+                        ? "rice"
+                        : "";
+                const food = asks !== "" && !!here && ((pairs[asks]?.find((one) => one.id === here.id)?.items.length ?? 0) > 0);
+                if (via === "dish" && food) {
+                  setOffer(asks);
+                  setStep("more");
+                } else {
+                  setStep(via !== "drink" && canDrink ? "drink" : "added");
+                }
               }
             }, 0);
           }}

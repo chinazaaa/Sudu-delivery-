@@ -676,3 +676,18 @@ export async function kindShops(filter: KindFilter, perShop = 40): Promise<Aisle
     (a, b) => Number(featuredIn(b)) - Number(featuredIn(a)) || a.from - b.from
   );
 }
+
+/**
+ * What goes with what, for the picker's "add chicken?" and "add rice?".
+ *
+ * A kind is a list of places in the menu to look, the same shape a front
+ * page tile uses. Written as data here so a new pairing is a line, and so
+ * the picker asks the server rather than carrying menu words of its own.
+ */
+export const UPSELL_KINDS: Record<string, { label: string; sources: KindSource[] }> = {
+  chicken: { label: "chicken", sources: [{ aisle: "Chicken" }] },
+  rice: {
+    label: "rice",
+    sources: [{ aisle: "Rice, pasta & bowls" }, { q: "rice" }, { q: "jollof" }],
+  },
+};
