@@ -102,6 +102,7 @@ type Asked = {
   aisle?: string;
   sort?: string;
   page?: string;
+  view?: string;
 };
 
 /**
@@ -230,8 +231,8 @@ export default async function ProductsPage({
 
   return (
     <div className="-mt-4 space-y-4 pb-10">
-      {fresh && tiles.length > 0 ? (
-        <StartTiles tiles={tiles} more={extra} />
+      {fresh ? (
+        <StartTiles tiles={tiles} more={extra} kitchens={facets.places} view={asked.view === "kitchens" ? "kitchens" : "food"} />
       ) : (
       <header className="bleed relative overflow-hidden border-b-2 border-ink">
         <span
@@ -264,7 +265,7 @@ export default async function ProductsPage({
         </div>
       </header>
       )}
-      {!(fresh && tiles.length > 0) && (
+      {!(fresh) && (
       <>
 
       {/* The board's filter bar, stuck to the top: what kind on one line,
