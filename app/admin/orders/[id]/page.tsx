@@ -1341,7 +1341,10 @@ async function orderPage(id: string, said: string) {
               <Detail label="Block" value={order.hostel} />
               <Detail
                 label="Left a review"
-                value={order.rated_at ? "Yes" : "Not yet"}
+                // On this order, or on Google for an earlier one: the
+                // customer's own page already says so, and the two should
+                // not disagree about the same person.
+                value={order.rated_at ? "Yes" : them?.reviewed ? "Yes, on Google" : "Not yet"}
               />
             </dl>
             <Link
