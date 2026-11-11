@@ -122,6 +122,22 @@ export type SignedIn = {
   cameFrom: string;
 };
 
+/**
+ * Brings the chosen chip into view along a row that scrolls sideways.
+ *
+ * Landing on the page with Friday chosen and the row showing "Today ·
+ * closed" and "Tomorrow · closed" makes somebody swipe to find the one thing
+ * that is on. Only when the choice changes, so it never fights a thumb that
+ * is scrolling the row itself, and only along the row, never the page.
+ */
+function focusChip(el: HTMLElement | null, key: string) {
+  const row = el?.parentElement;
+  if (!el || !row || row.dataset.focused === key) return;
+  row.dataset.focused = key;
+  const there = el.getBoundingClientRect().left - row.getBoundingClientRect().left + row.scrollLeft;
+  row.scrollLeft = Math.max(0, there - (row.clientWidth - el.offsetWidth) / 2);
+}
+
 export default function Checkout({
   batches,
   today,
@@ -1561,6 +1577,7 @@ export default function Checkout({
             return (
               <button
                 key={one.date}
+                ref={on ? (el) => focusChip(el, one.date) : undefined}
                 type="button"
                 disabled={shut || adding !== null || joining !== null || party !== ""}
                 onClick={() => {
@@ -1593,6 +1610,7 @@ export default function Checkout({
             return (
               <button
                 key={one.date}
+                ref={on ? (el) => focusChip(el, one.date) : undefined}
                 type="button"
                 disabled={adding !== null || joining !== null || party !== ""}
                 onClick={() => {
