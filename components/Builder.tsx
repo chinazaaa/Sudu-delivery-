@@ -433,9 +433,18 @@ export default function Builder({
             <button type="button" onClick={() => setStep("dish")} className="btn-quiet w-full">
               + Add more from {shop?.name}
             </button>
-            <button type="button" onClick={() => setStep("shop")} className="btn-quiet w-full">
-              Pick another restaurant
-            </button>
+            {/* Only one restaurant sells this kind of food: going back to a list
+                of one would look like nothing happened, so it goes to the
+                front page tiles instead. */}
+            {(shops?.length ?? 0) > 1 ? (
+              <button type="button" onClick={() => setStep("shop")} className="btn-quiet w-full">
+                Pick another restaurant
+              </button>
+            ) : (
+              <button type="button" onClick={onClose} className="btn-quiet w-full">
+                Pick something else
+              </button>
+            )}
           </div>
         )}
       </div>
