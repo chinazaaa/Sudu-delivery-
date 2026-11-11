@@ -46,7 +46,7 @@ export default async function MarketPage({
             <span className="text-brand">Send your list.</span>
           </>
         }
-        lead="Write or paste everything you want from the market. We price it, you say yes, and we buy it and bring it to your hostel."
+        lead="Every Saturday. Send your list, and we agree the time and the fee with you on WhatsApp."
       />
 
       <div className="py-8">
@@ -56,8 +56,8 @@ export default async function MarketPage({
               We have your list.
             </p>
             <p className="mt-2 text-ink/75">
-              We will message you on WhatsApp with what it comes to. Nothing is
-              bought until you say yes.
+              We will message you on WhatsApp to agree the time and the price.
+              Nothing is bought until you say yes.
             </p>
           </div>
         ) : (
@@ -69,7 +69,7 @@ export default async function MarketPage({
             simple
             rows={9}
             opening="Hi Sudu, here is my market list."
-            lead="Open WhatsApp and paste your list. We price it and send you the total."
+            lead="Open WhatsApp and paste your list. We agree the time and the price there."
             label="Your market list"
             placeholder={"Pepper\nTomatoes\nOnions\nTin tomatoes\nEgusi"}
             help="One thing to a line is easiest. Say how much of each if it matters."
