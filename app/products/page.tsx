@@ -214,6 +214,8 @@ export default async function ProductsPage({
   const chips = asked.place ? facets.categories : facets.aisles;
   const picked = (asked.place ? asked.category : asked.aisle) ?? "";
 
+  // Filters, kitchens and sorting are off: a search is just the results.
+  const showFilters = false;
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const link = (change: Partial<Asked>) => {
     const now = new URLSearchParams();
@@ -235,36 +237,11 @@ export default async function ProductsPage({
       {fresh ? (
         <StartTiles tiles={tiles} more={extra} kitchens={kitchens} view={asked.view === "kitchens" ? "kitchens" : "food"} />
       ) : (
-      <header className="bleed relative overflow-hidden border-b-2 border-ink">
-        <span
-          aria-hidden
-          className="absolute inset-y-0 -right-8 w-[26%] opacity-90"
-          style={{
-            background:
-              "repeating-linear-gradient(-60deg,#e5321d 0 7px,transparent 7px 16px)",
-          }}
-        />
-        <div className="shell relative flex flex-col gap-4 pb-8 pt-7 sm:gap-5 sm:pb-9 sm:pt-11">
-        {/* Not "everything": the shop sells more than food now, and this is
-            the food door. Calling it everything while skincare, boxes and
-            parcels live behind their own cards was the one contradiction the
-            front page could not afford. */}
-        <span className="ticket text-brand-dark">
-          {total} thing{total === 1 ? "" : "s"} · {facets.places.length} kitchen
-          {facets.places.length === 1 ? "" : "s"} · one run
-        </span>
-        <h1 className="font-display text-[min(16vw,6.5rem)] font-black uppercase leading-[0.86] sm:text-[clamp(3.5rem,8vw,6.5rem)]">
-          Every menu.
-          <br />
-          One list.
-        </h1>
-          <p className="sr-only">
-            Every restaurant together. One car carries all of it, so anything
-            here can go in the same order.
-          </p>
-
-        </div>
-      </header>
+      <div className="shell pt-3">
+        <Link href="/products" className="text-sm font-bold underline">
+          ← Back to the menu
+        </Link>
+      </div>
       )}
       {!(fresh) && (
       <>
@@ -310,7 +287,7 @@ export default async function ProductsPage({
               <ProductSearch start={asked.q ?? ""} big />
             </Suspense>
 
-            {chips.length > 0 && (
+            {showFilters && chips.length > 0 && (
               <div
                 aria-label={asked.place ? "Sections" : "What kind"}
                 className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
@@ -361,6 +338,7 @@ export default async function ProductsPage({
         </div>
       </div>
 
+      {showFilters && (
       <div className="flex flex-wrap items-center justify-between gap-2.5">
         {/*
           The row scrolls, and said so to nobody.
@@ -434,6 +412,7 @@ export default async function ProductsPage({
           ))}
         </div>
       </div>
+      )}
 
       {/*
         What they probably meant, as the loudest thing on the screen.
