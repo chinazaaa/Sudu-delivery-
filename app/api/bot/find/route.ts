@@ -81,8 +81,24 @@ export async function POST(request: Request): Promise<NextResponse> {
           .filter((one) => (one.kind ?? "food") === "food")
           .map((one) => one.id)
       );
+      // A counter that is mostly groceries or household things is a shop, not
+      // a place to eat: counted off how its own shelves are filed.
+      const { data: shelves } = await db()
+        .from("menu_categories")
+        .select("restaurant_id, aisle");
+      const tally = new Map<string, { shop: number; all: number }>();
+      for (const row of (shelves ?? []) as { restaurant_id: string; aisle: string | null }[]) {
+        const mine = tally.get(row.restaurant_id) ?? { shop: 0, all: 0 };
+        mine.all += 1;
+        if (row.aisle === "Groceries" || row.aisle === "For the room") mine.shop += 1;
+        tally.set(row.restaurant_id, mine);
+      }
+      const eats = (id: string) => {
+        const one = tally.get(id);
+        return !one || one.all === 0 || one.shop / one.all < 0.6;
+      };
       return shops
-        .filter((shop) => food.has(shop.restaurant.id))
+        .filter((shop) => food.has(shop.restaurant.id) && eats(shop.restaurant.id))
         .sort(
           (a, b) =>
             (popularity.get(b.restaurant.id) ?? 0) - (popularity.get(a.restaurant.id) ?? 0)
@@ -98,7 +114,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         said.trim()
       )
     ) {
-      const top = await mostOrdered(5);
+      const top = await mostOrdered(30);
       if (top.length > 1) {
         return NextResponse.json({
           how: "popular",
