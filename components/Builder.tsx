@@ -147,9 +147,11 @@ export default function Builder({
   const popular = list.filter((d) => d.orderedCount > 0).slice(0, 3);
   const lead = cheapest ? [] : list.filter((d) => d.featured);
   const top = cheapest ? [] : lead.length > 0 ? lead : popular.length > 0 ? popular : list.slice(0, 3);
-  const rest = (cheapest ? [...list].sort((a, b) => a.price - b.price) : list).filter(
-    (d) => !top.includes(d)
-  );
+  // What is most ordered (or what the tile leads with) comes first; the rest
+  // follow cheapest first, so the next thing down is always the least to spend.
+  const rest = [...list]
+    .sort((a, b) => a.price - b.price)
+    .filter((d) => !top.includes(d));
 
   const card = (dish: Dish, from: AisleShop, tag?: string, drink = false) => (
     <button
