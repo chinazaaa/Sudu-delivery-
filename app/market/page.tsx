@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import AskForm from "@/components/AskForm";
-import PageHead from "@/components/PageHead";
 import { hostelNames } from "@/lib/hostels";
 import { safeSettings } from "@/lib/settings";
 
@@ -37,19 +36,16 @@ export default async function MarketPage({
 
   return (
     <div className="-mt-4 pb-10">
-      <PageHead
-        ticket="Saturdays"
-        title={
-          <>
-            Market delivery.
-            <br />
-            <span className="text-brand">Send your list.</span>
-          </>
-        }
-        lead="Every Saturday. Send your list, and we agree the time and the fee with you on WhatsApp."
-      />
+      <div className="shell space-y-1 pt-3">
+        <h1 className="font-display text-3xl font-black uppercase leading-none">
+          Market delivery
+        </h1>
+        <p className="text-sm text-muted">
+          Every Saturday. Send your list, and we agree the time and the fee with you on WhatsApp.
+        </p>
+      </div>
 
-      <div className="py-8">
+      <div className="shell py-3">
         {sent ? (
           <div className="rounded-2xl border-2 border-ink bg-paper p-6 shadow-lift">
             <p className="font-display text-[32px] font-black uppercase leading-none text-mint">
