@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Linking,
   Pressable,
   ScrollView,
   Text,
@@ -12,7 +13,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-import { api, naira, pickApi, type MenuTilesView, type Product } from "@/lib/api";
+import { api, BASE, naira, pickApi, type MenuTilesView, type Product } from "@/lib/api";
 import Thumb from "@/components/Thumb";
 import AskUs from "@/components/AskUs";
 import { F, T } from "@/lib/theme";
@@ -125,7 +126,7 @@ export default function ProductsScreen() {
   const fresh = query === "" && category === "" && aisle === "" && place === "";
   if (fresh && menuTiles) {
     const w = Math.floor((width - 32 - 8) / 2);
-    const cards: { key: string; label: string; from: number; image: string; go: () => void }[] =
+    const cards: { key: string; label: string; from: number; image: string; note?: string; go: () => void }[] =
       view === "kitchens"
         ? menuTiles.kitchens.map((one) => ({
             key: one.id,
@@ -153,16 +154,22 @@ export default function ProductsScreen() {
                   router.push({ pathname: "/pick", params: { label: one.label, aisle: one.label } } as never),
               })),
             ];
-            if (menuTiles.featured) {
-              const f = menuTiles.featured;
-              all.splice(Math.max(0, all.length - 2), 0, {
-                key: "featured",
+            const picked = menuTiles.featured ?? [];
+            all.splice(
+              Math.max(0, all.length - 2),
+              0,
+              ...picked.map((f) => ({
+                key: `f-${f.href}`,
                 label: f.label,
                 from: f.from,
                 image: f.image,
-                go: () => router.push(`/occasions/${f.slug}` as never),
-              });
-            }
+                note: f.note,
+                go: () =>
+                  f.href.startsWith("/collections/")
+                    ? router.push(`/occasions/${f.href.split("/").pop()}` as never)
+                    : void Linking.openURL(`${BASE}${f.href}`).catch(() => {}),
+              }))
+            );
             return all;
           })();
     return (
@@ -220,7 +227,7 @@ export default function ProductsScreen() {
                 {one.label}
               </Text>
               <Text style={{ fontFamily: F.bodyBold, fontSize: 13, color: T.brand }}>
-                {one.from > 0 ? `from ${naira(one.from)} →` : "→"}
+                {one.note ? `${one.note} →` : one.from > 0 ? `from ${naira(one.from)} →` : "→"}
               </Text>
             </Pressable>
           ))}

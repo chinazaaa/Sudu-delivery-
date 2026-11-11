@@ -57,5 +57,5 @@ export async function sendRequest(
     /* The request is saved either way. */
   }
 
-  redirect("/custom-order?sent=1");
+  redirect(said("back") === "/market" ? "/market?sent=1" : "/custom-order?sent=1");
 }

@@ -205,7 +205,7 @@ export const kitchenTiles = unstable_cache(readKitchens, ["kitchen-tiles"], {
   tags: ["menu"],
 });
 
-export type FeaturedTile = { aisle: string; from: number; image: string; href: string };
+export type FeaturedTile = { aisle: string; from: number; image: string; href: string; note?: string };
 
 async function readFeatured(): Promise<FeaturedTile | null> {
   try {
@@ -241,3 +241,26 @@ export const featuredTile = unstable_cache(readFeatured, ["featured-tile"], {
   revalidate: 600,
   tags: ["menu"],
 });
+
+/**
+ * Market delivery: a list sent to the shop instead of a cart. It wears the
+ * grocery aisle's photo and says what to do rather than a price.
+ */
+async function readMarket(): Promise<FeaturedTile> {
+  const groceries = (await everyAisleTile().catch(() => [] as AisleTile[])).find(
+    (one) => one.aisle === "Groceries"
+  );
+  return {
+    aisle: "Market delivery",
+    from: 0,
+    image: groceries?.image ?? "",
+    href: "/market",
+    note: "Send us your list",
+  };
+}
+
+/** What the shop is pushing: market delivery first, then the promoted collection. */
+export async function featuredTiles(): Promise<FeaturedTile[]> {
+  const [market, shelf] = await Promise.all([readMarket(), featuredTile()]);
+  return shelf ? [market, shelf] : [market];
+}

@@ -38,7 +38,23 @@ export default function AskForm({
    * errand says what its own picture is for; this is the shopping one.
    */
   fileHint = "Optional, and often quicker than describing it. A photo of the thing, a screenshot, or the label off the pack you want.",
+  tag = "",
+  rows = 3,
+  placeholder = "A black 20,000mAh power bank",
+  help = "The more exact the better. Colour, size, make, anything you know.",
+  simple = false,
+  back = "",
 }: {
+  /** Put in front of what they wrote when it is saved, so admin can tell
+   *  this kind of ask apart: "Market list". */
+  tag?: string;
+  rows?: number;
+  placeholder?: string;
+  help?: string;
+  /** No picture and no limit: a list is just a list. */
+  simple?: boolean;
+  /** Where to land after sending, where it is not the custom order page. */
+  back?: string;
   hostels: string[];
   whatsapp: string | null;
   /** What the box starts with, where the page is about one kind of ask.
@@ -85,7 +101,7 @@ export default function AskForm({
   // is theirs to send: we never send anything on anybody's behalf.
   const message =
     opening +
-    (wanted.trim() ? `\n\nWhat: ${wanted.trim()}` : "") +
+    (wanted.trim() ? `\n\n${tag === "" ? "What: " : ""}${wanted.trim()}` : "") +
     (budget.trim() ? `\nLimit: ${budget.trim()}` : "") +
     (hostel.trim() ? `\nBlock: ${hostel.trim()}` : "") +
     (photo !== "" ? "\n\n(I have a file to send.)" : "");
@@ -128,23 +144,23 @@ export default function AskForm({
           </label>
           <textarea
             id="wanted"
-            name="wanted"
-            rows={3}
+            name={tag === "" ? "wanted" : undefined}
+            rows={rows}
             required
             value={wanted}
             onChange={(event) => setWanted(event.target.value)}
-            placeholder="A black 20,000mAh power bank"
+            placeholder={placeholder}
             className="field"
           />
-          <p className="mt-1 text-xs text-muted">
-            The more exact the better. Colour, size, make, anything you know.
-          </p>
+          {tag !== "" && <input type="hidden" name="wanted" value={`${tag}: ${wanted}`} />}
+          {back !== "" && <input type="hidden" name="back" value={back} />}
+          <p className="mt-1 text-xs text-muted">{help}</p>
 
           {/* Tap one and it writes itself into the box above. They were sat
               further down the page looking like buttons and doing nothing,
               which is the worst a chip can be: it says the shop does these
               and then ignores the finger. */}
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className={`mt-2 flex flex-wrap gap-2 ${simple ? "hidden" : ""}`}>
             {(chips ?? [
               "Tailoring: ",
               "Laundry: ",
@@ -178,7 +194,7 @@ export default function AskForm({
             picture is for changes with the page, so each errand says it in
             its own words rather than one sentence trying to cover all of
             them. */}
-        <div>
+        <div className={simple ? "hidden" : ""}>
           <label className="label" htmlFor="photo">
             {fileLabel}
           </label>
@@ -216,7 +232,7 @@ export default function AskForm({
             is the one thing actually needed at this end: whether to go
             ahead without asking again.
           */}
-          <div>
+          <div className={simple ? "hidden" : ""}>
             <label className="label" htmlFor="budget">
               A limit, if you have one
             </label>

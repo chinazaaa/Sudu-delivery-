@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { aisleTiles, everyAisleTile, featuredTile, kitchenTiles } from "@/lib/aisle-tiles";
+import { aisleTiles, everyAisleTile, featuredTiles, kitchenTiles } from "@/lib/aisle-tiles";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export async function GET(): Promise<NextResponse> {
     const [starters, more, featured, kitchens] = await Promise.all([
       aisleTiles(),
       everyAisleTile(),
-      featuredTile(),
+      featuredTiles(),
       kitchenTiles(),
     ]);
     const tile = (one: { aisle: string; from: number; image: string }) => ({
@@ -24,9 +24,13 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({
       tiles: starters.map(tile),
       more: more.map(tile),
-      featured: featured
-        ? { label: featured.aisle, from: featured.from, image: featured.image, slug: featured.href.split("/").pop() ?? "" }
-        : null,
+      featured: featured.map((one) => ({
+        label: one.aisle,
+        from: one.from,
+        image: one.image,
+        href: one.href,
+        note: one.note ?? "",
+      })),
       kitchens: kitchens.map((one) => ({
         id: one.id,
         name: one.name,

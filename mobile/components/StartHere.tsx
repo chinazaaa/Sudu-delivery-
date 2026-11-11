@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Linking, Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { useRouter } from "expo-router";
-import { naira, pickApi, type HomeTileView, type HomeView } from "@/lib/api";
+import { BASE, naira, pickApi, type HomeTileView, type HomeView } from "@/lib/api";
 import Thumb from "@/components/Thumb";
 import { Display } from "@/components/ui";
 import { whatsappTo } from "@/lib/whatsapp";
@@ -49,6 +49,13 @@ export default function StartHere() {
       : whatsappTo(home.whatsapp, "Hi Sudu, I'd like to order: ");
     if (link === "") router.push("/ask" as never);
     else void Linking.openURL(link).catch(() => {});
+  };
+
+  // A collection opens in the app; anything else, like the market list page,
+  // opens on the website.
+  const openFeatured = (href: string) => {
+    if (href.startsWith("/collections/")) router.push(`/occasions/${href.split("/").pop()}` as never);
+    else void Linking.openURL(`${BASE}${href}`).catch(() => {});
   };
 
   const tile = (one: HomeTileView, kind: "tile" | "aisle", w: number) => (
@@ -128,7 +135,7 @@ export default function StartHere() {
         {button("Message us", message, false)}
       </View>
 
-      {(home.more.length > 0 || home.featured) && (
+      {(home.more.length > 0 || (home.featured ?? []).length > 0) && (
         <View style={{ gap: 8, marginTop: 6 }}>
           <Display size={22}>Something else?</Display>
           <ScrollView
@@ -137,9 +144,10 @@ export default function StartHere() {
             style={{ marginHorizontal: -16 }}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
           >
-            {home.featured && (
+            {(home.featured ?? []).map((one) => (
               <Pressable
-                onPress={() => router.push(`/occasions/${home.featured?.slug}` as never)}
+                key={one.href}
+                onPress={() => openFeatured(one.href)}
                 style={{
                   width: moreW,
                   gap: 4,
@@ -150,15 +158,15 @@ export default function StartHere() {
                   borderRadius: 16,
                 }}
               >
-                <Thumb src={home.featured.image} name={home.featured.label} radius={8} ratio={16 / 9} />
+                <Thumb src={one.image} name={one.label} radius={8} ratio={16 / 9} />
                 <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }} numberOfLines={1}>
-                  {home.featured.label}
+                  {one.label}
                 </Text>
                 <Text style={{ fontFamily: F.bodyBold, fontSize: 13, color: T.brand }}>
-                  {home.featured.from > 0 ? `from ${naira(home.featured.from)} →` : "→"}
+                  {one.note !== "" ? `${one.note} →` : one.from > 0 ? `from ${naira(one.from)} →` : "→"}
                 </Text>
               </Pressable>
-            )}
+            ))}
             {home.more.map((one) => tile(one, "aisle", moreW))}
           </ScrollView>
         </View>

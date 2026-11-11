@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { aisleTiles, featuredTile, moreTiles } from "@/lib/aisle-tiles";
+import { aisleTiles, featuredTiles, moreTiles } from "@/lib/aisle-tiles";
 import { arrivalShort } from "@/lib/arrival-short";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import { carsOnOffer, openBatches } from "@/lib/batches";
@@ -25,7 +25,7 @@ export async function GET(): Promise<NextResponse> {
       openBatches(),
       aisleTiles(),
       moreTiles(),
-      featuredTile(),
+      featuredTiles(),
     ]);
 
     // The one rule the front page and the checkout share, asked the same way.
@@ -56,9 +56,13 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({
       tiles: starters.map(tile),
       more: more.map(tile),
-      featured: featured
-        ? { label: featured.aisle, from: featured.from, image: featured.image, slug: featured.href.split("/").pop() ?? "" }
-        : null,
+      featured: featured.map((one) => ({
+        label: one.aisle,
+        from: one.from,
+        image: one.image,
+        href: one.href,
+        note: one.note ?? "",
+      })),
       arriving: decided?.said ? arrivalShort(decided.said) : "",
       whatsapp:
         whatsappLink(settings.whatsapp_number, "Hi Sudu, I'd like to order: ") ?? "",

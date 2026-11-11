@@ -1841,15 +1841,15 @@ export type HomeView = {
   /** A wa.me link, or empty when the shop has no number. */
   whatsapp: string;
   /** The collection the shop is promoting, if it has picked one. */
-  featured?: FeaturedView | null;
+  featured?: FeaturedView[];
 };
 
-export type FeaturedView = { label: string; from: number; image: string; slug: string };
+export type FeaturedView = { label: string; from: number; image: string; href: string; note: string };
 
 export type MenuTilesView = {
   tiles: HomeTileView[];
   more: HomeTileView[];
-  featured: FeaturedView | null;
+  featured: FeaturedView[];
   kitchens: { id: string; name: string; from: number; image: string }[];
 };
 

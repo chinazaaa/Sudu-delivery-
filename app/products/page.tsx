@@ -10,7 +10,7 @@ import { optionGroupsFor } from "@/lib/menu";
 import { browseProducts, productFacets, shelfNames, PER_PAGE } from "@/lib/products";
 import ProductSearch from "@/components/ProductSearch";
 import StartTiles from "@/components/StartTiles";
-import { aisleTiles, everyAisleTile, kitchenTiles, featuredTile } from "@/lib/aisle-tiles";
+import { aisleTiles, everyAisleTile, kitchenTiles, featuredTiles } from "@/lib/aisle-tiles";
 
 export const dynamic = "force-dynamic";
 
@@ -143,7 +143,7 @@ export default async function ProductsPage({
     dealsOn(),
     fresh ? aisleTiles().catch(() => []) : Promise.resolve([]),
     fresh ? everyAisleTile().catch(() => []) : Promise.resolve([]),
-    fresh ? featuredTile().catch(() => null) : Promise.resolve(null),
+    fresh ? featuredTiles().catch(() => []) : Promise.resolve([]),
     fresh && asked.view === "kitchens" ? kitchenTiles().catch(() => []) : Promise.resolve([]),
   ]);
 
