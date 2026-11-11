@@ -1040,11 +1040,27 @@ export default function CartView({
        */}
       {runOnlyLines.length > 0 && goingWord !== "today" && (
         <div className="rounded-2xl border border-brand/30 bg-brand-tint px-4 py-2.5">
-          <p className="text-sm font-bold text-brand-dark">
-            {goingWord !== ""
-              ? `${runOnlySaid} comes ${goingWord}, so the whole order does.`
-              : `We have no day for ${runOnlySaid} yet. Message us.`}
-          </p>
+          {runOnlyLines.length < cart.length ? (
+            <>
+              <p className="text-sm font-bold text-brand-dark">
+                {runOnlySaid} only comes {goingWord || "on a later day"}. The rest could
+                come sooner.
+              </p>
+              <button
+                type="button"
+                onClick={() => runOnlyLines.forEach((line) => setQty(line.key, 0))}
+                className="mt-1.5 text-sm font-semibold text-brand-dark underline"
+              >
+                Take out {runOnlySaid}
+              </button>
+            </>
+          ) : (
+            <p className="text-sm font-bold text-brand-dark">
+              {goingWord !== ""
+                ? `${runOnlySaid} comes ${goingWord}.`
+                : `We have no day for ${runOnlySaid} yet. Message us.`}
+            </p>
+          )}
         </div>
       )}
 
