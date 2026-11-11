@@ -117,7 +117,7 @@ export default function Home({
   /** Ready-made carts, so nobody has to start from the whole menu. */
   /** WhatsApp link for somebody who still cannot decide. */
   askUs?: string;
-  starters?: { aisle: string; from: number }[];
+  starters?: { aisle: string; from: number; image: string }[];
   todayOffer?: {
     badge: string;
     where: string;
@@ -366,8 +366,8 @@ export default function Home({
                         onClick={() => setBuilding({ label: one.aisle, tile: one.aisle })}
                         className="flex h-full w-full flex-col justify-between gap-2 rounded-2xl border-2 border-ink bg-white p-3.5 text-left shadow-[3px_3px_0_0_#111]"
                       >
-                        <span className="block size-16 overflow-hidden">
-                          <Thumb src="" name={one.aisle} category={one.aisle} variant="tile" />
+                        <span className="block aspect-[4/3] w-full overflow-hidden rounded-xl">
+                          <Thumb src={one.image} name={one.aisle} category={one.aisle} variant="tile" />
                         </span>
                         <span className="text-lg font-extrabold leading-tight">{one.aisle}</span>
                         <span className="text-sm font-bold text-brand">
@@ -381,7 +381,7 @@ export default function Home({
                   <button
                     type="button"
                     onClick={() => window.dispatchEvent(new Event("sudu:open-bot"))}
-                    className="btn-primary w-full"
+                    className="btn-primary w-full whitespace-nowrap px-3 text-[15px]"
                   >
                     Chat with our bot
                   </button>
@@ -389,7 +389,7 @@ export default function Home({
                     href={askUs || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn-quiet w-full text-center"
+                    className="btn-quiet w-full whitespace-nowrap px-3 text-center text-[15px]"
                   >
                     Message us
                   </a>

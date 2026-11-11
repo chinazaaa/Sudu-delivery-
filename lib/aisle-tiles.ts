@@ -2,11 +2,11 @@ import { unstable_cache } from "next/cache";
 
 import { aislesFrom, NOT_DINNER } from "./aisles";
 import { parseHomeTiles, type HomeTile } from "./home-tiles";
-import { aisleFromPrices, kindShops } from "./products";
+import { kindShops } from "./products";
 import { safeSettings } from "./settings";
 
 /** A tile on the front page: what it says, and what it starts at. */
-export type AisleTile = { aisle: string; from: number };
+export type AisleTile = { aisle: string; from: number; image: string };
 
 /**
  * Used when no tiles are written in admin: the shop's own aisle order, less
@@ -26,19 +26,19 @@ export async function homeTileDefs(): Promise<HomeTile[]> {
 async function readTiles(): Promise<AisleTile[]> {
   try {
     const defs = await homeTileDefs();
-    const unwritten = parseHomeTiles((await safeSettings()).home_tiles).length === 0;
-    if (unwritten) {
-      const from = await aisleFromPrices(defs.map((one) => one.label));
-      return defs
-        .filter((one) => (from[one.label] ?? 0) > 0)
-        .slice(0, 4)
-        .map((one) => ({ aisle: one.label, from: from[one.label] }));
-    }
     const out: AisleTile[] = [];
-    for (const one of defs.slice(0, 6)) {
-      const shops = await kindShops({ sources: one.sources, shops: one.shops }, 1);
+    for (const one of defs) {
+      const shops = await kindShops({ sources: one.sources, shops: one.shops }, 8);
       const from = Math.min(...shops.map((shop) => shop.from).filter((n) => n > 0));
-      if (Number.isFinite(from)) out.push({ aisle: one.label, from });
+      if (!Number.isFinite(from)) continue;
+      // A photo of what is most ordered under it, so the tile shows food and
+      // not a drawing of it.
+      const photo = shops
+        .flatMap((shop) => shop.items)
+        .filter((dish) => dish.imageUrl !== "")
+        .sort((a, b) => b.orderedCount - a.orderedCount)[0];
+      out.push({ aisle: one.label, from, image: photo?.imageUrl ?? "" });
+      if (out.length === 4) break;
     }
     return out;
   } catch {
