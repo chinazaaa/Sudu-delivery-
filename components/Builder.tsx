@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import ItemSheet from "./ItemSheet";
 import Thumb from "./Thumb";
-import { cartCount, cartSubtotal, setQty, useCart } from "@/lib/cart";
+import { cartCount, cartSubtotal, choicesSaid, setQty, useCart } from "@/lib/cart";
 import { naira } from "@/lib/money";
 import type { AisleShop } from "@/lib/products";
 import type { ItemView } from "@/lib/view";
@@ -373,6 +373,11 @@ export default function Builder({
                     <span className="block text-xs text-muted">
                       {line.restaurantName} · {naira(line.unitPrice * line.qty)}
                     </span>
+                    {line.choices.length > 0 && (
+                      <span className="block truncate text-xs text-muted">
+                        {choicesSaid(line.choices, line.choiceFees, naira).join(", ")}
+                      </span>
+                    )}
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5">
                     <button
@@ -420,8 +425,10 @@ export default function Builder({
                       type="button"
                       onClick={() => {
                         late.forEach((line) => setQty(line.key, 0));
-                        setEveryone(true);
-                        setShops(null);
+                        if (!everyone) {
+                          setEveryone(true);
+                          setShops(null);
+                        }
                         setShop(null);
                         setStep("shop");
                       }}
@@ -452,8 +459,13 @@ export default function Builder({
             <button
               type="button"
               onClick={() => {
-                setEveryone(true);
-                setShops(null);
+                // Only cleared when the list is about to be fetched again: if it
+                // is already the list of everyone nothing will refetch it, and
+                // clearing it would leave the screen on "Loading…" for good.
+                if (!everyone) {
+                  setEveryone(true);
+                  setShops(null);
+                }
                 setShop(null);
                 setStep("shop");
               }}
