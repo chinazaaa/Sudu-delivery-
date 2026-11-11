@@ -1081,7 +1081,7 @@ export default function CartView({
                   Take out {runOnlySaid}
                 </button>
                 <button type="button" onClick={swapPlace} className="underline">
-                  Switch to another place
+                  Switch to another restaurant
                 </button>
               </div>
             </>

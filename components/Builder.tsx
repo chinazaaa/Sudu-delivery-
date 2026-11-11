@@ -413,7 +413,7 @@ export default function Builder({
                       }}
                       className="underline"
                     >
-                      Switch to another place
+                      Switch to another restaurant
                     </button>
                   </div>
                 </div>
@@ -434,7 +434,7 @@ export default function Builder({
               + Add more from {shop?.name}
             </button>
             <button type="button" onClick={() => setStep("shop")} className="btn-quiet w-full">
-              Pick another place
+              Pick another restaurant
             </button>
           </div>
         )}
