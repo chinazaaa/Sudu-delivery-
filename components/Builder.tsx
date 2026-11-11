@@ -64,7 +64,21 @@ export default function Builder({
   const [added, setAdded] = useState<Dish[]>([]);
   const cart = useCart();
   const before = useRef(0);
+  // When each counter in the cart next delivers, so a late one can be said.
+  const [days, setDays] = useState<Record<string, { said: string; today: boolean }>>({});
   const scroller = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (step !== "added") return;
+    const ids = [...new Set(cart.map((line) => line.restaurantId))];
+    if (ids.length === 0) return;
+    fetch(`/api/shop-days?ids=${ids.join(",")}`)
+      .then((r) => r.json())
+      .then((d) => setDays(d.days ?? {}))
+      .catch(() => {});
+    // The cart's own makeup is what matters, not each tick of it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, cart.length]);
+
   // Each step opens at its top, not wherever the last one was scrolled to.
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 });
@@ -371,6 +385,40 @@ export default function Builder({
                 </li>
               ))}
             </ul>
+            {(() => {
+              const late = cart.filter((line) => days[line.restaurantId] && !days[line.restaurantId].today);
+              const early = cart.filter((line) => days[line.restaurantId]?.today);
+              if (late.length === 0 || early.length === 0) return null;
+              const names = [...new Set(late.map((line) => line.restaurantName))];
+              const said = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+              const day = days[late[0].restaurantId].said.replace("Next delivery ", "");
+              return (
+                <div className="rounded-2xl border border-brand/30 bg-brand-tint px-4 py-2.5">
+                  <p className="text-sm font-bold text-brand-dark">
+                    {said} only comes {day}. The rest could come today.
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold text-brand-dark">
+                    <button
+                      type="button"
+                      onClick={() => late.forEach((line) => setQty(line.key, 0))}
+                      className="underline"
+                    >
+                      Take out {said}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        late.forEach((line) => setQty(line.key, 0));
+                        setStep("shop");
+                      }}
+                      className="underline"
+                    >
+                      Switch to another place
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
             <p className="text-center text-sm font-semibold text-muted">
               In your cart: {cartCount(cart)} {cartCount(cart) === 1 ? "item" : "items"} ·{" "}
               {naira(cartSubtotal(cart))}
