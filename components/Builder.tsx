@@ -184,7 +184,10 @@ export default function Builder({
     } else if (step === "more" || step === "drink" || step === "added") setStep("dish");
   };
 
-  const list = shop?.items ?? [];
+  // Swallow (eba, pounded yam) is what goes with a soup, offered after one,
+  // so it is not listed beside the soups as though it were a meal.
+  const swallowIds = new Set((pairs.swallow ?? []).flatMap((one) => one.items.map((d) => d.id)));
+  const list = (shop?.items ?? []).filter((d) => !swallowIds.has(d.id));
   const popular = list.filter((d) => d.orderedCount > 0).slice(0, 3);
   const lead = cheapest ? [] : list.filter((d) => d.featured);
   const top = cheapest ? [] : lead.length > 0 ? lead : popular.length > 0 ? popular : list.slice(0, 3);
