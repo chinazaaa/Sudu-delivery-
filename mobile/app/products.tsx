@@ -6,12 +6,13 @@ import {
   ScrollView,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-import { api, naira, type Product } from "@/lib/api";
+import { api, naira, pickApi, type MenuTilesView, type Product } from "@/lib/api";
 import Thumb from "@/components/Thumb";
 import AskUs from "@/components/AskUs";
 import { F, T } from "@/lib/theme";
@@ -33,6 +34,7 @@ import { Display } from "@/components/ui";
  */
 export default function ProductsScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
 
   /*
    * What the home screen was tapped for, if it was.
@@ -63,6 +65,18 @@ export default function ProductsScreen() {
    */
   const aisle = once(asked.aisle);
 
+  const [view, setView] = useState<"food" | "kitchens">("food");
+  const [menuTiles, setMenuTiles] = useState<MenuTilesView | null>(null);
+  useEffect(() => {
+    let live = true;
+    pickApi
+      .menuTiles()
+      .then((found) => live && setMenuTiles(found))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
   const [typed, setTyped] = useState(once(asked.q));
   const [query, setQuery] = useState(once(asked.q));
   const [place, setPlace] = useState("");
@@ -107,6 +121,114 @@ export default function ProductsScreen() {
     [rows]
   );
 
+  // Nothing asked yet: open on the same tiles the website's menu does.
+  const fresh = query === "" && category === "" && aisle === "" && place === "";
+  if (fresh && menuTiles) {
+    const w = Math.floor((width - 32 - 8) / 2);
+    const cards: { key: string; label: string; from: number; image: string; go: () => void }[] =
+      view === "kitchens"
+        ? menuTiles.kitchens.map((one) => ({
+            key: one.id,
+            label: one.name,
+            from: one.from,
+            image: one.image,
+            go: () => router.push(`/r/${one.id}` as never),
+          }))
+        : (() => {
+            const all = [
+              ...menuTiles.tiles.map((one) => ({
+                key: `t-${one.label}`,
+                label: one.label,
+                from: one.from,
+                image: one.image,
+                go: () =>
+                  router.push({ pathname: "/pick", params: { label: one.label, tile: one.label } } as never),
+              })),
+              ...menuTiles.more.map((one) => ({
+                key: `a-${one.label}`,
+                label: one.label,
+                from: one.from,
+                image: one.image,
+                go: () =>
+                  router.push({ pathname: "/pick", params: { label: one.label, aisle: one.label } } as never),
+              })),
+            ];
+            if (menuTiles.featured) {
+              const f = menuTiles.featured;
+              all.splice(Math.max(0, all.length - 2), 0, {
+                key: "featured",
+                label: f.label,
+                from: f.from,
+                image: f.image,
+                go: () => router.push(`/occasions/${f.slug}` as never),
+              });
+            }
+            return all;
+          })();
+    return (
+      <ScrollView
+        style={{ backgroundColor: T.shell }}
+        contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 40 }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <Display size={28}>{view === "kitchens" ? "Restaurants" : "What are you having?"}</Display>
+          <View
+            style={{
+              flexDirection: "row",
+              borderWidth: 2,
+              borderColor: T.ink,
+              borderRadius: 999,
+              padding: 2,
+              backgroundColor: T.paper,
+            }}
+          >
+            {(["food", "kitchens"] as const).map((one) => (
+              <Pressable
+                key={one}
+                onPress={() => setView(one)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 5,
+                  borderRadius: 999,
+                  backgroundColor: view === one ? T.ink : "transparent",
+                }}
+              >
+                <Text style={{ fontFamily: F.bodyBold, fontSize: 13, color: view === one ? T.shell : T.ink }}>
+                  {one === "food" ? "Food" : "Restaurants"}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {cards.map((one) => (
+            <Pressable
+              key={one.key}
+              onPress={one.go}
+              style={{
+                width: w,
+                gap: 4,
+                padding: 8,
+                backgroundColor: T.paper,
+                borderWidth: 2,
+                borderColor: T.ink,
+                borderRadius: 16,
+              }}
+            >
+              <Thumb src={one.image} name={one.label} radius={8} ratio={16 / 9} />
+              <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }} numberOfLines={2}>
+                {one.label}
+              </Text>
+              <Text style={{ fontFamily: F.bodyBold, fontSize: 13, color: T.brand }}>
+                {one.from > 0 ? `from ${naira(one.from)} →` : "→"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </ScrollView>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: T.shell }}>
       <View style={{ paddingHorizontal: 16, paddingBottom: 12, gap: 12 }}>
@@ -148,31 +270,6 @@ export default function ProductsScreen() {
           />
         </View>
 
-        {/* Chips rather than a menu, because a filter you can see is one
-            people use and a filter behind a tap is one they never find. */}
-        {categories.length > 0 && (
-          <Chips
-            options={[
-              { id: "", name: "Anything" },
-              ...categories.map((one) => ({ id: one, name: one })),
-            ]}
-            picked={category}
-            onPick={(id) => start(() => setCategory(id))}
-          />
-        )}
-
-        <Chips
-          options={[{ id: "", name: "Everywhere" }, ...places]}
-          picked={place}
-          onPick={(id) =>
-            start(() => {
-              setPlace(id);
-              // A category the new restaurant has never heard of has to go.
-              setCategory("");
-            })
-          }
-        />
-
         {/* What the list is, in one line, and how to reorder it. */}
         <View
           style={{
@@ -199,27 +296,6 @@ export default function ProductsScreen() {
                     kitchens > 1 ? ` · ${kitchens} kitchens` : ""
                   } · all on the next run`}
           </Text>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            {(
-              [
-                ["", "A to Z"],
-                ["cheap", "Cheapest"],
-                ["dear", "Dearest"],
-              ] as const
-            ).map(([value, label]) => (
-              <Pressable key={value || "az"} onPress={() => start(() => setSort(value))}>
-                <Text
-                  style={{
-                    color: sort === value ? T.brandDark : T.muted,
-                    fontFamily: sort === value ? F.bodyBold : F.bodySemi,
-                    fontSize: 13,
-                  }}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
         </View>
       </View>
 

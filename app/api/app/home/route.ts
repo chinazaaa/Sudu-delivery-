@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { aisleTiles, moreTiles } from "@/lib/aisle-tiles";
+import { aisleTiles, featuredTile, moreTiles } from "@/lib/aisle-tiles";
 import { arrivalShort } from "@/lib/arrival-short";
 import { nextArrival, runArrival } from "@/lib/arrival";
 import { carsOnOffer, openBatches } from "@/lib/batches";
@@ -20,11 +20,12 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(): Promise<NextResponse> {
   try {
-    const [settings, batches, starters, more] = await Promise.all([
+    const [settings, batches, starters, more, featured] = await Promise.all([
       safeSettings(),
       openBatches(),
       aisleTiles(),
       moreTiles(),
+      featuredTile(),
     ]);
 
     // The one rule the front page and the checkout share, asked the same way.
@@ -55,6 +56,9 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({
       tiles: starters.map(tile),
       more: more.map(tile),
+      featured: featured
+        ? { label: featured.aisle, from: featured.from, image: featured.image, slug: featured.href.split("/").pop() ?? "" }
+        : null,
       arriving: decided?.said ? arrivalShort(decided.said) : "",
       whatsapp:
         whatsappLink(settings.whatsapp_number, "Hi Sudu, I'm not sure what to order") ?? "",

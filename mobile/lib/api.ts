@@ -1840,6 +1840,17 @@ export type HomeView = {
   arriving: string;
   /** A wa.me link, or empty when the shop has no number. */
   whatsapp: string;
+  /** The collection the shop is promoting, if it has picked one. */
+  featured?: FeaturedView | null;
+};
+
+export type FeaturedView = { label: string; from: number; image: string; slug: string };
+
+export type MenuTilesView = {
+  tiles: HomeTileView[];
+  more: HomeTileView[];
+  featured: FeaturedView | null;
+  kitchens: { id: string; name: string; from: number; image: string }[];
 };
 
 export type BuilderDish = {
@@ -1878,6 +1889,7 @@ async function plain<T>(path: string): Promise<T> {
 
 export const pickApi = {
   home: () => get<HomeView>("/home"),
+  menuTiles: () => get<MenuTilesView>("/menu-tiles"),
   /** The shops and dishes behind a tile, aisle, word or category. */
   builder: async (
     ask: {

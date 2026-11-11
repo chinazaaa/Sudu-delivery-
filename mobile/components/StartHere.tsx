@@ -128,7 +128,7 @@ export default function StartHere() {
         {button("Message us", message, false)}
       </View>
 
-      {home.more.length > 0 && (
+      {(home.more.length > 0 || home.featured) && (
         <View style={{ gap: 8, marginTop: 6 }}>
           <Display size={22}>Something else?</Display>
           <ScrollView
@@ -137,6 +137,28 @@ export default function StartHere() {
             style={{ marginHorizontal: -16 }}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
           >
+            {home.featured && (
+              <Pressable
+                onPress={() => router.push(`/occasions/${home.featured?.slug}` as never)}
+                style={{
+                  width: moreW,
+                  gap: 4,
+                  padding: 8,
+                  backgroundColor: T.paper,
+                  borderWidth: 2,
+                  borderColor: T.ink,
+                  borderRadius: 16,
+                }}
+              >
+                <Thumb src={home.featured.image} name={home.featured.label} radius={8} ratio={16 / 9} />
+                <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: T.ink }} numberOfLines={1}>
+                  {home.featured.label}
+                </Text>
+                <Text style={{ fontFamily: F.bodyBold, fontSize: 13, color: T.brand }}>
+                  {home.featured.from > 0 ? `from ${naira(home.featured.from)} →` : "→"}
+                </Text>
+              </Pressable>
+            )}
             {home.more.map((one) => tile(one, "aisle", moreW))}
           </ScrollView>
         </View>
