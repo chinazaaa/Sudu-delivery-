@@ -15,6 +15,7 @@ import DayHours from "@/components/admin/DayHours";
 import ActionButton from "@/components/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { AISLES } from "@/lib/aisles";
+import { DEFAULT_HOME_TILES } from "@/lib/home-tiles";
 import { LEAD_DAYS } from "@/lib/plans";
 import { GROUP_FLOOR, parseBands, SAME_DAY_BANDS, URGENT_EXTRA } from "@/lib/fees";
 import { missingSettings } from "@/lib/health";
@@ -1522,11 +1523,10 @@ export default async function SettingsAdmin() {
               <textarea
                 name="home_tiles"
                 rows={6}
-                defaultValue={settings.home_tiles}
-                placeholder={"Pizza | aisle:Pizza\nBurgers & shawarma | aisle:Burgers & wraps; q:shawarma"}
-                className="field font-mono text-sm"
+                defaultValue={settings.home_tiles || DEFAULT_HOME_TILES}
+                                className="field font-mono text-sm"
               />
-              <p className="hint">Leave it empty and the tiles follow your first aisles.</p>
+              <p className="hint">The row under these offers every other aisle, so nothing is listed twice.</p>
               <SaveButton look="btn-admin-go">Save tiles</SaveButton>
             </div>
           </Panel>

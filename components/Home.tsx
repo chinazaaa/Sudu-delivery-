@@ -64,6 +64,7 @@ export default function Home({
   arrivalWas = 0,
   todayOffer = null,
   starters = [],
+  more = [],
   askUs = "",
   areaExtras = [],
   award = "",
@@ -118,6 +119,8 @@ export default function Home({
   /** WhatsApp link for somebody who still cannot decide. */
   askUs?: string;
   starters?: { aisle: string; from: number; image: string }[];
+  /** The other aisles, in the same tile design. */
+  more?: { aisle: string; from: number; image: string }[];
   todayOffer?: {
     badge: string;
     where: string;
@@ -347,9 +350,9 @@ export default function Home({
           {building !== null && <Builder kind={building} onClose={() => setBuilding(null)} />}
           {starters.length > 0 && (
             <section>
-              <div className="shell space-y-3 pb-2 pt-5">
+              <div className="shell space-y-2 pb-2 pt-3">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="font-display text-[1.7rem] font-black uppercase leading-none">
+                  <h2 className="font-display text-2xl font-black uppercase leading-none">
                     Start from here
                   </h2>
                   {arriving !== "" && (
@@ -358,26 +361,26 @@ export default function Home({
                     </span>
                   )}
                 </div>
-                <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {starters.map((one) => (
                     <li key={one.aisle}>
                       <button
                         type="button"
                         onClick={() => setBuilding({ label: one.aisle, tile: one.aisle })}
-                        className="flex h-full w-full flex-col justify-between gap-2 rounded-2xl border-2 border-ink bg-white p-3.5 text-left shadow-[3px_3px_0_0_#111]"
+                        className="flex h-full w-full flex-col justify-between gap-1 rounded-2xl border-2 border-ink bg-white p-2 text-left shadow-[2px_2px_0_0_#111]"
                       >
-                        <span className="block aspect-[4/3] w-full overflow-hidden rounded-xl">
+                        <span className="block aspect-[16/9] w-full overflow-hidden rounded-lg">
                           <Thumb src={one.image} name={one.aisle} category={one.aisle} variant="tile" />
                         </span>
-                        <span className="text-lg font-extrabold leading-tight">{one.aisle}</span>
-                        <span className="text-sm font-bold text-brand">
+                        <span className="text-[15px] font-extrabold leading-tight">{one.aisle}</span>
+                        <span className="text-[13px] font-bold text-brand">
                           from {naira(one.from)} <span aria-hidden>→</span>
                         </span>
                       </button>
                     </li>
                   ))}
                 </ul>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => window.dispatchEvent(new Event("sudu:open-bot"))}
@@ -532,44 +535,32 @@ export default function Home({
               that sells food on a phone opens this way and they are right
               to: nobody arrives wanting a restaurant, they arrive hungry.
           */}
-          <section aria-label="What kind of food" className="shell flex flex-col gap-6 pb-10 pt-12">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <h2 className="section-title">
-                Something
-                <br />
-                else?
+          {more.length > 0 && (
+            <section aria-label="Something else" className="shell flex flex-col gap-4 pb-10 pt-8">
+              <h2 className="font-display text-[1.7rem] font-black uppercase leading-none">
+                Something else?
               </h2>
-              <Link href="/products" className="pb-1 font-bold underline">
-                Browse the full menu
-              </Link>
-            </div>
-            <ul className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-              {FOOD_KINDS.filter((kind) => !covered(kind)).map((kind) => (
-                <li key={kind.label}>
-                  <button
-                    type="button"
-                    onClick={() => setBuilding(kind)}
-                    /* Smaller tiles, same grid. Nine of them at a hundred
-                       and four pixels each is a whole phone screen for a
-                       row of signposts, and what is under them, what
-                       everybody is ordering, was never seen. A slider
-                       would save the same space by hiding five of the
-                       nine, which is the wrong trade for the one control
-                       that is the way into the menu: all nine fit in half
-                       the height instead. */
-                    className="flex h-full min-h-[76px] w-full flex-col text-left items-start justify-between gap-1 rounded-xl border-2 border-ink bg-paper p-2.5 transition active:translate-x-0.5 active:translate-y-0.5 sm:min-h-[96px] sm:gap-2 sm:p-4"
-                  >
-                    <span aria-hidden className="text-xl leading-none sm:text-3xl">
-                      {kind.emoji}
-                    </span>
-                    <span className="font-display text-[15px] font-extrabold uppercase leading-[1.05] sm:text-[19px]">
-                      {kind.label}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {more.map((one) => (
+                  <li key={one.aisle}>
+                    <button
+                      type="button"
+                      onClick={() => setBuilding({ label: one.aisle, aisle: one.aisle })}
+                      className="flex h-full w-full flex-col justify-between gap-1 rounded-2xl border-2 border-ink bg-white p-2 text-left shadow-[2px_2px_0_0_#111]"
+                    >
+                      <span className="block aspect-[16/9] w-full overflow-hidden rounded-lg">
+                        <Thumb src={one.image} name={one.aisle} category={one.aisle} variant="tile" />
+                      </span>
+                      <span className="text-[15px] font-extrabold leading-tight">{one.aisle}</span>
+                      <span className="text-sm font-bold text-brand">
+                        from {naira(one.from)} <span aria-hidden>→</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {popular.length > 0 && (
             <section className="shell flex flex-col gap-6 pb-10">

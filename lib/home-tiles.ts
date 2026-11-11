@@ -40,3 +40,14 @@ export function parseHomeTiles(text: string | null | undefined): HomeTile[] {
   }
   return tiles;
 }
+
+/**
+ * What the front page shows until tiles are written in admin. Edit them
+ * there: this is only where it starts.
+ */
+export const DEFAULT_HOME_TILES = [
+  "Pizza | aisle:Pizza",
+  "Chicken | aisle:Chicken",
+  "Burgers, shawarma & wraps | aisle:Burgers & wraps; q:shawarma",
+  "Rice & chicken | aisle:Chicken; aisle:Rice, pasta & bowls; aisle:Meals & combos; q:rice; q:jollof | Chicken Republic; The Place",
+].join("\n");
