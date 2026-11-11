@@ -165,8 +165,8 @@ export type KitchenTile = { id: string; slug: string; name: string; from: number
 
 async function readKitchens(): Promise<KitchenTile[]> {
   try {
-    const shops = await kindShops({ all: true }, 12);
-    const out: KitchenTile[] = [];
+    const shops = await kindShops({ all: true }, 40);
+    const out: (KitchenTile & { orders: number })[] = [];
     for (const shop of shops) {
       out.push({
         id: shop.id,
@@ -174,9 +174,13 @@ async function readKitchens(): Promise<KitchenTile[]> {
         name: shop.name,
         from: shop.from,
         image: (await sharpest(mostOrdered([shop]))) || shop.logoUrl || "",
+        orders: shop.items.reduce((total, dish) => total + dish.orderedCount, 0),
       });
     }
-    return out.sort((a, b) => a.name.localeCompare(b.name));
+    // The kitchen people order from most first; ties by name.
+    return out
+      .sort((a, b) => b.orders - a.orders || a.name.localeCompare(b.name))
+      .map(({ orders: _orders, ...tile }) => tile);
   } catch {
     return [];
   }
