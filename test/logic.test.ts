@@ -8503,3 +8503,15 @@ test("arrivalShort squeezes a delivery window into a pill", async () => {
   assert.equal(arrivalShort("Between 11am and 1pm tomorrow"), "Tomorrow 11am-1pm");
   assert.equal(arrivalShort("around 4:30pm today"), "around 4:30pm today");
 });
+
+test("home tiles read photo and first options", async () => {
+  const { parseHomeTiles } = await import("../lib/home-tiles");
+  const [tile] = parseHomeTiles(
+    "Rice & chicken | aisle:Chicken; q:rice | Chicken Republic; The Place | photo:Refuel More | first:jollof/rice + chicken"
+  );
+  assert.equal(tile.label, "Rice & chicken");
+  assert.equal(tile.sources.length, 2);
+  assert.deepEqual(tile.shops, ["Chicken Republic", "The Place"]);
+  assert.equal(tile.photo, "Refuel More");
+  assert.equal(tile.first, "jollof/rice + chicken");
+});

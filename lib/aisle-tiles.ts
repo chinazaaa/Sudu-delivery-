@@ -41,15 +41,17 @@ async function readTiles(): Promise<AisleTile[]> {
     const defs = await homeTileDefs();
     const out: AisleTile[] = [];
     for (const one of defs) {
-      const shops = await kindShops({ sources: one.sources, shops: one.shops }, 8);
+      const shops = await kindShops({ sources: one.sources, shops: one.shops, first: one.first }, one.photo ? 80 : 8);
       const from = Math.min(...shops.map((shop) => shop.from).filter((n) => n > 0));
       if (!Number.isFinite(from)) continue;
       // A photo of what is most ordered under it, so the tile shows food and
       // not a drawing of it.
-      const photo = shops
-        .flatMap((shop) => shop.items)
-        .filter((dish) => dish.imageUrl !== "")
-        .sort((a, b) => b.orderedCount - a.orderedCount)[0];
+      const pictured = shops.flatMap((shop) => shop.items).filter((dish) => dish.imageUrl !== "");
+      // The dish the tile asks for by name, else whatever is most ordered.
+      const photo =
+        (one.photo
+          ? pictured.find((dish) => dish.name.toLowerCase().includes(one.photo.toLowerCase()))
+          : undefined) ?? [...pictured].sort((a, b) => b.orderedCount - a.orderedCount)[0];
       out.push({ aisle: one.label, from, image: photo?.imageUrl ?? "" });
       if (out.length === 4) break;
     }

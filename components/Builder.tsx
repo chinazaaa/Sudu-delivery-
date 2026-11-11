@@ -125,7 +125,8 @@ export default function Builder({
 
   const list = shop?.items ?? [];
   const popular = list.filter((d) => d.orderedCount > 0).slice(0, 3);
-  const top = cheapest ? [] : popular.length > 0 ? popular : list.slice(0, 3);
+  const lead = cheapest ? [] : list.filter((d) => d.featured);
+  const top = cheapest ? [] : lead.length > 0 ? lead : popular.length > 0 ? popular : list.slice(0, 3);
   const rest = (cheapest ? [...list].sort((a, b) => a.price - b.price) : list).filter(
     (d) => !top.includes(d)
   );
@@ -241,7 +242,7 @@ export default function Builder({
               ))}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {top.map((dish, at) => card(dish, shop, "★ Most ordered"))}
+              {top.map((dish) => card(dish, shop, lead.length > 0 ? undefined : "★ Most ordered"))}
               {rest.map((dish) => card(dish, shop))}
             </div>
           </div>

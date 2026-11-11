@@ -1511,7 +1511,7 @@ export default async function SettingsAdmin() {
             detail={
               <>
                 The big tiles under &quot;Start from here&quot;, one per line, in
-                order. Write: <b>Name | where it comes from | counters</b>. Where it
+                order. Write: <b>Name | where it comes from | counters | photo:Dish name | first:word + word</b>. Where it
                 comes from is one or more of <b>aisle:Pizza</b>, <b>q:shawarma</b>{" "}
                 (a word in the dish name) or <b>category:Small Chops</b>, separated
                 by semicolons. The counters part is optional and keeps the tile to

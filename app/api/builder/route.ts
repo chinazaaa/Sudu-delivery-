@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   if (tile !== "") {
     const found = (await homeTileDefs()).find((one) => one.label === tile);
     return NextResponse.json({
-      shops: found ? await kindShops({ sources: found.sources, shops: found.shops }) : [],
+      shops: found ? await kindShops({ sources: found.sources, shops: found.shops, first: found.first }) : [],
     });
   }
   return NextResponse.json({

@@ -527,6 +527,8 @@ export type AisleShop = {
     /** Its choices can change the price (a size, a bigger pizza), so what is
      *  shown is where it starts, not what it will cost. */
     varies: boolean;
+    /** Matches what the tile leads with, so it is shown before the rest. */
+    featured: boolean;
   }[];
 };
 
@@ -544,6 +546,9 @@ export type KindFilter = KindSource & {
   sources?: KindSource[];
   /** Only these counters, by name. */
   shops?: string[];
+  /** Dishes to lead with: every group must appear in the name or description,
+   *  groups joined by + and the choices inside one by /. */
+  first?: string;
 };
 
 export async function aisleShops(aisle: string, perShop = 40): Promise<AisleShop[]> {
@@ -592,9 +597,21 @@ export async function kindShops(filter: KindFilter, perShop = 40): Promise<Aisle
     for (const row of (rows ?? []) as MenuItem[]) found.set(row.id, row);
   }
 
+  const leadGroups = (filter.first ?? "")
+    .split("+")
+    .map((group) => group.split("/").map((word) => word.trim().toLowerCase()).filter(Boolean))
+    .filter((group) => group.length > 0);
+  const leads = (row: MenuItem) => {
+    if (leadGroups.length === 0) return false;
+    const text = `${row.name} ${row.description ?? ""}`.toLowerCase();
+    return leadGroups.every((group) => group.some((word) => text.includes(word)));
+  };
+
   const data = [...found.values()].sort(
     (a, b) =>
-      (b.ordered_count ?? 0) - (a.ordered_count ?? 0) || (a.sort_order ?? 0) - (b.sort_order ?? 0)
+      Number(leads(b)) - Number(leads(a)) ||
+      (b.ordered_count ?? 0) - (a.ordered_count ?? 0) ||
+      (a.sort_order ?? 0) - (b.sort_order ?? 0)
   );
 
   const shops = new Map<string, AisleShop>();
@@ -619,6 +636,7 @@ export async function kindShops(filter: KindFilter, perShop = 40): Promise<Aisle
         containerPct: pctOf(row),
         orderedCount: row.ordered_count ?? 0,
         varies: false,
+        featured: leads(row),
       });
     }
     shops.set(place.id, shop);
@@ -635,5 +653,8 @@ export async function kindShops(filter: KindFilter, perShop = 40): Promise<Aisle
     );
   }
   // Cheapest way in first, so the shop with the lowest starting price leads.
-  return [...shops.values()].sort((a, b) => a.from - b.from);
+  const featuredIn = (shop: AisleShop) => shop.items.some((dish) => dish.featured);
+  return [...shops.values()].sort(
+    (a, b) => Number(featuredIn(b)) - Number(featuredIn(a)) || a.from - b.from
+  );
 }
