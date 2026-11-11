@@ -574,10 +574,20 @@ export type OpenBatch = Batch & {
  * query that fails answers "nobody is out", which is how the shop worked
  * before this existed.
  */
+/**
+ * Whether the one-driver rule is enforced at all.
+ *
+ * Switched off: a car and a run on the same hours is not something the
+ * shop forbids, it is something it sorts out with the customer on WhatsApp
+ * when it happens. With the rule on, a quiet day lost its cars to a run
+ * that could not even carry the cart. Set to true to bring it back.
+ */
+const ONE_DRIVER_RULE = false;
+
 export async function carsOnOffer<T extends { date: string; at: string }>(
   slots: T[]
 ): Promise<T[]> {
-  if (slots.length === 0) return slots;
+  if (!ONE_DRIVER_RULE || slots.length === 0) return slots;
 
   // A car at the run's own hour is a dearer way to get the same food at
   // the same time. A car hours before it is a different trip, and she
@@ -609,6 +619,7 @@ export async function carsOnOffer<T extends { date: string; at: string }>(
  * is spoken for.
  */
 export async function nobodyToDrive(date: string, at?: string): Promise<boolean> {
+  if (!ONE_DRIVER_RULE) return false;
   const starts = (await runStartsOn([date]))[date];
   if (starts !== undefined) {
     if (at === undefined) return true;
