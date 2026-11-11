@@ -67,15 +67,7 @@ export default async function MarketPage({
             opening="Hi Sudu, here is my market list."
             lead="Open WhatsApp and paste your list. We agree the time and the price there."
             label="Your market list"
-            placeholder={"Egusi, 1 kg
-5 pepper
-Tomatoes x 10
-Indomie, 1 carton (chicken)
-Peak milk, 2 tins
-Golden Penny spaghetti x 5
-Dangote sugar, 1 kg
-Titus sardine x 3
-Crayfish, N2,000 worth"}
+            placeholder={"Egusi, 1 kg\n5 pepper\nTomatoes x 10\nIndomie, 1 carton (chicken)\nPeak milk, 2 tins\nGolden Penny spaghetti x 5\nDangote sugar, 1 kg\nTitus sardine x 3\nCrayfish, N2,000 worth"}
             help="Name the brand or size if it matters: Peak milk, 1 kg, N2,000 worth. One to a line."
             send="Send us my list"
           />
