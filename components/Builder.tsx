@@ -59,6 +59,9 @@ export default function Builder({
   const [drinks, setDrinks] = useState<AisleShop[]>([]);
   const [loading, setLoading] = useState("");
   const [cheapest, setCheapest] = useState(false);
+  // "Pick another restaurant" lists every restaurant, not only the ones that
+  // sell this kind of food.
+  const [everyone, setEveryone] = useState(false);
   const [last, setLast] = useState<Dish | null>(null);
   // Everything added in this visit, so the last screen shows the lot.
   const [added, setAdded] = useState<Dish[]>([]);
@@ -87,7 +90,8 @@ export default function Builder({
   useEffect(() => {
     let live = true;
     const asked = new URLSearchParams();
-    if (kind.tile) asked.set("tile", kind.tile);
+    if (everyone) asked.set("all", "1");
+    else if (kind.tile) asked.set("tile", kind.tile);
     if (kind.aisle) asked.set("aisle", kind.aisle);
     if (kind.q) asked.set("q", kind.q);
     if (kind.category) asked.set("category", kind.category);
@@ -107,7 +111,7 @@ export default function Builder({
     return () => {
       live = false;
     };
-  }, [kind.tile, kind.aisle, kind.q, kind.category]);
+  }, [kind.tile, kind.aisle, kind.q, kind.category, everyone]);
 
   useEffect(() => {
     let live = true;
@@ -409,6 +413,9 @@ export default function Builder({
                       type="button"
                       onClick={() => {
                         late.forEach((line) => setQty(line.key, 0));
+                        setEveryone(true);
+                        setShops(null);
+                        setShop(null);
                         setStep("shop");
                       }}
                       className="underline"
@@ -433,18 +440,20 @@ export default function Builder({
             <button type="button" onClick={() => setStep("dish")} className="btn-quiet w-full">
               + Add more from {shop?.name}
             </button>
-            {/* Only one restaurant sells this kind of food: going back to a list
-                of one would look like nothing happened, so it goes to the
-                front page tiles instead. */}
-            {(shops?.length ?? 0) > 1 ? (
-              <button type="button" onClick={() => setStep("shop")} className="btn-quiet w-full">
-                Pick another restaurant
-              </button>
-            ) : (
-              <button type="button" onClick={onClose} className="btn-quiet w-full">
-                Pick something else
-              </button>
-            )}
+            {/* Every restaurant, not only the ones that sell this kind of food,
+                in case they want something different. */}
+            <button
+              type="button"
+              onClick={() => {
+                setEveryone(true);
+                setShops(null);
+                setShop(null);
+                setStep("shop");
+              }}
+              className="btn-quiet w-full"
+            >
+              Pick another restaurant
+            </button>
           </div>
         )}
       </div>

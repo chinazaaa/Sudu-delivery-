@@ -23,6 +23,9 @@ export async function GET(request: Request) {
   if (upsell) {
     return NextResponse.json({ shops: await kindShops({ sources: upsell.sources }, 40) });
   }
+  if (asked.get("all") === "1") {
+    return NextResponse.json({ shops: await withDays(await kindShops({ all: true })) });
+  }
   const tile = asked.get("tile") ?? "";
   if (tile !== "") {
     const found = (await homeTileDefs()).find((one) => one.label === tile);

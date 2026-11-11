@@ -551,6 +551,8 @@ export type KindFilter = KindSource & {
   /** Dishes to lead with: every group must appear in the name or description,
    *  groups joined by + and the choices inside one by /. */
   first?: string;
+  /** Every dish at every counter, for "pick another restaurant". */
+  all?: boolean;
 };
 
 export async function aisleShops(aisle: string, perShop = 40): Promise<AisleShop[]> {
@@ -566,9 +568,20 @@ export async function kindShops(filter: KindFilter, perShop = 40): Promise<Aisle
   const sources = (filter.sources ?? [{ aisle: filter.aisle, q: filter.q, category: filter.category }]).filter(
     (one) => (one.aisle ?? "").trim() !== "" || (one.q ?? "").trim() !== "" || (one.category ?? "").trim() !== ""
   );
-  if (places.length === 0 || sources.length === 0) return [];
+  if (places.length === 0 || (sources.length === 0 && !filter.all)) return [];
 
   const found = new Map<string, MenuItem>();
+  if (filter.all) {
+    const { data: rows } = await db()
+      .from("menu_items")
+      .select("*")
+      .in("restaurant_id", places.map((one) => one.id))
+      .eq("available", true)
+      .gt("price_food", 0)
+      .order("ordered_count", { ascending: false })
+      .limit(3000);
+    for (const row of (rows ?? []) as MenuItem[]) found.set(row.id, row);
+  }
   for (const source of sources) {
     const aisle = (source.aisle ?? "").trim();
     const word = (source.q ?? "").trim().replace(/[%_,()]/g, " ").trim();
