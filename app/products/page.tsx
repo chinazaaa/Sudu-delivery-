@@ -10,7 +10,7 @@ import { optionGroupsFor } from "@/lib/menu";
 import { browseProducts, productFacets, shelfNames, PER_PAGE } from "@/lib/products";
 import ProductSearch from "@/components/ProductSearch";
 import StartTiles from "@/components/StartTiles";
-import { aisleTiles, everyAisleTile } from "@/lib/aisle-tiles";
+import { aisleTiles, everyAisleTile, kitchenTiles } from "@/lib/aisle-tiles";
 
 export const dynamic = "force-dynamic";
 
@@ -125,7 +125,7 @@ export default async function ProductsPage({
 
   // Nothing chosen yet: open on the photo tiles, as the front page does.
   const fresh = !asked.q && !asked.place && !asked.category && !asked.aisle && page === 1;
-  const [{ products, total }, facets, saleOn, tiles, extra] = await Promise.all([
+  const [{ products, total }, facets, saleOn, tiles, extra, kitchens] = await Promise.all([
     browseProducts({
       query: asked.q,
       place: asked.place,
@@ -143,6 +143,7 @@ export default async function ProductsPage({
     dealsOn(),
     fresh ? aisleTiles().catch(() => []) : Promise.resolve([]),
     fresh ? everyAisleTile().catch(() => []) : Promise.resolve([]),
+    fresh && asked.view === "kitchens" ? kitchenTiles().catch(() => []) : Promise.resolve([]),
   ]);
 
   /*
@@ -232,7 +233,7 @@ export default async function ProductsPage({
   return (
     <div className="-mt-4 space-y-4 pb-10">
       {fresh ? (
-        <StartTiles tiles={tiles} more={extra} kitchens={facets.places} view={asked.view === "kitchens" ? "kitchens" : "food"} />
+        <StartTiles tiles={tiles} more={extra} kitchens={kitchens} view={asked.view === "kitchens" ? "kitchens" : "food"} />
       ) : (
       <header className="bleed relative overflow-hidden border-b-2 border-ink">
         <span

@@ -35,7 +35,7 @@ export const KINDS: Kind[] = [
   { label: "Shawarma", emoji: "🌯", q: "shawarma" },
   { label: "Small chops", emoji: "🍢", category: "Small Chops" },
   { label: "Pasta", emoji: "🍝", q: "pasta" },
-  { label: "Ice cream", emoji: "🍦", aisle: "Ice cream" },
+  { label: "Ice cream", emoji: "🍦", aisle: "Ice cream & cakes" },
   { label: "Doughnuts", emoji: "🍩", q: "doughnut" },
 ];
 

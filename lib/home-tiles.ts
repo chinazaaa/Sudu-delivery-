@@ -91,4 +91,7 @@ export function parseMorePhotos(
 export const DEFAULT_MORE_PHOTOS = [
   "Soups & swallow | Seafood Okro",
   "Meals & combos | Carribean Meal Combo@Chicken Republic",
+  "Drinks | Coca Cola (50cl)@Chicken Republic",
+  "Groceries | Indomie Super Pack@Local Market",
+  "Small chops | Big Stan Pack@Uncle Stan's",
 ].join("\n");

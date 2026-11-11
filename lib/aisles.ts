@@ -26,12 +26,13 @@ export const AISLES = [
   "Soups & swallow",
   "Meals & combos",
   "Sides & snacks",
+  "Small chops",
   "Sweet things",
   // Its own aisle rather than a corner of the sweet one. Two counters sell
   // it and they name it differently: one calls every tub "Chocolate Ice
   // Cream" and the other calls them "Padi (1 Scoop)" and "Boku (3 Scoops)".
   // No word search finds both, which is what an aisle is for.
-  "Ice cream",
+  "Ice cream & cakes",
   "Drinks",
   "Groceries",
   "For the room",
@@ -81,12 +82,13 @@ const RULES: [string, RegExp][] = [
   ["Burgers & wraps", /burger|sandwich|wrap|hot ?dog|dawg|gourmet|shawarma/i],
   // Above the sweet things, because every one of these is also a dessert
   // and the first line that matches wins.
-  ["Ice cream", /ice ?cream|gelato|soft serve|\bscoops?\b|sundae/i],
+  ["Ice cream & cakes", /ice ?cream|gelato|soft serve|\bscoops?\b|sundae|\bcakes?\b|bakery/i],
   ["Sweet things", /dessert|cake|doughnut|donut|waffle|crepe|signature creation|flavour|flavor|pull apart|sweet|chocolate/i],
   ["Drinks", /drink|coffee|\btea\b|shake|chiller|water|juice|smoothie/i],
   ["Groceries", /pepper|vegetable|fruit|grain|tuber|protein|\bmeat\b|\bfish\b|condiment|baking|grocer/i],
   ["Rice, pasta & bowls", /rice|pasta|noodle|bowl|jollof|vegan|stir ?fry/i],
   ["Meals & combos", /meals?\b|combo|\bdeal|special|kids|squad|citizens|value|lunch|platter/i],
+  ["Small chops", /small chops?/i],
   ["Sides & snacks", /side|snack|chops|starter|salad|bread|extras|fries|\bpies?\b/i],
 ];
 

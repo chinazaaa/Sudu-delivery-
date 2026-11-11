@@ -21,7 +21,7 @@ export default function StartTiles({
 }: {
   tiles: Tile[];
   more?: Tile[];
-  kitchens?: { id: string; name: string }[];
+  kitchens?: { id: string; slug: string; name: string; from: number; image: string }[];
   view?: "food" | "kitchens";
 }) {
   const [building, setBuilding] = useState<Kind | null>(null);
@@ -52,11 +52,17 @@ export default function StartTiles({
           {kitchens.map((one) => (
             <li key={one.id}>
               <Link
-                href={`/r/${one.id}`}
-                className="flex h-full min-h-[64px] w-full items-center justify-between gap-2 rounded-2xl border-2 border-ink bg-white p-3 text-[15px] font-extrabold leading-tight shadow-[2px_2px_0_0_#111]"
+                href={`/r/${one.slug}`}
+                className="flex h-full w-full flex-col justify-between gap-1 rounded-2xl border-2 border-ink bg-white p-2 text-left shadow-[2px_2px_0_0_#111]"
               >
-                {one.name}
-                <span aria-hidden className="text-brand">→</span>
+                <span className="block aspect-[16/9] w-full overflow-hidden rounded-lg">
+                  <Thumb src={one.image} name={one.name} category={one.name} variant="tile" />
+                </span>
+                <span className="text-[15px] font-extrabold leading-tight">{one.name}</span>
+                <span className="text-[13px] font-bold text-brand">
+                  {one.from > 0 ? <>from {naira(one.from)} </> : null}
+                  <span aria-hidden>→</span>
+                </span>
               </Link>
             </li>
           ))}

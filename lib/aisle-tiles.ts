@@ -40,6 +40,7 @@ export async function moreAisles(everything = false): Promise<string[]> {
   return aislesFrom((await safeSettings()).menu_aisles).filter(
     (one) =>
       !covered.has(one) &&
+      !(everything && one === "For the room") &&
       (everything || (!NOT_DINNER.includes(one) && one !== "Drinks" && one !== "Groceries"))
   );
 }
@@ -156,6 +157,33 @@ export const aisleTiles = unstable_cache(readTiles, ["aisle-tiles"], {
 
 /** Every aisle the shop has, for the menu page. */
 export const everyAisleTile = unstable_cache(() => readMore(true), ["every-aisle-tiles"], {
+  revalidate: 60,
+  tags: ["menu"],
+});
+
+export type KitchenTile = { id: string; slug: string; name: string; from: number; image: string };
+
+async function readKitchens(): Promise<KitchenTile[]> {
+  try {
+    const shops = await kindShops({ all: true }, 12);
+    const out: KitchenTile[] = [];
+    for (const shop of shops) {
+      out.push({
+        id: shop.id,
+        slug: shop.slug || shop.id,
+        name: shop.name,
+        from: shop.from,
+        image: (await sharpest(mostOrdered([shop]))) || shop.logoUrl || "",
+      });
+    }
+    return out.sort((a, b) => a.name.localeCompare(b.name));
+  } catch {
+    return [];
+  }
+}
+
+/** Every kitchen as a tile: a photo, its name and where its prices start. */
+export const kitchenTiles = unstable_cache(readKitchens, ["kitchen-tiles"], {
   revalidate: 60,
   tags: ["menu"],
 });

@@ -44,7 +44,7 @@ export const FOOD_KINDS: FoodKind[] = [
   // Cream" and Scoop'd names them "Padi (1 Scoop)" and "Boku (3 Scoops)",
   // so a search for the words finds one counter and misses the shop whose
   // whole name is ice cream.
-  { label: "Ice cream", emoji: "🍦", aisle: "Ice cream" },
+  { label: "Ice cream", emoji: "🍦", aisle: "Ice cream & cakes" },
   { label: "Doughnuts", emoji: "🍩", q: "doughnut" },
 ];
 
