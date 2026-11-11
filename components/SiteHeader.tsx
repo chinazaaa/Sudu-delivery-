@@ -28,6 +28,8 @@ export default function SiteHeader({
   const path = usePathname();
   const router = useRouter();
   const [menu, setMenu] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [term, setTerm] = useState("");
 
   /*
    * The arrow went home from every page, so anyone who had come from their
@@ -127,6 +129,38 @@ export default function SiteHeader({
 
           From md up the nav is on the bar itself, where there is room for
           it, with the two account links and the cart pill. */}
+      {searching && (
+        <form
+          role="search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const q = term.trim();
+            setSearching(false);
+            router.push(q === "" ? "/products" : `/products?q=${encodeURIComponent(q)}`);
+          }}
+          className="absolute inset-0 z-10 flex items-center gap-2 bg-shell px-4"
+        >
+          <input
+            autoFocus
+            value={term}
+            onChange={(event) => setTerm(event.target.value)}
+            placeholder="Search jollof, wings, pizza…"
+            aria-label="Search the menu"
+            enterKeyHint="search"
+            className="field min-h-[46px] flex-1 rounded-full border-2 border-ink bg-paper px-4 text-base"
+          />
+          <button type="submit" className="btn-primary px-4 text-sm">
+            Search
+          </button>
+          <button
+            type="button"
+            onClick={() => setSearching(false)}
+            className="px-1 text-sm font-semibold underline"
+          >
+            Cancel
+          </button>
+        </form>
+      )}
       <div className="shell flex items-center gap-x-8 py-2.5 md:py-3.5">
         {/* Back, on a phone only. On a laptop the nav is right there, and
             an arrow beside five links is an arrow nobody presses. */}
@@ -187,16 +221,17 @@ export default function SiteHeader({
               /products does nothing when /products is already under you,
               which is exactly where somebody is most likely to reach for a
               magnifier, and a button that does nothing reads as broken. */}
-          <Link
-            href="/products#find"
-            aria-label="Search the menu"
-            className="grid size-11 place-items-center rounded-full md:hidden"
+          <button
+            type="button"
+            onClick={() => setSearching(true)}
+            aria-label="Search"
+            className="grid size-11 place-items-center rounded-full"
           >
             <svg viewBox="0 0 24 24" className="size-[22px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <circle cx="11" cy="11" r="7" />
               <path d="M20 20l-4-4" />
             </svg>
-          </Link>
+          </button>
           <button
             type="button"
             onClick={() => setMenu(true)}
