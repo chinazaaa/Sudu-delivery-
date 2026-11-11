@@ -6,7 +6,7 @@ import Link from "next/link";
 
 import ItemSheet from "./ItemSheet";
 import Thumb from "./Thumb";
-import { cartCount, useCart } from "@/lib/cart";
+import { cartCount, cartSubtotal, useCart } from "@/lib/cart";
 import { naira } from "@/lib/money";
 import type { AisleShop } from "@/lib/products";
 import type { ItemView } from "@/lib/view";
@@ -37,6 +37,7 @@ export default function Builder({
   const [drinks, setDrinks] = useState<AisleShop[]>([]);
   const [loading, setLoading] = useState("");
   const [cheapest, setCheapest] = useState(false);
+  const [last, setLast] = useState<Dish | null>(null);
   const cart = useCart();
   const before = useRef(0);
 
@@ -96,6 +97,7 @@ export default function Builder({
     }
     setLoading("");
     before.current = cartCount(cart);
+    setLast(dish);
     setOpen({
       drink,
       shop: from,
@@ -254,7 +256,8 @@ export default function Builder({
               Add a drink?
             </h2>
             <div className="grid grid-cols-2 gap-3">
-              {(drinks.find((one) => one.id === shop.id)?.items ?? [])
+              {[...(drinks.find((one) => one.id === shop.id)?.items ?? [])]
+                .sort((a, b) => a.price - b.price)
                 .slice(0, 8)
                 .map((dish) => card(dish, shop, undefined, true))}
             </div>
@@ -265,30 +268,32 @@ export default function Builder({
         )}
 
         {step === "added" && (
-          <div className="mx-auto max-w-lg space-y-4 pt-6 text-center">
-            <p
-              className="mx-auto flex size-24 items-center justify-center rounded-full border-2 border-ink bg-brand text-5xl font-black text-white shadow-[3px_3px_0_0_#111]"
-              aria-hidden
-            >
-              ✓
+          <div className="mx-auto max-w-lg space-y-4 pt-2">
+            <div className="flex items-center gap-3 rounded-2xl border-2 border-ink bg-white p-3 shadow-[3px_3px_0_0_#111]">
+              <span className="block size-16 shrink-0 overflow-hidden rounded-xl">
+                <Thumb src={last?.imageUrl ?? ""} name={last?.name ?? ""} category={aisle} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="ticket mb-0.5 block text-brand-dark">✓ Added</span>
+                <span className="block truncate font-bold leading-tight">{last?.name}</span>
+              </span>
+            </div>
+            <p className="text-center text-sm font-semibold text-muted">
+              In your cart: {cartCount(cart)} {cartCount(cart) === 1 ? "item" : "items"} ·{" "}
+              {naira(cartSubtotal(cart))}
             </p>
-            <h2 className="font-display text-3xl font-black uppercase leading-none">
-              In your cart
-            </h2>
-            <Link href="/cart" className="btn-primary block w-full" onClick={onClose}>
-              Go to cart
+            <Link
+              href="/cart"
+              className="btn-primary flex w-full items-center justify-center text-lg"
+              onClick={onClose}
+            >
+              Go to cart →
             </Link>
             <button type="button" onClick={() => setStep("dish")} className="btn-quiet w-full">
               + Add more from {shop?.name}
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setStep("shop");
-              }}
-              className="btn-quiet w-full"
-            >
-              Another place
+            <button type="button" onClick={() => setStep("shop")} className="btn-quiet w-full">
+              Pick another place
             </button>
           </div>
         )}
