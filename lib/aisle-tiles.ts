@@ -150,18 +150,18 @@ async function readMore(everything = false): Promise<AisleTile[]> {
 }
 
 export const moreTiles = unstable_cache(() => readMore(false), ["more-tiles"], {
-  revalidate: 60,
+  revalidate: 600,
   tags: ["menu"],
 });
 
 export const aisleTiles = unstable_cache(readTiles, ["aisle-tiles"], {
-  revalidate: 60,
+  revalidate: 600,
   tags: ["menu"],
 });
 
 /** Every aisle the shop has, for the menu page. */
 export const everyAisleTile = unstable_cache(() => readMore(true), ["every-aisle-tiles"], {
-  revalidate: 60,
+  revalidate: 600,
   tags: ["menu"],
 });
 
@@ -201,7 +201,7 @@ async function readKitchens(): Promise<KitchenTile[]> {
 
 /** Every kitchen as a tile: a photo, its name and where its prices start. */
 export const kitchenTiles = unstable_cache(readKitchens, ["kitchen-tiles"], {
-  revalidate: 60,
+  revalidate: 600,
   tags: ["menu"],
 });
 
@@ -238,6 +238,6 @@ async function readFeatured(): Promise<FeaturedTile | null> {
 
 /** The collection the shop wants in front of people, if it has picked one. */
 export const featuredTile = unstable_cache(readFeatured, ["featured-tile"], {
-  revalidate: 60,
+  revalidate: 600,
   tags: ["menu"],
 });
