@@ -64,6 +64,11 @@ export default function Builder({
   const [added, setAdded] = useState<Dish[]>([]);
   const cart = useCart();
   const before = useRef(0);
+  const scroller = useRef<HTMLDivElement | null>(null);
+  // Each step opens at its top, not wherever the last one was scrolled to.
+  useEffect(() => {
+    scroller.current?.scrollTo({ top: 0 });
+  }, [step, shop, offer]);
 
   useEffect(() => {
     let live = true;
@@ -231,7 +236,7 @@ export default function Builder({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-10 pt-5">
+      <div ref={scroller} className="flex-1 overflow-y-auto px-4 pb-10 pt-5">
         {step === "shop" && (
           <div className="mx-auto max-w-lg space-y-3">
             <h2 className="font-display text-3xl font-black uppercase leading-none">
