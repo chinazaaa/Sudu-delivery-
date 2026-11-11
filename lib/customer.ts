@@ -69,6 +69,8 @@ export type OneCustomer = {
   pays: "transfer" | "card";
   promoterCode: string | null;
   reviewed: boolean;
+  /** They have rated at least one order in the app. */
+  ratedAny: boolean;
   /** The day of their first order, as the database recorded it. */
   since: string | null;
   /** Everything they have ordered, newest first, the written-off left out. */
@@ -227,6 +229,7 @@ export async function oneCustomer(phone: string): Promise<OneCustomer | null> {
     pays: said.payment_method === "card" ? "card" : "transfer",
     promoterCode: code === "" ? null : code,
     reviewed: Boolean(said.reviewed_at),
+    ratedAny: rated.length > 0,
     since: (said.first_order_at as string | null) ?? theirs.at(-1)?.created_at ?? null,
     orders: theirs,
     paidOrders: paid.length,

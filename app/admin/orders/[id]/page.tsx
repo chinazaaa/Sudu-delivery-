@@ -1344,7 +1344,7 @@ async function orderPage(id: string, said: string) {
                 // On this order, or on Google for an earlier one: the
                 // customer's own page already says so, and the two should
                 // not disagree about the same person.
-                value={order.rated_at || them?.reviewed ? "Yes" : "Not yet"}
+                value={order.rated_at || them?.reviewed || them?.ratedAny ? "Yes" : "Not yet"}
               />
             </dl>
             <Link

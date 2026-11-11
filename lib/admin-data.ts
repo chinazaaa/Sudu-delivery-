@@ -321,11 +321,21 @@ async function reviewedMap(phones: string[]): Promise<Set<string>> {
       .select("phone, reviewed_at")
       .in("phone", unique);
     if (error) return new Set();
-    return new Set(
+    const out = new Set(
       ((data ?? []) as { phone: string; reviewed_at: string | null }[])
         .filter((row) => Boolean(row.reviewed_at))
         .map((row) => row.phone)
     );
+    // A rating left on any order counts too: one review each, not two.
+    const rated = await db()
+      .from("orders")
+      .select("customer_phone")
+      .in("customer_phone", unique)
+      .not("rated_at", "is", null);
+    for (const row of (rated.data ?? []) as { customer_phone: string }[]) {
+      out.add(row.customer_phone);
+    }
+    return out;
   } catch {
     return new Set();
   }
