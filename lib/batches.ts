@@ -655,6 +655,21 @@ export async function runGoingToday(): Promise<boolean> {
  * query that fails answers "no runs", which is how the shop worked
  * before this existed.
  */
+/**
+ * Which of these runs have anybody on them.
+ *
+ * A run nobody has ordered on is not a trip the driver is making, so it does
+ * not keep a car of its own off the same hours. It can still gain an order
+ * later; that is a choice for the shop to make when it happens, and weighing
+ * every empty run as a commitment turned a quiet Friday into a day with no
+ * car on it at all.
+ */
+async function runsWithOrders(ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const { data } = await db().from("orders").select("batch_id").in("batch_id", ids);
+  return new Set(((data ?? []) as { batch_id: string }[]).map((row) => row.batch_id));
+}
+
 export async function runStartsOn(
   dates: string[]
 ): Promise<Record<string, number>> {
@@ -663,14 +678,16 @@ export async function runStartsOn(
   try {
     const { data, error } = await db()
       .from("batches")
-      .select("kind, run_date, status, delivery_window_text")
+      .select("id, kind, run_date, status, delivery_window_text")
       .in("run_date", wanted)
       .neq("status", "cancelled");
     if (error) return {};
 
+    const busy = await runsWithOrders(((data ?? []) as Batch[]).map((one) => one.id));
     const starts: Record<string, number> = {};
     for (const one of (data ?? []) as Batch[]) {
       if ((one.kind ?? "run") !== "run") continue;
+      if (!busy.has(one.id)) continue;
       const hours = windowHours(one.delivery_window_text ?? "");
       const from = hours ? hours.from : 0;
       const had = starts[one.run_date];
@@ -701,14 +718,16 @@ export async function runEndsOn(dates: string[]): Promise<Record<string, number>
   try {
     const { data, error } = await db()
       .from("batches")
-      .select("kind, run_date, status, delivery_window_text")
+      .select("id, kind, run_date, status, delivery_window_text")
       .in("run_date", wanted)
       .neq("status", "cancelled");
     if (error) return {};
 
+    const busy = await runsWithOrders(((data ?? []) as Batch[]).map((one) => one.id));
     const ends: Record<string, number> = {};
     for (const one of (data ?? []) as Batch[]) {
       if ((one.kind ?? "run") !== "run") continue;
+      if (!busy.has(one.id)) continue;
       const hours = windowHours(one.delivery_window_text ?? "");
       if (!hours) continue;
       const had = ends[one.run_date];
