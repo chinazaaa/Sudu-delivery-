@@ -31,14 +31,16 @@ export async function homeTileDefs(): Promise<HomeTile[]> {
  * only offers what is not there. A tile limited to some counters does not
  * cover its aisle for everyone else.
  */
-export async function moreAisles(): Promise<string[]> {
+export async function moreAisles(everything = false): Promise<string[]> {
   const covered = new Set<string>();
   for (const tile of await homeTileDefs()) {
     if (tile.shops.length > 0) continue;
     for (const source of tile.sources) if (source.aisle) covered.add(source.aisle);
   }
   return aislesFrom((await safeSettings()).menu_aisles).filter(
-    (one) => !covered.has(one) && !NOT_DINNER.includes(one) && one !== "Drinks" && one !== "Groceries"
+    (one) =>
+      !covered.has(one) &&
+      (everything || (!NOT_DINNER.includes(one) && one !== "Drinks" && one !== "Groceries"))
   );
 }
 
@@ -113,12 +115,12 @@ async function readTiles(): Promise<AisleTile[]> {
   }
 }
 
-async function readMore(): Promise<AisleTile[]> {
+async function readMore(everything = false): Promise<AisleTile[]> {
   try {
     const out: AisleTile[] = [];
     const saved = (await safeSettings()).more_photos;
     const picks = parseMorePhotos(saved.trim() === "" ? DEFAULT_MORE_PHOTOS : saved);
-    for (const aisle of await moreAisles()) {
+    for (const aisle of await moreAisles(everything)) {
       const pick = picks[aisle];
       const shops = await kindShops({ aisle }, pick ? 80 : 8);
       const from = Math.min(...shops.map((shop) => shop.from).filter((n) => n > 0));
@@ -134,7 +136,7 @@ async function readMore(): Promise<AisleTile[]> {
             )
         : undefined;
       out.push({ aisle, from, image: named?.imageUrl ?? (await sharpest(mostOrdered(shops))) });
-      if (out.length === 6) break;
+      if (!everything && out.length === 6) break;
     }
     return out;
   } catch {
@@ -142,12 +144,18 @@ async function readMore(): Promise<AisleTile[]> {
   }
 }
 
-export const moreTiles = unstable_cache(readMore, ["more-tiles"], {
+export const moreTiles = unstable_cache(() => readMore(false), ["more-tiles"], {
   revalidate: 60,
   tags: ["menu"],
 });
 
 export const aisleTiles = unstable_cache(readTiles, ["aisle-tiles"], {
+  revalidate: 60,
+  tags: ["menu"],
+});
+
+/** Every aisle the shop has, for the menu page. */
+export const everyAisleTile = unstable_cache(() => readMore(true), ["every-aisle-tiles"], {
   revalidate: 60,
   tags: ["menu"],
 });

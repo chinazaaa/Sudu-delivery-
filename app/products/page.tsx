@@ -10,7 +10,7 @@ import { optionGroupsFor } from "@/lib/menu";
 import { browseProducts, productFacets, shelfNames, PER_PAGE } from "@/lib/products";
 import ProductSearch from "@/components/ProductSearch";
 import StartTiles from "@/components/StartTiles";
-import { aisleTiles, moreTiles } from "@/lib/aisle-tiles";
+import { aisleTiles, everyAisleTile } from "@/lib/aisle-tiles";
 
 export const dynamic = "force-dynamic";
 
@@ -141,7 +141,7 @@ export default async function ProductsPage({
     productFacets(asked.place),
     dealsOn(),
     fresh ? aisleTiles().catch(() => []) : Promise.resolve([]),
-    fresh ? moreTiles().catch(() => []) : Promise.resolve([]),
+    fresh ? everyAisleTile().catch(() => []) : Promise.resolve([]),
   ]);
 
   /*
@@ -264,6 +264,8 @@ export default async function ProductsPage({
         </div>
       </header>
       )}
+      {!(fresh && tiles.length > 0) && (
+      <>
 
       {/* The board's filter bar, stuck to the top: what kind on one line,
           which kitchen and the sort on the next.
@@ -531,6 +533,8 @@ export default async function ProductsPage({
         </div>
       )}
 
+      </>
+      )}
     </div>
   );
 }
