@@ -1,7 +1,13 @@
 import { unstable_cache } from "next/cache";
 
 import { aislesFrom, NOT_DINNER } from "./aisles";
-import { DEFAULT_HOME_TILES, parseHomeTiles, type HomeTile } from "./home-tiles";
+import {
+  DEFAULT_HOME_TILES,
+  DEFAULT_MORE_PHOTOS,
+  parseHomeTiles,
+  parseMorePhotos,
+  type HomeTile,
+} from "./home-tiles";
 import { kindShops } from "./products";
 import { safeSettings } from "./settings";
 
@@ -110,11 +116,24 @@ async function readTiles(): Promise<AisleTile[]> {
 async function readMore(): Promise<AisleTile[]> {
   try {
     const out: AisleTile[] = [];
+    const saved = (await safeSettings()).more_photos;
+    const picks = parseMorePhotos(saved.trim() === "" ? DEFAULT_MORE_PHOTOS : saved);
     for (const aisle of await moreAisles()) {
-      const shops = await kindShops({ aisle }, 8);
+      const pick = picks[aisle];
+      const shops = await kindShops({ aisle }, pick ? 80 : 8);
       const from = Math.min(...shops.map((shop) => shop.from).filter((n) => n > 0));
       if (!Number.isFinite(from)) continue;
-      out.push({ aisle, from, image: await sharpest(mostOrdered(shops)) });
+      // The dish the tile was told to wear, where there is one with a photo.
+      const named = pick
+        ? shops
+            .filter((shop) => pick.counter === "" || shop.name.toLowerCase() === pick.counter.toLowerCase())
+            .flatMap((shop) => shop.items)
+            .find(
+              (dish) =>
+                dish.imageUrl !== "" && dish.name.toLowerCase().includes(pick.dish.toLowerCase())
+            )
+        : undefined;
+      out.push({ aisle, from, image: named?.imageUrl ?? (await sharpest(mostOrdered(shops))) });
       if (out.length === 6) break;
     }
     return out;

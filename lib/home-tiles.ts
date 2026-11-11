@@ -64,3 +64,31 @@ export const DEFAULT_HOME_TILES = [
   "Burgers, shawarma & wraps | aisle:Burgers & wraps; q:shawarma; q:chicken pie; q:meat pie | | photo:Shawarma@Chicken Republic",
   "Rice & chicken | aisle:Chicken; aisle:Rice, pasta & bowls; aisle:Meals & combos; q:rice; q:jollof | Chicken Republic; The Place | photo:Refuel More | first:jollof/rice + chicken",
 ].join("\n");
+
+/**
+ * Which dish's photo each "Something else" tile wears, one line each:
+ *
+ *   Soups & swallow | Seafood Okro
+ *   Meals & combos | Carribean Meal Combo@Chicken Republic
+ *
+ * The aisle, then a word in the dish's name, then optionally @ the counter
+ * when the same word is on several menus. An aisle with no line wears the
+ * sharpest of its most ordered dishes.
+ */
+export function parseMorePhotos(
+  text: string | null | undefined
+): Record<string, { dish: string; counter: string }> {
+  const out: Record<string, { dish: string; counter: string }> = {};
+  for (const line of String(text ?? "").split("\n")) {
+    const [aisle, pick = ""] = line.split("|").map((part) => part.trim());
+    if (!aisle || !pick) continue;
+    const [dish, counter = ""] = pick.split("@").map((part) => part.trim());
+    if (dish) out[aisle] = { dish, counter };
+  }
+  return out;
+}
+
+export const DEFAULT_MORE_PHOTOS = [
+  "Soups & swallow | Seafood Okro",
+  "Meals & combos | Carribean Meal Combo@Chicken Republic",
+].join("\n");

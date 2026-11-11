@@ -3453,6 +3453,7 @@ const SETTING_FIELDS = [
   "group_fee_floor",
   "menu_aisles",
   "home_tiles",
+  "more_photos",
   "plans_paused_until",
   "plan_lead_days",
   "same_day_on",

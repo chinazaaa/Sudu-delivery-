@@ -15,7 +15,7 @@ import DayHours from "@/components/admin/DayHours";
 import ActionButton from "@/components/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { AISLES } from "@/lib/aisles";
-import { DEFAULT_HOME_TILES } from "@/lib/home-tiles";
+import { DEFAULT_HOME_TILES, DEFAULT_MORE_PHOTOS } from "@/lib/home-tiles";
 import { LEAD_DAYS } from "@/lib/plans";
 import { GROUP_FLOOR, parseBands, SAME_DAY_BANDS, URGENT_EXTRA } from "@/lib/fees";
 import { missingSettings } from "@/lib/health";
@@ -1528,6 +1528,26 @@ export default async function SettingsAdmin() {
               />
               <p className="hint">The row under these offers every other aisle, so nothing is listed twice.</p>
               <SaveButton look="btn-admin-go">Save tiles</SaveButton>
+            </div>
+          </Panel>
+          <Panel
+            title="Something else photos"
+            detail={
+              <>
+                Which dish&apos;s photo each tile in the &quot;Something else&quot; row
+                wears. One per line: <b>Aisle | Dish name</b>, or{" "}
+                <b>Aisle | Dish name@Counter</b> when the name is on several menus.
+              </>
+            }
+          >
+            <div className="space-y-3">
+              <textarea
+                name="more_photos"
+                rows={4}
+                defaultValue={settings.more_photos || DEFAULT_MORE_PHOTOS}
+                className="field font-mono text-sm"
+              />
+              <SaveButton look="btn-admin-go">Save photos</SaveButton>
             </div>
           </Panel>
         </form>
