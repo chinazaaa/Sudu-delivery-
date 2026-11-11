@@ -64,6 +64,7 @@ export default function Home({
   arrivalWas = 0,
   todayOffer = null,
   starters = [],
+  featured = null,
   more = [],
   askUs = "",
   areaExtras = [],
@@ -119,6 +120,7 @@ export default function Home({
   /** WhatsApp link for somebody who still cannot decide. */
   askUs?: string;
   starters?: { aisle: string; from: number; image: string }[];
+  featured?: { aisle: string; from: number; image: string; href: string } | null;
   /** The other aisles, in the same tile design. */
   more?: { aisle: string; from: number; image: string }[];
   todayOffer?: {
@@ -535,12 +537,29 @@ export default function Home({
               that sells food on a phone opens this way and they are right
               to: nobody arrives wanting a restaurant, they arrive hungry.
           */}
-          {more.length > 0 && (
+          {(more.length > 0 || featured !== null) && (
             <section aria-label="Something else" className="flex flex-col gap-2 pb-8 pt-3">
               <h2 className="shell w-full font-display text-2xl font-black uppercase leading-none">
                 Something else?
               </h2>
               <ul className="flex gap-2 overflow-x-auto px-4 pb-2 sm:px-6">
+                {featured && (
+                  <li className="w-[42%] shrink-0 sm:w-48">
+                    <Link
+                      href={featured.href}
+                      className="flex h-full w-full flex-col justify-between gap-1 rounded-2xl border-2 border-ink bg-white p-2 text-left shadow-[2px_2px_0_0_#111]"
+                    >
+                      <span className="block aspect-[16/9] w-full overflow-hidden rounded-lg">
+                        <Thumb src={featured.image} name={featured.aisle} category={featured.aisle} variant="tile" />
+                      </span>
+                      <span className="text-[15px] font-extrabold leading-tight">{featured.aisle}</span>
+                      <span className="text-sm font-bold text-brand">
+                        {featured.from > 0 ? <>from {naira(featured.from)} </> : null}
+                        <span aria-hidden>→</span>
+                      </span>
+                    </Link>
+                  </li>
+                )}
                 {more.map((one) => (
                   <li key={one.aisle} className="w-[42%] shrink-0 sm:w-48">
                     <button

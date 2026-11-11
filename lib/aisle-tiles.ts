@@ -11,6 +11,9 @@ import {
 import { kindShops } from "./products";
 import { db } from "./supabase";
 import { safeSettings } from "./settings";
+import { boxesAcross, occasionBySlug } from "./boxes";
+import { cheapestBoxes } from "./box-view";
+import { shelfPhotos } from "./shelf-photo";
 
 /** A tile on the front page: what it says, and what it starts at. */
 export type AisleTile = { aisle: string; from: number; image: string };
@@ -198,6 +201,37 @@ async function readKitchens(): Promise<KitchenTile[]> {
 
 /** Every kitchen as a tile: a photo, its name and where its prices start. */
 export const kitchenTiles = unstable_cache(readKitchens, ["kitchen-tiles"], {
+  revalidate: 60,
+  tags: ["menu"],
+});
+
+export type FeaturedTile = { aisle: string; from: number; image: string; href: string };
+
+async function readFeatured(): Promise<FeaturedTile | null> {
+  try {
+    const slug = ((await safeSettings()).featured_shelf ?? "").trim();
+    if (slug === "") return null;
+    const shelf = await occasionBySlug(slug);
+    if (!shelf) return null;
+    const boxes = (await boxesAcross([shelf.id])).filter((box) => !box.is_extra);
+    if (boxes.length === 0) return null;
+    const [from, photo] = await Promise.all([
+      cheapestBoxes(boxes).catch(() => new Map<string, number>()),
+      shelfPhotos(boxes).catch(() => ({}) as Record<string, string>),
+    ]);
+    return {
+      aisle: shelf.name,
+      from: from.get(shelf.id) ?? 0,
+      image: photo[shelf.id] || shelf.image_url || "",
+      href: `/collections/${shelf.slug}`,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** The collection the shop wants in front of people, if it has picked one. */
+export const featuredTile = unstable_cache(readFeatured, ["featured-tile"], {
   revalidate: 60,
   tags: ["menu"],
 });

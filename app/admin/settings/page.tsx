@@ -1550,6 +1550,20 @@ export default async function SettingsAdmin() {
               <SaveButton look="btn-admin-go">Save photos</SaveButton>
             </div>
           </Panel>
+          <Panel
+            title="Promoted collection"
+            detail="The collection that leads the Something else row and sits near the end of the menu. Type its address word, like christmas. Empty means none."
+          >
+            <div className="space-y-3">
+              <input
+                name="featured_shelf"
+                defaultValue={settings.featured_shelf}
+                placeholder="christmas"
+                className="field"
+              />
+              <SaveButton look="btn-admin-go">Save</SaveButton>
+            </div>
+          </Panel>
         </form>
 
         <form id="plans" action={saveSettings} className="lg:col-span-2 scroll-mt-4">

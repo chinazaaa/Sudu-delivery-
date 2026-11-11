@@ -140,6 +140,8 @@ export type Settings = {
   home_tiles: string;
   /** Which dish's photo the "Something else" tiles wear, one per line. */
   more_photos: string;
+  /** The slug of the collection promoted on the front page and menu. */
+  featured_shelf: string;
   /** Every standing plan held at once, for the holidays. A date, or empty. */
   plans_paused_until: string;
   /** How many days before it lands a plan's order is raised. */
@@ -367,6 +369,7 @@ export const EMPTY: Settings = {
   menu_aisles: "",
   home_tiles: "",
   more_photos: "",
+  featured_shelf: "",
   plans_paused_until: "",
   plan_lead_days: "",
   same_day_first_hour: "",

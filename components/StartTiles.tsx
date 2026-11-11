@@ -17,11 +17,13 @@ export default function StartTiles({
   tiles,
   more = [],
   kitchens = [],
+  featured = null,
   view = "food",
 }: {
   tiles: Tile[];
   more?: Tile[];
   kitchens?: { id: string; slug: string; name: string; from: number; image: string }[];
+  featured?: { aisle: string; from: number; image: string; href: string } | null;
   view?: "food" | "kitchens";
 }) {
   const [building, setBuilding] = useState<Kind | null>(null);
@@ -69,11 +71,40 @@ export default function StartTiles({
         </ul>
       ) : (
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[
-          ...tiles.map((one) => ({ ...one, kind: { label: one.aisle, tile: one.aisle } as Kind })),
-          ...more.map((one) => ({ ...one, kind: { label: one.aisle, aisle: one.aisle } as Kind })),
-        ].map((one) => (
+        {(() => {
+          const all = [
+            ...tiles.map((one) => ({ ...one, kind: { label: one.aisle, tile: one.aisle } as Kind, href: "" })),
+            ...more.map((one) => ({ ...one, kind: { label: one.aisle, aisle: one.aisle } as Kind, href: "" })),
+          ];
+          // Near the end, so it is the last thing a scroll reaches before the
+          // everyday aisles run out, not in the way of them.
+          if (featured) {
+            all.splice(Math.max(0, all.length - 2), 0, {
+              aisle: featured.aisle,
+              from: featured.from,
+              image: featured.image,
+              kind: { label: featured.aisle },
+              href: featured.href,
+            });
+          }
+          return all;
+        })().map((one) => (
           <li key={one.aisle}>
+            {one.href !== "" ? (
+              <Link
+                href={one.href}
+                className="flex h-full w-full flex-col justify-between gap-1 rounded-2xl border-2 border-ink bg-white p-2 text-left shadow-[2px_2px_0_0_#111]"
+              >
+                <span className="block aspect-[16/9] w-full overflow-hidden rounded-lg">
+                  <Thumb src={one.image} name={one.aisle} category={one.aisle} variant="tile" />
+                </span>
+                <span className="text-[15px] font-extrabold leading-tight">{one.aisle}</span>
+                <span className="text-[13px] font-bold text-brand">
+                  {one.from > 0 ? <>from {naira(one.from)} </> : null}
+                  <span aria-hidden>→</span>
+                </span>
+              </Link>
+            ) : (
             <button
               type="button"
               onClick={() => setBuilding(one.kind)}
@@ -87,6 +118,7 @@ export default function StartTiles({
                 from {naira(one.from)} <span aria-hidden>→</span>
               </span>
             </button>
+            )}
           </li>
         ))}
       </ul>
