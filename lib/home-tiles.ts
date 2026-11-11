@@ -21,7 +21,7 @@ export type HomeTile = {
  * come from: an aisle, a word in the name (q:) or a section name
  * (category:), any number of them, separated by semicolons. The third is
  * optional and limits it to those counters. A fourth, also optional, is
- * photo:Some Dish, to choose which dish's picture the tile wears. Typed in admin, so a new tile is
+ * photo:Some Dish (or Some Dish@Counter), to choose which dish's picture the tile wears. Typed in admin, so a new tile is
  * a line and not a deploy.
  */
 export function parseHomeTiles(text: string | null | undefined): HomeTile[] {
@@ -61,6 +61,6 @@ export function parseHomeTiles(text: string | null | undefined): HomeTile[] {
 export const DEFAULT_HOME_TILES = [
   "Pizza | aisle:Pizza",
   "Chicken | aisle:Chicken",
-  "Burgers, shawarma & wraps | aisle:Burgers & wraps; q:shawarma; q:chicken pie; q:meat pie",
+  "Burgers, shawarma & wraps | aisle:Burgers & wraps; q:shawarma; q:chicken pie; q:meat pie | | photo:Shawarma@Chicken Republic",
   "Rice & chicken | aisle:Chicken; aisle:Rice, pasta & bowls; aisle:Meals & combos; q:rice; q:jollof | Chicken Republic; The Place | photo:Refuel More | first:jollof/rice + chicken",
 ].join("\n");

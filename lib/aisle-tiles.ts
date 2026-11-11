@@ -46,12 +46,21 @@ async function readTiles(): Promise<AisleTile[]> {
       if (!Number.isFinite(from)) continue;
       // A photo of what is most ordered under it, so the tile shows food and
       // not a drawing of it.
-      const pictured = shops.flatMap((shop) => shop.items).filter((dish) => dish.imageUrl !== "");
+      // "Dish@Counter" picks that dish at that counter, when the same word is
+      // on several menus.
+      const [dishWord, counter = ""] = one.photo.split("@").map((part) => part.trim());
+      const pictured = shops
+        .filter((shop) => counter === "" || shop.name.toLowerCase() === counter.toLowerCase())
+        .flatMap((shop) => shop.items)
+        .filter((dish) => dish.imageUrl !== "");
       // The dish the tile asks for by name, else whatever is most ordered.
       const photo =
-        (one.photo
-          ? pictured.find((dish) => dish.name.toLowerCase().includes(one.photo.toLowerCase()))
-          : undefined) ?? [...pictured].sort((a, b) => b.orderedCount - a.orderedCount)[0];
+        (dishWord
+          ? pictured.find((dish) => dish.name.toLowerCase().includes(dishWord.toLowerCase()))
+          : undefined) ??
+        [...shops.flatMap((shop) => shop.items).filter((dish) => dish.imageUrl !== "")].sort(
+          (a, b) => b.orderedCount - a.orderedCount
+        )[0];
       out.push({ aisle: one.label, from, image: photo?.imageUrl ?? "" });
       if (out.length === 4) break;
     }
