@@ -19,14 +19,16 @@ export default function Reprice({
   itemPrice,
   optionDelta,
   half = {},
+  pct = {},
 }: {
   itemPrice: Record<string, number>;
   optionDelta: Record<string, number>;
   half?: Record<string, true>;
+  pct?: Record<string, number>;
 }) {
   useEffect(() => {
-    reprice(itemPrice, optionDelta, half);
-  }, [itemPrice, optionDelta, half]);
+    reprice(itemPrice, optionDelta, half, pct);
+  }, [itemPrice, optionDelta, half, pct]);
 
   return null;
 }

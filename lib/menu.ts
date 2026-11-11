@@ -498,7 +498,11 @@ async function readPrices(): Promise<{
    *  list of deltas, so the basket leaves it exactly as it was priced when
    *  it went in and the checkout has the last word, as it always does. */
   half: Record<string, true>;
+  /** How much of the car each takes, so a basket saved when a drink counted
+   *  as a whole container follows the menu once that is corrected. */
+  pct: Record<string, number>;
 }> {
+  const pct: Record<string, number> = {};
   const item: Record<string, number> = {};
   const option: Record<string, number> = {};
   const half: Record<string, true> = {};
@@ -507,14 +511,17 @@ async function readPrices(): Promise<{
     // Repricing a basket left open uses the same rule the checkout charges
     // by, so a sale starting or ending while somebody was away moves the
     // cart with it rather than leaving a price nobody will honour.
-    const items = await everyRow<DealRow & { id: string }>((from, to) =>
+    const items = await everyRow<DealRow & { id: string; container_pct?: number | null }>((from, to) =>
       db()
         .from("menu_items")
-        .select("id, price_food, deal_price, deal_until")
+        .select("id, price_food, deal_price, deal_until, container_pct")
         .order("id")
         .range(from, to)
     );
-    for (const one of items) item[one.id] = sellingNow(one);
+    for (const one of items) {
+      item[one.id] = sellingNow(one);
+      if (one.container_pct !== null && one.container_pct !== undefined) pct[one.id] = one.container_pct;
+    }
 
     const options = await everyRow<{ id: string; price_delta: number }>((from, to) =>
       db().from("item_options").select("id, price_delta").order("id").range(from, to)
@@ -544,10 +551,10 @@ async function readPrices(): Promise<{
   } catch {
     // A cart that cannot be checked is left exactly as it is. The server
     // prices the order either way, so nobody is charged the wrong thing.
-    return { item: {}, option: {}, half: {} };
+    return { item: {}, option: {}, half: {}, pct: {} };
   }
 
-  return { item, option, half };
+  return { item, option, half, pct };
 }
 
 export const livePrices = unstable_cache(readPrices, ["live-prices"], {

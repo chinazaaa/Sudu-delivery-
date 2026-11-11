@@ -605,7 +605,11 @@ export async function kindShops(filter: KindFilter, perShop = 40): Promise<Aisle
     .filter((group) => group.length > 0);
   const leads = (row: MenuItem) => {
     if (leadGroups.length === 0) return false;
-    const text = `${row.name} ${row.description ?? ""}`.toLowerCase();
+    // "Does not come with chicken" is the opposite of coming with chicken,
+    // so what follows a negative is not read.
+    const text = `${row.name} ${row.description ?? ""}`
+      .toLowerCase()
+      .replace(/\b(does not|doesn't|do not|without|not served with)\b[^.]*\.?/g, " ");
     return leadGroups.every((group) => group.some((word) => text.includes(word)));
   };
 

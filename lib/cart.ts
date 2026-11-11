@@ -375,13 +375,23 @@ export function reprice(
    *  added back up from a base and a list of deltas, because the price of
    *  it is the dearer half rather than the sum, so the line is left as it
    *  was priced when it went in. */
-  half: Record<string, true> = {}
+  half: Record<string, true> = {},
+  /** What each dish takes of the car now. */
+  pct: Record<string, number> = {}
 ): void {
   load();
   if (lines.length === 0) return;
 
   let moved = false;
   const next = lines.map((line) => {
+    // The share of the car first, because it is true whatever the price
+    // does: a drink corrected from a whole container to a quarter should
+    // not keep pushing the delivery up from a basket saved earlier.
+    const share = pct[line.itemId];
+    if (share !== undefined && share !== (line.containerPct ?? 100)) {
+      moved = true;
+      line = { ...line, containerPct: share };
+    }
     const base = itemPrice[line.itemId];
     if (base === undefined) return line;
     if (line.optionIds.some((id) => half[id])) return line;
