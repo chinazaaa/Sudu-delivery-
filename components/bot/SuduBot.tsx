@@ -2056,8 +2056,23 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           }
 
           const wanted: { what: string; qty: number }[] = reading.wanted ?? [];
+          /*
+           * The counter they named, put back.
+           *
+           * The reading is told to leave a counter's name out of what they
+           * asked for, which is right for a pasted cart and wrong for "rice
+           * and chicken from the place": searched without it, two counters
+           * sell rice and chicken and the chat asks which, straight after
+           * being told. Where exactly one is named in what they typed, the
+           * search is scoped to it the same way the rules scope it.
+           */
+          const namedHere = namedIn(said, startRef.current?.kitchens ?? []);
+          const scoped = (what: string) =>
+            namedHere.length === 1 && !what.toLowerCase().includes(namedHere[0].name.toLowerCase())
+              ? `${what} from ${namedHere[0].name}`
+              : what;
           if (wanted.length >= 2) {
-            const parts = wanted.map((one) => `${one.qty} ${one.what}`);
+            const parts = wanted.map((one) => scoped(`${one.qty} ${one.what}`));
             list.current = parts.slice(1);
             listing.current = parts.length;
             bot(
@@ -2103,7 +2118,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             /* One thing, said in a sentence. Searched for as the thing
                rather than as the sentence, which is the whole difference
                between finding it and apologising. */
-            const only = `${wanted[0].qty} ${wanted[0].what}`;
+            const only = scoped(`${wanted[0].qty} ${wanted[0].what}`);
             if (only.toLowerCase() !== said.trim().toLowerCase()) {
               huntRef.current?.(only, false);
               return;
