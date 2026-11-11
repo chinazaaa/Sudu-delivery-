@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { menuView, menuViewFor } from "@/lib/menu";
+import { db } from "@/lib/supabase";
 import { COUNTERS, counterIndex } from "@/lib/counter";
 import { errandMeant } from "@/lib/errands";
 import type { ItemView } from "@/lib/view";
@@ -56,6 +57,58 @@ export async function POST(request: Request): Promise<NextResponse> {
       : await menuViewFor(kitchen).then((one) => (one ? [one] : []));
     if (shops.length === 0) {
       return NextResponse.json({ how: "lost", hits: [], qty: 1, person: false, instead: [] });
+    }
+
+    /*
+     * Which kitchens people order from most, restaurants only.
+     *
+     * "What can I order" has no dish in it, so searching for one finds
+     * whatever happens to contain the word. The honest answer is the places
+     * most people order from. The shop's own counter and the service
+     * counters are not restaurants and are left out.
+     */
+    const popularity = new Map<string, number>();
+    for (const shop of shops) {
+      popularity.set(
+        shop.restaurant.id,
+        shop.items.reduce((total, one) => total + (one.orderedCount ?? 0), 0)
+      );
+    }
+    const mostOrdered = async (limit: number) => {
+      const { data } = await db().from("restaurants").select("id, kind");
+      const food = new Set(
+        ((data ?? []) as { id: string; kind: string | null }[])
+          .filter((one) => (one.kind ?? "food") === "food")
+          .map((one) => one.id)
+      );
+      return shops
+        .filter((shop) => food.has(shop.restaurant.id))
+        .sort(
+          (a, b) =>
+            (popularity.get(b.restaurant.id) ?? 0) - (popularity.get(a.restaurant.id) ?? 0)
+        )
+        .slice(0, limit)
+        .map((shop) => ({ id: shop.restaurant.id, name: shop.restaurant.name }));
+    };
+
+    // A question with no dish in it.
+    if (
+      kitchen === "" &&
+            /^(so\s+)?(what('s| is)? (can|could|do|should) (i|we|you) (order|get|have|buy|eat|sell)( (today|here|from you|from here|now|please))?|what('s| is|s) (good|popular|best|on the menu|available)( (today|here|please))?|(can you )?(recommend|suggest)( something| anything)?|surprise me|show me the menu|what do you (have|sell))[?.! ]*$/i.test(
+        said.trim()
+      )
+    ) {
+      const top = await mostOrdered(5);
+      if (top.length > 1) {
+        return NextResponse.json({
+          how: "popular",
+          qty: 1,
+          person: false,
+          hits: [],
+          instead: [],
+          shops: top,
+        });
+      }
     }
 
     const whose = new Map<string, { id: string; name: string }>();
@@ -238,7 +291,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
       if (where.length > 1) {
         // The counter that files a whole shelf under these words leads.
-        where.sort((a, b) => Number(b.id === exactShelf) - Number(a.id === exactShelf));
+        where.sort(
+          (a, b) =>
+            Number(b.id === exactShelf) - Number(a.id === exactShelf) ||
+            (popularity.get(b.id) ?? 0) - (popularity.get(a.id) ?? 0)
+        );
         return NextResponse.json({
           how: "where",
           qty: howMany(said),

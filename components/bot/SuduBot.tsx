@@ -2382,6 +2382,35 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           });
           return;
         }
+        // Nothing in particular asked for: the places people order from most.
+        if (got.how === "popular" && (got.shops ?? []).length > 0) {
+          misses.current = 0;
+          const top = got.shops ?? [];
+          bot("Most people order from these. Where from?", 450);
+          setAsk({
+            of: "chips",
+            chips: [
+              ...top.map((shop, which) => ({
+                said: shop.name,
+                hot: which === 0,
+                go: () => {
+                  me(shop.name);
+                  queue.current = [shop];
+                  askOrder();
+                },
+              })),
+              {
+                said: "Something else",
+                go: () => {
+                  me("Something else");
+                  queue.current = [];
+                  askOrder();
+                },
+              },
+            ],
+          });
+          return;
+        }
         if (got.how === "kitchens" && (got.shops ?? []).length > 0) {
           queue.current = [...(got.shops ?? [])];
           const names = queue.current.map((one) => one.name);
