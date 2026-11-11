@@ -10,7 +10,7 @@ import { optionGroupsFor } from "@/lib/menu";
 import { browseProducts, productFacets, shelfNames, PER_PAGE } from "@/lib/products";
 import ProductSearch from "@/components/ProductSearch";
 import StartTiles from "@/components/StartTiles";
-import { aisleTiles } from "@/lib/aisle-tiles";
+import { aisleTiles, moreTiles } from "@/lib/aisle-tiles";
 
 export const dynamic = "force-dynamic";
 
@@ -124,7 +124,7 @@ export default async function ProductsPage({
 
   // Nothing chosen yet: open on the photo tiles, as the front page does.
   const fresh = !asked.q && !asked.place && !asked.category && !asked.aisle && page === 1;
-  const [{ products, total }, facets, saleOn, tiles] = await Promise.all([
+  const [{ products, total }, facets, saleOn, tiles, extra] = await Promise.all([
     browseProducts({
       query: asked.q,
       place: asked.place,
@@ -141,6 +141,7 @@ export default async function ProductsPage({
     productFacets(asked.place),
     dealsOn(),
     fresh ? aisleTiles().catch(() => []) : Promise.resolve([]),
+    fresh ? moreTiles().catch(() => []) : Promise.resolve([]),
   ]);
 
   /*
@@ -230,7 +231,7 @@ export default async function ProductsPage({
   return (
     <div className="-mt-4 space-y-4 pb-10">
       {fresh && tiles.length > 0 ? (
-        <StartTiles tiles={tiles} />
+        <StartTiles tiles={tiles} more={extra} />
       ) : (
       <header className="bleed relative overflow-hidden border-b-2 border-ink">
         <span
