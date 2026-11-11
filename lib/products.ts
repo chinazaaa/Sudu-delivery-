@@ -605,11 +605,16 @@ export async function kindShops(filter: KindFilter, perShop = 40): Promise<Aisle
     .filter((group) => group.length > 0);
   const leads = (row: MenuItem) => {
     if (leadGroups.length === 0) return false;
-    // "Does not come with chicken" is the opposite of coming with chicken,
-    // so what follows a negative is not read.
-    const text = `${row.name} ${row.description ?? ""}`
-      .toLowerCase()
-      .replace(/\b(does not|doesn't|do not|without|not served with)\b[^.]*\.?/g, " ");
+    const whole = `${row.name} ${row.description ?? ""}`.toLowerCase();
+    // "Does not come with chicken" settles it: whatever else the description
+    // says about chicken (diced into the rice, say), it is not the meal with
+    // chicken, and what follows a negative is not read either.
+    if (/\b(does not|doesn't|do not|without|not served with)\b[^.]*/.test(whole)) {
+      const denied = whole.match(/\b(?:does not|doesn't|do not|without|not served with)\b[^.]*/g) ?? [];
+      const wanted = leadGroups.flat();
+      if (denied.some((part) => wanted.some((word) => part.includes(word)))) return false;
+    }
+    const text = whole.replace(/\b(does not|doesn't|do not|without|not served with)\b[^.]*\.?/g, " ");
     return leadGroups.every((group) => group.some((word) => text.includes(word)));
   };
 
