@@ -1,6 +1,6 @@
 import { allAreas, areaOfEach, openDaysOfEach } from "./areas-server";
 import { canGoSameDay, carGoesOn, runCovers } from "./areas";
-import { nextArrival, runArrival } from "./arrival";
+import { runArrival } from "./arrival";
 import { openBatches } from "./batches";
 import { runCarries } from "./run-places";
 import { opensOn } from "./open-days";
@@ -57,17 +57,31 @@ export async function deliveryFor(ids: string[]): Promise<Record<string, ShopDel
     const cars = canGoSameDay(area)
       ? slots.filter((slot) => carGoesOn(area, slot.date, opensOn))
       : [];
+    // The earliest way it can get there, a shared run or a car of its own:
+    // somebody asking when it comes wants the soonest day, not the cheapest.
     const soonest = [...usable].sort((a, b) => a.runDate.localeCompare(b.runDate))[0];
-    const going = soonest ? nextArrival([soonest], [], today) : nextArrival(usable, cars, today);
-    const date = going?.date ?? "";
-    if (!going || date === "") {
+    const carDate = [...cars].map((slot) => slot.date).sort()[0] ?? "";
+    const runDate = soonest?.runDate ?? "";
+    const dates = [runDate, carDate].filter((one) => one !== "").sort();
+    const date = dates[0] ?? "";
+    const going = date !== "";
+    if (!going) {
       out[id] = { said: "No delivery day yet", today: false };
     } else if (date === today) {
       out[id] = { said: "Delivers today", today: true };
     } else if (date === dayAfter(today)) {
-      out[id] = { said: "Not today · tomorrow", today: false };
+      out[id] = {
+        said: `Not today · tomorrow${carDate === date && date !== runDate ? " by car" : ""}`,
+        today: false,
+      };
     } else {
-      out[id] = { said: `Not today · ${runDateLabel(date)}`, today: false };
+      // A day only a car of its own can do is said so, because the shared
+      // delivery is later and cheaper and the two are not the same offer.
+      const byCar = carDate !== "" && carDate === date && date !== runDate;
+      out[id] = {
+        said: `Not today · ${runDateLabel(date)}${byCar ? " by car" : ""}`,
+        today: false,
+      };
     }
   }
   return out;
