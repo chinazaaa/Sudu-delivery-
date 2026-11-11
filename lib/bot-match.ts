@@ -217,10 +217,27 @@ export function find(said: string, among: Candidate[], most = 4): Found {
   const asked = words(said);
   if (asked.length === 0 || among.length === 0) return { hits: [], how: "lost" };
 
+  // How many of the words somebody used are really in a name. "Rice and
+  // chicken" should offer the dishes with both before the dishes with one,
+  // whatever else scores on the way.
+  const cover = (name: string) =>
+    asked.filter((word) =>
+      words(name).some((part) => part === word || (word.length >= 4 && part.startsWith(word)))
+    ).length;
+
   const ranked = among
     .map((one) => ({ id: one.id, name: one.name, score: scoreOne(asked, one) }))
     .filter((one) => one.score >= WORTH)
-    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+    .sort(
+      (a, b) =>
+        // Scores that are close count as level, and among those the one with
+        // more of the words in its name wins. A clearly better score still
+        // wins outright, so a typo is not outranked by a longer name.
+        Math.floor(b.score * 6) - Math.floor(a.score * 6) ||
+        cover(b.name) - cover(a.name) ||
+        b.score - a.score ||
+        a.name.localeCompare(b.name)
+    );
 
   if (ranked.length === 0) return { hits: [], how: "lost" };
 

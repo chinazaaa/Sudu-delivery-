@@ -8528,3 +8528,16 @@ test("a broad two word order that fits several dishes is asked, an exact name is
   assert.equal(find("rice and chicken", menu).how, "asking");
   assert.equal(find("fried rice", menu).hits[0].id, "4");
 });
+
+test("dishes with every word are offered before dishes with one", async () => {
+  const { find } = await import("../lib/bot-match");
+  const menu = [
+    { id: "1", name: "Rich jollof rice" },
+    { id: "2", name: "Fried rice" },
+    { id: "3", name: "Jollof rice & pepper chicken - small value munch" },
+    { id: "4", name: "Regular value munch - fried rice & chicken in stew" },
+    { id: "5", name: "Grilled chicken" },
+  ];
+  const got = find("rice and chicken", menu);
+  assert.deepEqual(got.hits.slice(0, 2).map((h) => h.id).sort(), ["3", "4"]);
+});
