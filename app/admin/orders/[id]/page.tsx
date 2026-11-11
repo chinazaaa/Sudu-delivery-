@@ -1236,6 +1236,7 @@ async function orderPage(id: string, said: string) {
                   batchStage: order.batch?.stage ?? "",
                   counters,
                   reviewed: them?.reviewed ?? false,
+                  ratedBefore: them?.ratedAny ?? false,
                 },
                 (iso) => lagosClock(iso)
               ).map((step, at, all) => (

@@ -38,6 +38,8 @@ export function orderStory(order: {
    *  against the person rather than the order, because a review is about
    *  the shop and somebody only writes one once. */
   reviewed?: boolean;
+  /** They rated some other order of theirs in the app. */
+  ratedBefore?: boolean;
 }, say: (iso: string) => string): Step[] {
   const stage = String(order.batchStage ?? "");
   const reached = (name: string) =>
@@ -112,8 +114,11 @@ export function orderStory(order: {
         ? say(order.rated_at)
         : order.reviewed === true
           ? "On Google"
-          : "",
-      done: order.rated_at !== null || order.reviewed === true,
+          : order.ratedBefore === true
+            ? "On a previous order"
+            : "",
+      done:
+        order.rated_at !== null || order.reviewed === true || order.ratedBefore === true,
     },
   ];
 }
