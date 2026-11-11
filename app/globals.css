@@ -606,8 +606,8 @@ body:has([data-actionbar]) .sudubot .teaser {
  */
 .sudubot .fab {
   position: relative;
-  width: 68px;
-  height: 68px;
+  width: 50px;
+  height: 50px;
   display: grid;
   place-items: center;
   -webkit-tap-highlight-color: transparent;
@@ -631,7 +631,7 @@ body:has([data-actionbar]) .sudubot .teaser {
      arm's length, which is the only distance this button is ever seen at. */
   background: var(--bot-ink);
   border: 3px solid var(--bot-ink);
-  box-shadow: 5px 5px 0 var(--bot-shadow);
+  box-shadow: 3px 3px 0 var(--bot-shadow);
   display: grid;
   place-items: center;
   animation: sudubot-hop 2.6s cubic-bezier(0.3, 0.7, 0.4, 1) infinite;
@@ -708,14 +708,14 @@ body:has([data-actionbar]) .sudubot .teaser {
   position: absolute;
   top: -4px;
   right: -4px;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 6px;
-  border-radius: 12px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
   background: var(--bot-volt);
   color: #15110e;
   border: 2.5px solid var(--bot-ink);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
   display: grid;
   place-items: center;

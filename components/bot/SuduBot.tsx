@@ -484,8 +484,13 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     if (seen) return undefined;
     // About two hops. Long enough not to pounce on somebody arriving,
     // short enough that anybody watching the button jump is still there.
-    const when = setTimeout(() => setTeasing(true), 4200);
-    return () => clearTimeout(when);
+    // The "Hungry?" bubble is switched off: it sat over the page. Set
+    // SHOW_TEASER to true to bring it back.
+    const SHOW_TEASER = false;
+    const when = SHOW_TEASER ? setTimeout(() => setTeasing(true), 4200) : undefined;
+    return () => {
+      if (when) clearTimeout(when);
+    };
   }, [open]);
 
   useEffect(() => {
