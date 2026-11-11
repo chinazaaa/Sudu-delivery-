@@ -231,7 +231,9 @@ export function find(said: string, among: Candidate[], most = 4): Found {
     // One word, and only nearly that word, is never certain.
     heard(asked, hits[0].name) &&
     // And one word that names a whole shelf is never an answer.
-    !aKind(asked, ranked);
+    !aKind(asked, ranked) &&
+    // Nor is a description that several dishes fit equally well.
+    !severalFit(asked, hits[0].name, ranked);
 
   return { hits, how: clear ? "sure" : "asking" };
 }
@@ -255,6 +257,27 @@ export function find(said: string, among: Candidate[], most = 4): Found {
  * was never ambiguous.
  */
 const A_FEW = 3;
+
+/**
+ * Whether more than one dish answers the same words.
+ *
+ * "Rice and chicken" matched "Asun fried rice & fried curry chicken combo"
+ * by name, ahead of everything else, and was added as though it was the
+ * only rice and chicken there was. The Place has a dozen. When the words
+ * somebody used are all in more than one name, and the winner is more than
+ * those words, picking one is a guess dressed as a certainty, so it is
+ * asked. A name that is exactly what was said still goes straight in.
+ */
+function severalFit(asked: string[], winner: string, ranked: { name: string }[]): boolean {
+  const named = (name: string, word: string) =>
+    words(name).some((part) => part === word || (word.length >= 4 && part.startsWith(word)));
+  const used = asked.filter((word) => named(winner, word));
+  if (used.length < 2) return false;
+  // Exactly what they said: nothing else in the name.
+  if (words(winner).length <= used.length) return false;
+  const fitting = ranked.filter((one) => used.every((word) => named(one.name, word)));
+  return fitting.length >= 2;
+}
 
 function aKind(asked: string[], ranked: { name: string }[]): boolean {
   if (asked.length !== 1) return false;

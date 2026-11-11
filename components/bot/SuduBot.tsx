@@ -2202,33 +2202,11 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             me(shop.name);
             queue.current = [shop];
             setAsk({ of: "nothing" });
-            fetch("/api/bot/find", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ said, kitchen: shop.id }),
-            })
-              .then((answer) => answer.json())
-              .then((again: { hits: Hit[] }) => {
-                if (again.hits[0]) {
-                  /* Found it there, so the counter has done its job and
-                     the next question is not about it. */
-                  queue.current = [];
-                  walk(again.hits[0], again.hits[0].qty ?? got.qty);
-                  return;
-                }
-                /*
-                 * Not found there, so the counter is kept.
-                 *
-                 * Somebody who has just tapped Domino's has told us where
-                 * they are shopping, and clearing that because one search
-                 * came back empty threw the answer away: the next question
-                 * said "what do you fancy?" instead of "what from
-                 * Domino's?", and the suggestions after it came from every
-                 * kitchen in the shop.
-                 */
-                askOrder();
-              })
-              .catch(() => askOrder());
+            /* Searched again at that one counter through the ordinary path, so
+               a dish that is plainly the one goes in and a sentence that
+               fits several ("rice and chicken") is put up to be tapped
+               rather than the first of them being picked. */
+            huntRef.current?.(said, false);
           };
 
           /*

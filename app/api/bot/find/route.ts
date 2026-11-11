@@ -113,7 +113,10 @@ export async function POST(request: Request): Promise<NextResponse> {
             group.options.filter((one) => one.available).map((one) => one.name)
           ),
         ],
-      }))
+      })),
+      // Six to tap rather than four: a broad order like rice and chicken
+      // fits a dozen dishes, and the first four are not always the ones.
+      6
     );
 
     /*

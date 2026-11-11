@@ -8515,3 +8515,16 @@ test("home tiles read photo and first options", async () => {
   assert.equal(tile.photo, "Refuel More");
   assert.equal(tile.first, "jollof/rice + chicken");
 });
+
+test("a broad two word order that fits several dishes is asked, an exact name is not", async () => {
+  const { find } = await import("../lib/bot-match");
+  const menu = [
+    { id: "1", name: "Asun fried rice & fried curry chicken combo" },
+    { id: "2", name: "Jollof rice & pepper chicken - small value munch" },
+    { id: "3", name: "Regular value munch - fried rice & chicken in stew" },
+    { id: "4", name: "Fried rice" },
+    { id: "5", name: "Special fried rice" },
+  ];
+  assert.equal(find("rice and chicken", menu).how, "asking");
+  assert.equal(find("fried rice", menu).hits[0].id, "4");
+});
