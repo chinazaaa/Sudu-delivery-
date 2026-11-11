@@ -1812,10 +1812,8 @@ export default function Checkout({
               for by then is an order she cannot buy.
             */
             <p className="soft px-3.5 py-2.5 text-sm">
-              <span className="font-semibold">{LAST_MINUTE_SAID}.</span> This
-              run has closed and the food is about to be bought, so it goes
-              out with tonight&rsquo;s car. {payWithinSaid()}. Only the
-              counters it has not been to yet are on it.
+              <span className="font-semibold">{LAST_MINUTE_SAID}.</span>{" "}
+              {payWithinSaid()}.
             </p>
           ) : (
             <p className="text-sm text-muted">
@@ -1862,9 +1860,7 @@ export default function Checkout({
             Riding along with {joining.name}&apos;s delivery
           </p>
           <p className="mt-0.5 text-sm text-ink/80">
-            Your food goes in the same car, so you pay a share of one delivery
-            rather than a whole one of your own. You pay for your own food and
-            your bag is labelled with your name.
+            Same car, so you pay a share of one delivery.
           </p>
           <button
             type="button"
@@ -1924,8 +1920,7 @@ export default function Checkout({
 
       {adding && (
         <p className="rounded-2xl bg-brand-tint px-4 py-3 text-sm font-semibold text-brand-dark">
-          Adding to your {adding.batchLabel} order. It travels in the same car, and
-          delivery is charged on this order the same as any other.
+          Adding to your {adding.batchLabel} order, in the same car.
         </p>
       )}
 
@@ -1946,13 +1941,12 @@ export default function Checkout({
           <p className="text-sm text-ink/80">
             {partyWhen
               ? `Arriving ${partyWhen}.`
-              : "Everything ordered under your link comes in one delivery."}
+              : "One delivery for everyone."}
             {partyPeople > 0 &&
               ` ${partyPeople} ${partyPeople === 1 ? "order" : "orders"} in it so far.`}
           </p>
           <p className="text-sm text-muted">
-            You pay for your own food. The delivery is one fee for the whole car,
-            split evenly when the group closes.
+            You pay for your food. The delivery is split evenly.
           </p>
         </section>
       ) : (
@@ -2025,10 +2019,9 @@ export default function Checkout({
         {farHoldsItUp && withoutFar && (
           <p className="rounded-xl bg-white/10 px-3.5 py-2.5 text-[14.5px] leading-[1.45] text-shell">
             <span className="font-semibold">
-              {farWhereSaid}, which is what sets the date above.
+              {farWhereSaid} sets this date.
             </span>{" "}
-            Take {farLines.length === 1 ? "it" : "those"} out and the rest can
-            come {withoutFar.said}.{" "}
+            Without {farLines.length === 1 ? "it" : "them"}: {withoutFar.said}.{" "}
             <Link href="/cart" className="font-semibold text-volt underline">
               Change the cart
             </Link>
@@ -2043,13 +2036,10 @@ export default function Checkout({
         {lateRun !== null && beenTo.length > 0 && stillToCome.length > 0 && (
           <p className="soft px-3.5 py-2.5 text-sm">
             <span className="font-semibold">
-              We have already been to {saidList(beenTo)} tonight.
+              {saidList(stillToCome)} {stillToCome.length === 1 ? "is" : "are"} too late for
+              tonight&rsquo;s run.
             </span>{" "}
-            {saidList(stillToCome)} {stillToCome.length === 1 ? "is" : "are"}{" "}
-            still ahead of the car, so {stillToCome.length === 1 ? "that" : "those"}{" "}
-            can go out today as a last minute order: take the rest out of the
-            cart and it comes tonight. For all of it together, pick a day
-            below.
+            Take {stillToCome.length === 1 ? "it" : "them"} out, or pick a day below.
           </p>
         )}
 
@@ -2060,17 +2050,13 @@ export default function Checkout({
           <p className="text-sm leading-[1.45] text-shell/85">
             <span className="font-semibold">
               {shutSaid} {shutThere.length === 1 ? "is" : "are"} closed on{" "}
-              {shutDayWord}s.
-            </span>{" "}
-            {/* What is still fine, and what taking it out would buy them.
-                "Closed" on its own reads as the whole cart being stuck,
-                when usually it is one line of it. */}
+              {shutDayWord}s
+            </span>
             {stillFine.length > 0
-              ? `${stillFineSaid} ${stillFine.length === 1 ? "is" : "are"} open: take ${shutThere.length === 1 ? "it" : "them"} out and this can go on ${shutSoonest.label}. `
-              : ""}
-            {openable.length > 0
-              ? `Otherwise the next one that can bring everything is ${goingThere?.label ?? "the one below"}.`
-              : `${shutSaid} ${shutThere.length === 1 ? "opens" : "open"} again ${openAgainWord}.`}
+              ? `. Without ${shutThere.length === 1 ? "it" : "them"}: ${shutSoonest.label}.`
+              : openable.length > 0
+                ? `. Next: ${goingThere?.label ?? "the one below"}.`
+                : `, back ${openAgainWord}.`}
           </p>
         )}
 
@@ -2081,13 +2067,13 @@ export default function Checkout({
         {wrongCounter.length > 0 && (
           <p className="text-sm leading-[1.45] text-shell/85">
             <span className="font-semibold text-volt">
-              We do not collect from {counterSaid} on every delivery.
+              {counterSaid} is not on every delivery.
             </span>{" "}
             {openable.length > 0
-              ? `The next one that does is ${goingThere?.label ?? "the one below"}.`
+              ? `Next: ${goingThere?.label ?? "the one below"}.`
               : sameDaySlots.length > 0
-                ? "None of the days coming up are, so this goes on its own, at the time you pick below."
-                : "None of the days coming up are."}
+                ? "Pick a time below."
+                : ""}
           </p>
         )}
 
@@ -2289,22 +2275,19 @@ export default function Checkout({
           </ul>
 
           <p className="text-xs text-muted">
-            A number each is how anyone in the group gets called when their food
-            lands, and in a split it is what their payment link hangs off.
+            A number each, so everyone gets called when their food lands.
           </p>
 
           {mode === "split" && (
             <p className="text-xs text-muted">
-              A phone number each means everyone gets their own payment link and
-              their own narration. Leave one blank and that share sits
-              under your number instead.
+              A blank number means that share goes on yours.
             </p>
           )}
 
           <p className="border-t border-black/5 pt-3 text-sm text-muted">
             {collect === "leader"
-              ? "Every bag comes to your block, and you hand the rest out."
-              : "Each bag goes to the block under its own name. Yours comes to you."}
+              ? "All bags come to you."
+              : "Each bag goes to its own block."}
           </p>
 
           <fieldset className="space-y-2 border-t border-black/5 pt-3">
@@ -2652,9 +2635,7 @@ export default function Checkout({
               Is somebody abroad paying for this?
             </p>
             <p className="mt-0.5 text-xs text-muted">
-              We send you a card link in their money, and you pass it on to
-              them. The order is still {naira(total)}; the amount on the link
-              is worked out at our rate, so it is close rather than exact.
+              You get a card link in their money to pass on. About {naira(total)}.
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <button
@@ -2859,16 +2840,13 @@ export default function Checkout({
             <p className="mt-2 text-muted">
               {marketHalf.length > 0 && (
                 <>
-                  Two errands on one trip. The market shopping is priced by what
-                  it comes to, because a trip to the market is one trip whether
-                  it is two bags or five. The kitchens are priced by how much
-                  room the food takes in the car.{" "}
+                  Market shopping by what it comes to, kitchens by room in the car.{" "}
                 </>
               )}
               {marketHalf.length === 0 &&
                 "Priced by how much room the food takes in the car. "}
               {ridesAlongAdds > 0 &&
-                "The ice cream is small and we pass it on the way, so it adds a little rather than a trip of its own. "}
+                "The ice cream rides along, so it adds a little. "}
               One fee either way, however many places are in it.
             </p>
           </details>
@@ -2985,17 +2963,14 @@ export default function Checkout({
             if (!picked || picked.rate <= 0) return null;
             return (
               <p className="text-xs text-muted">
-                The card link will be for about {picked.symbol}
-                {(Math.ceil((total / picked.rate) * 10) / 10).toFixed(2)}, which
-                is this same {naira(total)} at our rate.
+                Card link: about {picked.symbol}
+                {(Math.ceil((total / picked.rate) * 10) / 10).toFixed(2)}.
               </p>
             );
           })()}
         {shared && (
           <p className="text-xs text-muted">
-            One delivery fee for the whole car, split evenly between everybody in
-            it. The more of you there are, the less each of you pays, so nobody
-            can be told their share until the last person is done.
+            One delivery fee, split evenly. The more of you, the less each pays.
           </p>
         )}
         {/* A code is a thing somebody was given in a group chat, so it is
@@ -3032,9 +3007,9 @@ export default function Checkout({
               {/* Name the thing that is actually missing. "Say where it goes"
                   is unhelpful when what is wrong is a mistyped number. */}
               {unresolved[0].goesTo !== "theirs"
-                ? `Say where ${unresolved[0].name}'s food goes: to your block with yours, or to them with their own number.`
+                ? `Where does ${unresolved[0].name}'s food go?`
                 : !normalisePhone(unresolved[0].phone)
-                  ? `${unresolved[0].name}'s number does not look right. It goes to them, so it has to be one that works.`
+                  ? `${unresolved[0].name}'s number does not look right.`
                   : `Pick the block ${unresolved[0].name}'s food goes to.`}
             </p>
           )}
@@ -3042,13 +3017,12 @@ export default function Checkout({
             <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
               {/* The way out is named, because "no run" on its own leaves
                   somebody holding a cart with nothing to do about it. */}
-              No delivery is going to {farNames} just now, and we cannot
-              get there and back in time for a faster one.{" "}
+              Nothing is going to {farNames} just now.{" "}
               {farLines.length < cart.length && withoutFar
-                ? `Take ${farLines.length === 1 ? "that one" : "those"} out and the rest can come ${withoutFar.said}.`
+                ? `Without ${farLines.length === 1 ? "it" : "them"}: ${withoutFar.said}.`
                 : farLines.length < cart.length
-                  ? `Take ${farLines.length === 1 ? "that one" : "those"} out and the rest can still come.`
-                  : "Check back when the next one is up, or message us."}
+                  ? `Take ${farLines.length === 1 ? "it" : "them"} out to go ahead.`
+                  : "Check back soon."}
             </p>
           )}
           {/* Nothing coming up stops there and no car can go either. Said
@@ -3056,9 +3030,7 @@ export default function Checkout({
               finds out they cannot buy what is in the basket. */}
           {wrongCounter.length > 0 && openable.length === 0 && sameDaySlots.length === 0 && (
             <p className="rounded-xl bg-brand-tint px-3 py-2 text-sm font-semibold text-brand-dark">
-              No run coming up is stopping at {counterSaid}, and a car of its
-              own cannot go just now. Check back when the next run is up, or
-              take those things out of the cart.
+              Nothing is going to {counterSaid} just now. Take it out to go ahead.
             </p>
           )}
           {state.error && (
