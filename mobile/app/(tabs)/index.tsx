@@ -27,6 +27,7 @@ import CutOff from "@/components/CutOff";
 import OfferNudge from "@/components/OfferNudge";
 import Thumb from "@/components/Thumb";
 import AskUs from "@/components/AskUs";
+import StartHere from "@/components/StartHere";
 import { Ionicons } from "@expo/vector-icons";
 import { F, T } from "@/lib/theme";
 import { tileAt } from "@/lib/tiles";
@@ -281,6 +282,10 @@ export default function Home() {
           <RefreshControl refreshing={pulling} onRefresh={() => load(true)} tintColor={T.brand} />
         }
       >
+        {/* The picker's front door, first on the page. Hidden while a search
+            is showing results, so the results are not pushed down. */}
+        {found === null && <StartHere />}
+
         {/* First, and above every banner.
 
             It sat under the ribbon, the last order and the order card, so on

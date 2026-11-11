@@ -20,6 +20,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     const body = (await request.json()) as {
       batchId?: string;
       deliverAt?: string | null;
+      /** The day the food would arrive, so an offer written for another day
+       *  is not quoted or mentioned. Older apps leave it out. */
+      onDay?: string;
       phone?: string;
       lines?: CartItem[];
     };
@@ -36,6 +39,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       items: lines.length,
       batchId: String(body.batchId ?? ""),
       deliverAt: body.deliverAt ?? null,
+      onDay: body.onDay ? String(body.onDay) : undefined,
       returning,
     };
 
@@ -46,6 +50,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       : nearMiss(offers, lines, {
           batchId: context.batchId,
           deliverAt: context.deliverAt,
+          onDay: context.onDay,
           returning,
         });
 

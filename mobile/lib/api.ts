@@ -1828,3 +1828,84 @@ export function otherWorthSaying<T extends Arriving>(
   if (run === null || car === null) return other;
   return run - car >= 2 ? other : null;
 }
+
+/* The front tiles and the step-by-step picker. */
+
+export type HomeTileView = { label: string; from: number; image: string };
+
+export type HomeView = {
+  tiles: HomeTileView[];
+  more: HomeTileView[];
+  /** The short pill, like "Today 5-7pm". Empty when nothing is going. */
+  arriving: string;
+  /** A wa.me link, or empty when the shop has no number. */
+  whatsapp: string;
+};
+
+export type BuilderDish = {
+  id: string;
+  href: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+  containerPct: number;
+  orderedCount: number;
+  varies: boolean;
+  featured: boolean;
+};
+
+export type BuilderShop = {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string;
+  brandHex: string;
+  delivery?: { said: string; today: boolean };
+  from: number;
+  count: number;
+  items: BuilderDish[];
+};
+
+export type ShopDay = { said: string; today: boolean };
+
+async function plain<T>(path: string): Promise<T> {
+  const response = await reach(`${BASE}${path}`);
+  const said = await body<T>(response);
+  if (!response.ok) throw new Error(said.error ?? "Something went wrong.");
+  return said;
+}
+
+export const pickApi = {
+  home: () => get<HomeView>("/home"),
+  /** The shops and dishes behind a tile, aisle, word or category. */
+  builder: async (
+    ask: {
+      tile?: string;
+      aisle?: string;
+      q?: string;
+      category?: string;
+      all?: boolean;
+      upsell?: string;
+    } = {}
+  ): Promise<BuilderShop[]> => {
+    const asked = new URLSearchParams();
+    if (ask.upsell) asked.set("upsell", ask.upsell);
+    else if (ask.all) asked.set("all", "1");
+    else {
+      if (ask.tile) asked.set("tile", ask.tile);
+      if (ask.aisle) asked.set("aisle", ask.aisle);
+      if (ask.q) asked.set("q", ask.q);
+      if (ask.category) asked.set("category", ask.category);
+    }
+    return (await plain<{ shops?: BuilderShop[] }>(`/api/builder?${asked.toString()}`)).shops ?? [];
+  },
+  /** One dish's sizes, flavours and extras. */
+  choices: async (itemId: string): Promise<Item["groups"]> =>
+    (await plain<{ groups?: Item["groups"] }>(`/api/item/${encodeURIComponent(itemId)}/choices`))
+      .groups ?? [],
+  /** When each counter next delivers, by counter id. */
+  shopDays: async (ids: string[]): Promise<Record<string, ShopDay>> =>
+    (await plain<{ days?: Record<string, ShopDay> }>(`/api/shop-days?ids=${ids.map(encodeURIComponent).join(",")}`))
+      .days ?? {},
+};

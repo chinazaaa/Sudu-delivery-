@@ -3,8 +3,10 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  api,
+  areasIn,
   bandIndex,
+  canGoSameDay,
+  carGoesOn,
   feeAcross,
   feeRidingAlong,
   feeFor,
@@ -13,10 +15,15 @@ import {
   nextArrival,
   pricesByStep,
   pricesByValue,
+  runCarries,
+  runCovers,
   stepsFor,
   sameDayFeeFor,
   valueLadderFor,
+  type Slot,
 } from "@/lib/api";
+import { carDaysFor, dayWord, nextOpenDay, openDaysOf, opensOn, weekdayName } from "@/lib/one-driver";
+import { offerOnDay } from "@/lib/offer-on";
 import { cart, cartTotal, countItems, party, people, useStored, type Line } from "@/lib/store";
 import { useShop } from "@/lib/use-shop";
 import { useIceInCart } from "@/lib/ice";
@@ -44,7 +51,55 @@ export default function Cart() {
 
   const items = countItems(lines);
   const food = cartTotal(lines);
-  const run = shop?.runs[0] ?? null;
+
+  /** The menu a line came off, found by the dish rather than by the name of
+   *  the restaurant, so renaming one in admin does not break the link. */
+  const kitchenOf = (line: { itemId: string }) =>
+    shop?.menu.find((one) => one.items.some((item) => item.id === line.itemId))
+      ?.restaurant.id ?? "";
+  const kitchensIn = [...new Set(lines.map((line) => kitchenOf(line)))].filter(Boolean);
+  const cartAreas = areasIn(shop, kitchensIn);
+  const openOf = openDaysOf(shop);
+  const today = lagosToday();
+
+  /*
+   * Only what could really carry this cart: a run that reaches where the food
+   * is, stops at these counters and goes on a day everything is open. A car
+   * of its own is hidden only by a run that could take this food.
+   */
+  const usableRuns = (shop?.runs ?? []).filter(
+    (one) =>
+      !one.closed &&
+      !one.full &&
+      runCovers(one, cartAreas) &&
+      runCarries(one, kitchensIn) &&
+      kitchensIn.every((id) => opensOn(openOf[id], one.runDate ?? ""))
+  );
+  const carrying = usableRuns.map((one) => ({
+    runDate: one.runDate ?? "",
+    window: one.deliveryWindow,
+  }));
+  const carDays: Slot[] =
+    shop && canGoSameDay(cartAreas)
+      ? carDaysFor(shop.sameDay?.slots ?? [], carrying, kitchensIn, shop).filter((one) =>
+          carGoesOn(cartAreas, one.date ?? "")
+        )
+      : [];
+
+  // A shared delivery wins over a car of its own wherever one is coming,
+  // even when the car is sooner: it is thousands cheaper.
+  const sharedSoon =
+    [...usableRuns].sort((a, b) => (a.runDate ?? "").localeCompare(b.runDate ?? ""))[0] ?? null;
+  const decided = shop
+    ? sharedSoon
+      ? nextArrival([sharedSoon], [], today)
+      : nextArrival(usableRuns, carDays, today)
+    : null;
+  const run = decided?.onARun ? (usableRuns.find((one) => one.id === decided.runId) ?? null) : null;
+  const soon =
+    decided && !decided.onARun ? (carDays.find((one) => one.at === decided.at) ?? null) : null;
+  // The day this cart is quoted for.
+  const goingOn = run?.runDate || soon?.date || today;
 
   /** One block per person, in the order the names were added, exactly as the
    *  website stacks them: everything of mine, then everything of Bola's. */
@@ -76,14 +131,15 @@ export default function Cart() {
   } | null>(null);
 
   useEffect(() => {
-    if (lines.length === 0 || !run) {
+    if (lines.length === 0 || (!run && !soon)) {
       setPriced(null);
       return;
     }
     let alive = true;
-    void api
-      .offerOn({
-        batchId: run.id,
+    void offerOnDay({
+        batchId: run?.id ?? "",
+        deliverAt: soon?.at ?? null,
+        onDay: goingOn,
         lines: lines.map((line) => ({
           itemId: line.itemId,
           restaurantId: placeOf(line)?.restaurant.id ?? "",
@@ -101,7 +157,7 @@ export default function Cart() {
     return () => {
       alive = false;
     };
-  }, [lines, run?.id, shop]);
+  }, [lines, run?.id, soon?.at, goingOn, shop]);
 
   const offered = priced?.offer ?? null;
 
@@ -145,26 +201,6 @@ export default function Cart() {
   // Only where the ladder is what they would pay. Under an offer this number
   // is not what ordering alone costs, and the whole point of the line is that
   // the two figures are real.
-  // Which kitchens this cart touches, found the same way the checkout finds
-  // them: a line carries the counter's name, not its id.
-  const kitchenOf = (line: { itemId: string }) =>
-    shop?.menu.find((one) => one.items.some((item) => item.id === line.itemId))
-      ?.restaurant.id ?? "";
-  const kitchensIn = [
-    ...new Set(lines.map((line) => kitchenOf(line))),
-  ].filter(Boolean);
-  const decided = shop
-    ? nextArrival(
-        shop.runs.filter((one) => !one.closed && !one.full),
-        shop.sameDay?.slots ?? [],
-        lagosToday()
-      )
-    : null;
-  const soon =
-    decided && !decided.onARun
-      ? (shop?.sameDay?.slots ?? []).find((one) => one.at === decided.at) ?? null
-      : null;
-
   // What this cart costs to bring, worked out once.
   //
   // It used to be worked out twice: the summary at the bottom took the
@@ -194,13 +230,14 @@ export default function Cart() {
   const driving = ridingHalf.length === 0 ? items : countItems(drivingHalf);
   const ridesAlong = (otherFee: number) =>
     feeRidingAlong({ stepCount: ridingCount, steps, otherFee });
-  const carFee =
+  /** What this cart costs on one way of going: a car at a time, or a run. */
+  const quote = (slot: Slot | null, flash: number | null) =>
     shop && items > 0
-      ? soon && (shop.sameDay?.bands?.length ?? 0) > 0
+      ? slot && (shop.sameDay?.bands?.length ?? 0) > 0
         ? ridesAlong(
             sameDayFeeFor(
               driving,
-              soon.urgent,
+              slot.urgent,
               shop.sameDay!.bands,
               shop.sameDay!.urgentExtra ?? 0
             )
@@ -220,12 +257,24 @@ export default function Cart() {
                 const rest = lines.filter((line) => !pricesByValue(shop, kitchenOf(line)));
                 return rest.length === 0
                   ? 0
-                  : feeFor(countItems(rest), shop.bands, run?.flashFee ?? null);
+                  : feeFor(countItems(rest), shop.bands, flash);
               })(),
               bands: byValue,
             })
-          : ridesAlong(feeFor(driving, shop.bands, run?.flashFee ?? null))
+          : ridesAlong(feeFor(driving, shop.bands, flash))
       : 0;
+  const carFee = quote(soon, run?.flashFee ?? null);
+
+  // The soonest shared day and the soonest car day, each at its own price.
+  const carSoon = [...carDays].sort((a, b) => a.at.localeCompare(b.at))[0] ?? null;
+  const sharedDay = sharedSoon?.runDate ?? "";
+  const carFirst = carSoon !== null && sharedSoon !== null && (carSoon.date ?? "") < sharedDay;
+  const dayLine =
+    carFirst && carSoon && sharedSoon
+      ? `${naira(quote(null, sharedSoon.flashFee))} shared ${dayWord(sharedDay, today)}, or ${naira(
+          quote(carSoon, null)
+        )} to get it ${dayWord(carSoon.date ?? "", today)}.`
+      : "";
 
   // An offer prices delivery outright, so there is no ladder left to beat
   // and nothing for the group card to compare against.
@@ -236,6 +285,46 @@ export default function Cart() {
   // something else beside it looks like the offer simply not working, so it
   // says which is which and leaves the choice to them.
   const nearly = priced?.nearly ?? null;
+
+  /*
+   * Food from a place a car of its own cannot reach, said as a day. Said here,
+   * while the thing is still on screen with a button beside it.
+   */
+  const runOnlyLines = lines.filter((line) => {
+    const id = kitchenOf(line);
+    const area = (shop?.areas ?? []).find((one) => one.id === (shop?.areaOf?.[id] ?? ""));
+    return area !== undefined && !area.sameDay;
+  });
+  const listed = (words: string[]) =>
+    words.length <= 1
+      ? (words[0] ?? "")
+      : `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
+  const runOnlySaid = listed([...new Set(runOnlyLines.map((line) => line.restaurant))]);
+  const goingWord = decided ? dayWord(goingOn, today) : "";
+
+  // Something shut on the day this cart is quoted for.
+  const shutLines = lines.filter(
+    (line) => line.itemId !== iceId && !opensOn(openOf[kitchenOf(line)], goingOn)
+  );
+  const shutNames = [...new Set(shutLines.map((line) => line.restaurant))];
+  const shutAgain =
+    shutLines.length > 0 ? nextOpenDay(openOf[kitchenOf(shutLines[0])], goingOn) : "";
+
+  /** Each choice with what it added: "Big Pack (+₦500)". */
+  const choicesSaid = (line: Line): string[] => {
+    const item = shop?.menu
+      .flatMap((one) => one.items)
+      .find((one) => one.id === line.itemId);
+    const chosen = (item?.groups ?? [])
+      .flatMap((group) => group.options)
+      .filter((option) => line.optionIds.includes(option.id));
+    if (chosen.length !== line.choices.length) return line.choices;
+    return line.choices.map((name, at) =>
+      chosen[at].name === name && chosen[at].priceDelta > 0
+        ? `${name} (+${naira(chosen[at].priceDelta)})`
+        : name
+    );
+  };
 
   // The meter at the top: how full the car is, and how much more fits before
   // the fee goes up a rung. It only tells the truth where the fee is the
@@ -318,26 +407,84 @@ export default function Cart() {
               borderRadius: T.radius,
               borderWidth: 2,
               borderColor: T.ink,
-              padding: 14,
-              gap: 4,
+              paddingVertical: 10,
+              paddingHorizontal: 14,
             }}
           >
-            <Text style={{ fontFamily: F.bodyBold, color: T.brandDark, fontSize: 15 }}>
-              {nearly.fee === 0
-                ? "Delivery would be free"
-                : `Delivery would be ${naira(nearly.fee)}`}
-            </Text>
             <Text style={{ fontFamily: F.body, color: T.ink, fontSize: 14, lineHeight: 20 }}>
-              {nearly.note || "An offer"} is on for part of this cart.{" "}
-              {nearly.blocking.length <= 2
-                ? `${nearly.blocking.join(" and ")} ${
-                    nearly.blocking.length === 1 ? "is" : "are"
-                  } not in it, so it does not apply.`
-                : nearly.qualifying.length <= 2
-                  ? `Only the ${nearly.qualifying.join(" and ")} ${
-                      nearly.qualifying.length === 1 ? "is" : "are"
-                    } in it, so everything else would have to come out.`
-                  : `Only ${nearly.qualifying.length} of your items are in it, and the other ${nearly.blocking.length} would have to come out.`}
+              <Text style={{ fontFamily: F.bodyBold, color: T.brandDark }}>
+                {nearly.fee === 0 ? "Free delivery" : `${naira(nearly.fee)} delivery`}
+              </Text>{" "}
+              only applies to{" "}
+              {nearly.qualifying.length <= 2
+                ? nearly.qualifying.join(" and ")
+                : `${nearly.qualifying.length} of your items`}
+              .
+            </Text>
+          </View>
+        )}
+
+        {runOnlyLines.length > 0 && goingWord !== "today" && (
+          <View
+            style={{
+              backgroundColor: T.tint,
+              borderRadius: T.radius,
+              borderWidth: 2,
+              borderColor: T.ink,
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+              gap: 6,
+            }}
+          >
+            {runOnlyLines.length < lines.length ? (
+              <>
+                <Text style={{ fontFamily: F.bodyBold, color: T.brandDark, fontSize: 14, lineHeight: 20 }}>
+                  {runOnlySaid} only comes {goingWord || "on a later day"}. The rest could come
+                  sooner.
+                </Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}>
+                  <Pressable
+                    onPress={() => runOnlyLines.forEach((line) => void cart.setQty(line.key, 0))}
+                    accessibilityRole="button"
+                  >
+                    <Text style={noticeLink}>Take out {runOnlySaid}</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      runOnlyLines.forEach((line) => void cart.setQty(line.key, 0));
+                      router.push("/pick?everyone=1&label=Everything" as never);
+                    }}
+                    accessibilityRole="button"
+                  >
+                    <Text style={noticeLink}>Switch to another restaurant</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <Text style={{ fontFamily: F.bodyBold, color: T.brandDark, fontSize: 14, lineHeight: 20 }}>
+                {goingWord !== ""
+                  ? `${runOnlySaid} comes ${goingWord}.`
+                  : `We have no day for ${runOnlySaid} yet.`}
+              </Text>
+            )}
+          </View>
+        )}
+
+        {shutLines.length > 0 && (
+          <View
+            style={{
+              backgroundColor: T.tint,
+              borderRadius: T.radius,
+              borderWidth: 2,
+              borderColor: T.ink,
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+            }}
+          >
+            <Text style={{ fontFamily: F.bodyBold, color: T.brandDark, fontSize: 14, lineHeight: 20 }}>
+              {listed(shutNames)} {shutNames.length === 1 ? "is" : "are"} closed on{" "}
+              {weekdayName(goingOn)}s
+              {shutAgain !== "" && shutAgain !== goingOn ? `, back ${weekdayName(shutAgain)}` : ""}.
             </Text>
           </View>
         )}
@@ -429,7 +576,7 @@ export default function Cart() {
                       </Text>
                       {line.choices.length > 0 && (
                         <Text style={{ fontFamily: F.body, fontSize: 12, color: T.muted }}>
-                          {line.choices.join(", ")}
+                          {choicesSaid(line).join(", ")}
                         </Text>
                       )}
                     </Pressable>
@@ -564,6 +711,12 @@ export default function Cart() {
           </View>
         </Card>
 
+        {dayLine !== "" && (
+          <Text style={{ fontFamily: F.body, fontSize: 14, color: T.muted, lineHeight: 20 }}>
+            {dayLine}
+          </Text>
+        )}
+
         {/* Groups live on the website: the link somebody is sent is a web
             address, and everybody in a car has to see the same page. Rather
             than pretend the app can do it, this hands over to the thing that
@@ -608,8 +761,8 @@ export default function Cart() {
           </View>
           <Text style={{ fontFamily: F.body, fontSize: 14, color: T.muted, lineHeight: 20 }}>
             {friends.length > 0
-              ? "Tap a name under each item to say whose it is. Bags are labelled with these names."
-              : "Add their names, then tap a name under each item. The delivery fee does not change."}
+              ? "Tap a name under each item to say whose it is."
+              : "Add their names, then tap one under each item."}
           </Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
@@ -695,6 +848,13 @@ export default function Cart() {
     </View>
   );
 }
+
+const noticeLink = {
+  fontFamily: F.bodySemi,
+  fontSize: 14,
+  color: T.brandDark,
+  textDecorationLine: "underline" as const,
+};
 
 function Row({ label, value }: { label: string; value: string }) {
   return (

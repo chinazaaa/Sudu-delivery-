@@ -118,6 +118,8 @@ export default function Layout() {
         {/* Pushed over the tabs: each of these is somewhere you came from
             somewhere, and leaving is going back rather than sideways. */}
         <Stack.Screen name="r/[id]" options={{ title: "" }} />
+        {/* The step-by-step picker: it draws its own header and steps. */}
+        <Stack.Screen name="pick" options={{ headerShown: false, title: "" }} />
         <Stack.Screen name="checkout" options={{ title: "Checkout" }} />
         <Stack.Screen name="finalise" options={{ title: "Put my food in" }} />
         <Stack.Screen name="order/[id]" options={{ title: "Your order" }} />

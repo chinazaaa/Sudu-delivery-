@@ -7,6 +7,8 @@ import { HOME, type Place } from "@/lib/api";
 import { useShop } from "@/lib/use-shop";
 import { tileAt } from "@/lib/tiles";
 import { Display, Ticket } from "@/components/ui";
+import DeliveryPill from "@/components/DeliveryPill";
+import { useShopDays } from "@/lib/shop-days";
 import { F, T } from "@/lib/theme";
 
 /**
@@ -26,6 +28,7 @@ export default function Kitchens() {
 
   // Its own memo, so the two below do not see a fresh array every render.
   const menu = useMemo(() => shop?.menu ?? [], [shop]);
+  const days = useShopDays(useMemo(() => menu.map((one) => one.restaurant.id), [menu]));
 
   /**
    * The areas the kitchens actually sit in, in the order the shop lists
@@ -164,6 +167,7 @@ export default function Kitchens() {
                       place.items.length === 1 ? "" : "s"
                     }`}
                   </Ticket>
+                  <DeliveryPill day={days[place.restaurant.id]} />
                 </Pressable>
               </Link>
             );

@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useIceInCart } from "@/lib/ice";
+import { carDaysFor, nextOpenDay, openDaysOf, opensOn, weekdayName } from "@/lib/one-driver";
+import { offerOnDay } from "@/lib/offer-on";
 import {
   ActivityIndicator,
   Linking,
@@ -224,22 +226,67 @@ export default function Checkout() {
   const plainRunBands = withExtra(shop?.bands ?? [], farExtra);
   const sameDayBands = withExtra(shop?.sameDay?.bands ?? [], area.sameDayExtra + secondStop);
 
-  const runsHere = (shop?.runs ?? []).filter(
+  const openOf = openDaysOf(shop);
+  const openOnRun = (one: { runDate?: string }) =>
+    kitchens.every((id) => opensOn(openOf[id], one.runDate ?? ""));
+  const reachable = (shop?.runs ?? []).filter(
     (one) => !one.closed && !one.full && runCovers(one, cartAreas) && runCarries(one, kitchens)
   );
+  const runsHere = reachable.filter(openOnRun);
+  // Runs that fit the cart but go on a day a counter in it is shut.
+  const shutRuns = reachable.filter((one) => !openOnRun(one));
+  const shutSoonest =
+    [...shutRuns].sort((a, b) => (a.runDate ?? "").localeCompare(b.runDate ?? ""))[0] ?? null;
+  const shutThere = shutSoonest
+    ? [
+        ...new Set(
+          lines
+            .filter((line) => !opensOn(openOf[kitchenOf(line)], shutSoonest.runDate ?? ""))
+            .map((line) => line.restaurant)
+        ),
+      ]
+    : [];
+  const stillFine = shutSoonest
+    ? lines.some((line) => opensOn(openOf[kitchenOf(line)], shutSoonest.runDate ?? ""))
+    : false;
+  const openAgain = (() => {
+    if (!shutSoonest) return "";
+    const first = lines.find(
+      (line) => !opensOn(openOf[kitchenOf(line)], shutSoonest.runDate ?? "")
+    );
+    if (!first) return "";
+    const date = nextOpenDay(openOf[kitchenOf(first)], shutSoonest.runDate ?? "");
+    return date === lagosToday() ? "today" : weekdayName(date);
+  })();
   // One thing from a far area makes the whole order a run: a car cannot be
   // in two places in three hours.
+  // A run hides a car only if that run could carry THIS cart, and a car is
+  // never offered on a day a counter in the cart is shut.
   const slots = canGoSameDay(cartAreas)
-    ? (shop?.sameDay?.slots ?? []).filter((one) =>
+    ? carDaysFor(
+        shop?.sameDay?.slots ?? [],
+        runsHere.map((one) => ({ runDate: one.runDate ?? "", window: one.deliveryWindow })),
+        kitchens,
+        shop
+      ).filter((one) =>
         // Ajah takes a car on the day the shop is already going that way and
-        // on no other. The day picker offers a fortnight, so without this
-        // somebody could buy a Monday car to Ajah nobody was going to drive.
+        // on no other.
         carGoesOn(cartAreas, one.date ?? "")
       )
     : [];
 
   const far = cartAreas.filter((one) => one.id !== "");
   const farNames = far.map((one) => one.name).join(" and ");
+  const saidList = (names: string[]) =>
+    names.length <= 1
+      ? (names[0] ?? "")
+      : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  // The counters holding the cart up, by their own names: nobody thinks of
+  // themselves as ordering from Ajah, they ordered from The Place.
+  const farLines = lines.filter((line) =>
+    far.some((one) => one.id === (shop?.areaOf?.[kitchenOf(line)] ?? ""))
+  );
+  const farShopSaid = saidList([...new Set(farLines.map((line) => line.restaurant))]);
   const noRunThere = far.length > 0 && runsHere.length === 0;
 
   // Runs that are open, going the right way, and stopping at counters this
@@ -314,6 +361,30 @@ export default function Checkout() {
     slots,
   });
   const chosenDate = picked?.date ?? run?.runDate ?? "";
+
+  /*
+   * The chosen day's chip, scrolled into view in the row.
+   *
+   * Landing with Friday chosen and Today and Tomorrow filling the screen
+   * makes somebody swipe to find the one that is on. Done once per choice,
+   * so it never fights a thumb scrolling the row itself.
+   */
+  const dayRow = useRef<ScrollView>(null);
+  const rowWidth = useRef(0);
+  const chipAt = useRef<Record<string, { x: number; w: number }>>({});
+  const focused = useRef("");
+  const focusDay = (date: string) => {
+    const chip = chipAt.current[date];
+    if (!chip || rowWidth.current === 0 || date === "" || focused.current === date) return;
+    focused.current = date;
+    dayRow.current?.scrollTo({
+      x: Math.max(0, chip.x - (rowWidth.current - chip.w) / 2),
+      animated: false,
+    });
+  };
+  useEffect(() => {
+    focusDay(chosenDate);
+  }, [chosenDate]);
   const goToDay = (day: DayOnOffer) => {
     setRunId(day.runId);
     setDeliverAt(day.at);
@@ -439,10 +510,10 @@ export default function Checkout() {
       return;
     }
     let alive = true;
-    void api
-      .offerOn({
+    void offerOnDay({
         batchId: run?.id ?? "",
         deliverAt: picked?.at ?? null,
+        onDay: picked?.date ?? run?.runDate ?? lagosToday(),
         phone,
         lines: lines.map((line) => {
           const place = shop?.menu.find((one) =>
@@ -591,15 +662,27 @@ export default function Checkout() {
          */}
         {dayChoices.length > 0 && (
           <ScrollView
+            ref={dayRow}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+            onLayout={(event) => {
+              rowWidth.current = event.nativeEvent.layout.width;
+              focusDay(chosenDate);
+            }}
           >
             {dayChoices.map((day) => {
               const on = day.date === chosenDate;
               return (
                 <Pressable
                   key={day.date}
+                  onLayout={(event) => {
+                    chipAt.current[day.date] = {
+                      x: event.nativeEvent.layout.x,
+                      w: event.nativeEvent.layout.width,
+                    };
+                    if (on) focusDay(day.date);
+                  }}
                   onPress={() => goToDay(day)}
                   style={{
                     minHeight: 44,
@@ -626,33 +709,39 @@ export default function Checkout() {
           </ScrollView>
         )}
 
-        {/* One line, because three paragraphs about Lekki is three
-            paragraphs nobody reads. Why it waits for a run, and the way out
-            where waiting is the wrong trade. */}
-        {far.length > 0 && !noRunThere && (
+        {far.length > 0 && !noRunThere && farLines.length < lines.length && farSooner !== "" && (
           <Text style={{ color: T.onInk, fontFamily: F.body, fontSize: 14, lineHeight: 20 }}>
             <Text style={{ fontFamily: F.bodyBold, color: T.volt }}>
-              {farNames} goes out on a run only.
-            </Text>
-            {farSooner !== ""
-              ? ` Take ${far.length === 1 ? "it" : "those"} out and the rest can come ${farSooner}.`
-              : " Everything here travels together, so there is one delivery fee."}
+              {farShopSaid} sets this date.
+            </Text>{" "}
+            Without {farLines.length === 1 ? "it" : "them"}: {farSooner}.
           </Text>
         )}
 
-        {/* A run kept to one counter, said before somebody wonders where the
-            usual runs went. The line above already names when this cart can
-            come; this says why it is not sooner. */}
+        {shutSoonest !== null && shutThere.length > 0 && (
+          <Text style={{ color: T.onInk, fontFamily: F.body, fontSize: 14, lineHeight: 20 }}>
+            <Text style={{ fontFamily: F.bodyBold, color: T.volt }}>
+              {saidList(shutThere)} {shutThere.length === 1 ? "is" : "are"} closed on{" "}
+              {weekdayName(shutSoonest.runDate ?? "")}s
+            </Text>
+            {stillFine
+              ? `. Without ${shutThere.length === 1 ? "it" : "them"}: ${shutSoonest.label}.`
+              : runsHere.length > 0
+                ? `. Next: ${runsHere[0].label}.`
+                : `, back ${openAgain}.`}
+          </Text>
+        )}
+
         {wrongCounter.length > 0 && (
           <Text style={{ color: T.onInk, fontFamily: F.body, fontSize: 14, lineHeight: 20 }}>
             <Text style={{ fontFamily: F.bodyBold, color: T.volt }}>
-              Not every run stops at {counterSaid}.
+              {counterSaid} is not on every delivery.
             </Text>
             {runsHere.length > 0
-              ? ` The next one that does is ${runsHere[0].label}.`
+              ? ` Next: ${runsHere[0].label}.`
               : slots.length > 0
-                ? " None of the runs coming up are, so this goes as a car of its own, at the time you pick below."
-                : " None of the runs coming up are."}
+                ? " Pick a time below."
+                : ""}
           </Text>
         )}
 
@@ -741,9 +830,12 @@ export default function Checkout() {
 
         {noRunThere && (
           <Text style={{ color: T.volt, fontFamily: F.bodySemi, fontSize: 14, lineHeight: 20 }}>
-            No run is going to {farNames} just now, and a car of its own
-            cannot get there and back in time. Take {far.length === 1 ? "it" : "those"}{" "}
-            out and the rest can come {farSooner || "on the next one"}.
+            Nothing is going to {farShopSaid} just now.
+            {farLines.length < lines.length
+              ? farSooner !== ""
+                ? ` Without ${farLines.length === 1 ? "it" : "them"}: ${farSooner}.`
+                : ` Take ${farLines.length === 1 ? "it" : "them"} out to go ahead.`
+              : " Check back soon."}
           </Text>
         )}
 

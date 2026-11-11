@@ -13,13 +13,14 @@ import {
 } from "@/lib/settings";
 import { dealsAt, offerNudge, offersByRestaurant, type Nudge } from "@/lib/coupons";
 import { offerBadge, offerLine } from "@/lib/offers";
-import { deliverySlots, slotsWorthOffering } from "@/lib/same-day";
+import { deliverySlots } from "@/lib/same-day";
 import { serialiseBands } from "@/lib/fees";
 import { toBatchView } from "@/lib/view";
 import {
   allAreas,
   allAreaPairs,
   areaOfEach,
+  openDaysOfEach,
   stepFeeOfEach,
   valueBandsOfEach,
 } from "@/lib/areas-server";
@@ -129,6 +130,7 @@ export async function GET(): Promise<NextResponse> {
       promoters,
       nudge,
       iceFor,
+      openDaysOf,
     ] = await Promise.all([
       // The strip, checked against what it points at, so a banner for a
       // match that has been played takes itself down on the phone the same
@@ -148,27 +150,21 @@ export async function GET(): Promise<NextResponse> {
       namedPromoters(),
       appNudge(),
       iceForCart(),
+      openDaysOfEach().catch(() => ({} as Record<string, string>)),
     ]);
 
     const slots =
       // The app offers exactly what the site offers, this rule included.
       settings.same_day_on === "on"
         ? await carsOnOffer(
-            slotsWorthOffering(
-              // As far ahead as the shop is open, the same as the website.
-              // The app lets somebody pick a day now, and a day with no run
-              // on it is a car of its own: two days of windows meant that
-              // past tomorrow there was nothing to offer at all.
-              deliverySlots(
-                new Date(),
-                dayHours,
-                settings.order_horizon_days || 7
-              ),
-              batches.map((one) => ({
-                run_date: one.run_date,
-                window: one.delivery_window_text,
-              }))
-            )
+            /*
+             * Not thinned out by the runs here: whether a run makes a car
+             * pointless depends on where the cart is going, so the app
+             * asks that once it knows what is in the cart.
+             *
+             * As far ahead as the shop is open, the same as the website.
+             */
+            deliverySlots(new Date(), dayHours, settings.order_horizon_days || 7)
           )
         : [];
 
@@ -240,6 +236,9 @@ export async function GET(): Promise<NextResponse> {
       areas,
       areaOf,
       areaPairs,
+      // The weekdays a kitchen is open, for the ones that are not open every
+      // day. Empty means every kitchen is open every day.
+      openDaysOf,
       // The kitchens that charge by what the shopping comes to rather than
       // by how many things it is. Without this the app prices a market
       // basket off the container ladder and quotes a number nobody is
