@@ -7,7 +7,7 @@ import { opensOn } from "./open-days";
 import { hoursByDay, safeSettings } from "./settings";
 import { deliverySlots, slotsWorthOffering } from "./same-day";
 import { dayAfter } from "./pick-a-day";
-import { lagosToday, runDateLabel } from "./time";
+import { lagosToday } from "./time";
 import { toBatchView } from "./view";
 
 /** When a counter's food next arrives, as a pill: said, and whether it is today. */
@@ -70,18 +70,13 @@ export async function deliveryFor(ids: string[]): Promise<Record<string, ShopDel
     } else if (date === today) {
       out[id] = { said: "Delivers today", today: true };
     } else if (date === dayAfter(today)) {
-      out[id] = {
-        said: `Not today · tomorrow${carDate === date && date !== runDate ? " by car" : ""}`,
-        today: false,
-      };
+      out[id] = { said: "Next delivery tomorrow", today: false };
     } else {
-      // A day only a car of its own can do is said so, because the shared
-      // delivery is later and cheaper and the two are not the same offer.
-      const byCar = carDate !== "" && carDate === date && date !== runDate;
-      out[id] = {
-        said: `Not today · ${runDateLabel(date)}${byCar ? " by car" : ""}`,
-        today: false,
-      };
+      const weekday = new Date(`${date}T12:00:00Z`).toLocaleDateString("en-GB", {
+        weekday: "long",
+        timeZone: "UTC",
+      });
+      out[id] = { said: `Next delivery ${weekday}`, today: false };
     }
   }
   return out;
