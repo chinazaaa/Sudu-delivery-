@@ -48,6 +48,6 @@ export function parseHomeTiles(text: string | null | undefined): HomeTile[] {
 export const DEFAULT_HOME_TILES = [
   "Pizza | aisle:Pizza",
   "Chicken | aisle:Chicken",
-  "Burgers, shawarma & wraps | aisle:Burgers & wraps; q:shawarma",
+  "Burgers, shawarma & wraps | aisle:Burgers & wraps; q:shawarma; q:chicken pie; q:meat pie",
   "Rice & chicken | aisle:Chicken; aisle:Rice, pasta & bowls; aisle:Meals & combos; q:rice; q:jollof | Chicken Republic; The Place",
 ].join("\n");
