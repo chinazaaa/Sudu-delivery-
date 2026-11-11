@@ -35,6 +35,10 @@ import SeasonDecor from "@/components/SeasonDecor";
 import { Display, Stripes, Ticket } from "@/components/ui";
 import { KINDS, kindPath } from "@/lib/kinds";
 
+/** The old delivery card, row of kinds and kitchens grid are switched off while
+ *  the home opens on the picker. Set to true to bring them all back. */
+const SHOW_OLD_HOME = false;
+
 /**
  * The shop, and above it whatever is happening with the last order.
  *
@@ -449,7 +453,7 @@ export default function Home() {
             menu landed and it appeared, shoving everything below it down the
             screen: the banner that turns up after the page has finished
             loading. The card holds its place and fills itself in. */}
-        {(arriving !== "" || (shop !== null && !settled)) && (
+        {SHOW_OLD_HOME && (arriving !== "" || (shop !== null && !settled)) && (
           <Pressable
             /* It used to go to the cart, which is where somebody goes when
                they have already chosen. This is the top of the page: they
@@ -528,7 +532,7 @@ export default function Home() {
           things people open the app for and cannot find by name, pizza and
           ice cream, were missing from it.
         */}
-        {found === null && (
+        {SHOW_OLD_HOME && found === null && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -565,7 +569,7 @@ export default function Home() {
             them. Never the restaurant's: a tile in KFC's red with KFC's
             name on it is a shop claiming a relationship it does not have,
             and we are a courier rather than a franchise. */}
-        {found === null && (shop?.menu.length ?? 0) > 0 && (
+        {SHOW_OLD_HOME && found === null && (shop?.menu.length ?? 0) > 0 && (
           <View style={{ gap: 10 }}>
             <View
               style={{
