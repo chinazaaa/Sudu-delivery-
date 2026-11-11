@@ -181,6 +181,7 @@ export default function OfferNudge({
             {showing === "offer" ? (
               <>
                 {nudge?.badge}
+                {nudge?.said && <span> {nudge.said}</span>}
                 {nudge?.where && <span className="font-bold"> from {nudge.where}</span>}
               </>
             ) : (
@@ -200,7 +201,11 @@ export default function OfferNudge({
         {/* Clamped. The small print is built from whatever the offer says,
             and an offer with a lot to explain must not grow a card that is
             sitting over the page. */}
-        <p className="mt-1 line-clamp-2 text-sm leading-snug text-muted">
+        <p
+          className={`mt-1 line-clamp-2 text-sm leading-snug text-muted ${
+            showing === "offer" && !nudge?.detail ? "hidden" : ""
+          }`}
+        >
           {showing === "offer"
             ? nudge?.detail
             : onADesk

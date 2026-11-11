@@ -1277,9 +1277,10 @@ export async function offerNudge(onDay = ""): Promise<Nudge | null> {
      the card has a button on it saying where the offer is on, and a line
      explaining that an automatic offer is automatic is a sentence
      somebody has to read to learn nothing. */
-  const detail = [offerLine(offer), offer.firstOrderOnly ? "First order only." : ""]
-    .filter(Boolean)
-    .join(" ");
+  // The badge already says the price, so repeating it as "Delivery is
+  // ₦2,000." only added a line. Only what the badge cannot say goes here.
+  void offerLine;
+  const detail = offer.firstOrderOnly ? "First order only." : "";
 
   return {
     code: offer.code,
