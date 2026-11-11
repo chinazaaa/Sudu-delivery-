@@ -690,4 +690,7 @@ export const UPSELL_KINDS: Record<string, { label: string; sources: KindSource[]
     label: "rice",
     sources: [{ aisle: "Rice, pasta & bowls" }, { q: "rice" }, { q: "jollof" }],
   },
+  // By section name, as the kitchens file them: a soup is not a swallow.
+  soup: { label: "soup", sources: [{ category: "Soups" }] },
+  swallow: { label: "swallow", sources: [{ category: "Swallows" }] },
 };

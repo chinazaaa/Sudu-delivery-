@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const asked = new URL(request.url).searchParams;
   const upsell = UPSELL_KINDS[asked.get("upsell") ?? ""];
   if (upsell) {
-    return NextResponse.json({ shops: await kindShops({ sources: upsell.sources }, 12) });
+    return NextResponse.json({ shops: await kindShops({ sources: upsell.sources }, 40) });
   }
   const tile = asked.get("tile") ?? "";
   if (tile !== "") {

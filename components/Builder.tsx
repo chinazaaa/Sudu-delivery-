@@ -27,7 +27,8 @@ function DayPill({ delivery }: { delivery?: { said: string; today: boolean } }) 
   );
 }
 
-const UPSELL_WORD = { chicken: "chicken", rice: "rice" } as const;
+type Offer = "chicken" | "rice" | "soup" | "swallow";
+const UPSELL_KINDS_ASKED: Offer[] = ["chicken", "rice", "soup", "swallow"];
 
 type Step = "shop" | "dish" | "more" | "drink" | "added";
 type Dish = AisleShop["items"][number];
@@ -54,7 +55,7 @@ export default function Builder({
   const [open, setOpen] = useState<{ item: ItemView; shop: AisleShop; via?: "dish" | "more" | "drink" } | null>(null);
   // What goes with the dish just added: chicken with rice, rice with chicken.
   const [pairs, setPairs] = useState<Record<string, AisleShop[]>>({});
-  const [offer, setOffer] = useState<"chicken" | "rice" | "">("");
+  const [offer, setOffer] = useState<Offer | "">("");
   const [drinks, setDrinks] = useState<AisleShop[]>([]);
   const [loading, setLoading] = useState("");
   const [cheapest, setCheapest] = useState(false);
@@ -91,7 +92,7 @@ export default function Builder({
 
   useEffect(() => {
     let live = true;
-    for (const kindName of ["chicken", "rice"]) {
+    for (const kindName of UPSELL_KINDS_ASKED) {
       fetch(`/api/builder?upsell=${kindName}`)
         .then((r) => r.json())
         .then((d) => live && setPairs((was) => ({ ...was, [kindName]: d.shops ?? [] })))
@@ -298,10 +299,10 @@ export default function Builder({
         {step === "more" && shop && offer !== "" && (
           <div className="mx-auto max-w-lg space-y-3">
             <h2 className="font-display text-3xl font-black uppercase leading-none">
-              Add {UPSELL_WORD[offer]}?
+              Add {offer}?
             </h2>
             <div className="grid grid-cols-2 gap-3">
-              {[...(pairs[offer === "chicken" ? "chicken" : "rice"]?.find((one) => one.id === shop.id)?.items ?? [])]
+              {[...(pairs[offer]?.find((one) => one.id === shop.id)?.items ?? [])]
                 .sort((a, b) => a.price - b.price)
                 .slice(0, 6)
                 .map((dish) => card(dish, shop, undefined, "more"))}
@@ -412,14 +413,20 @@ export default function Builder({
                 const name = (open?.item.name ?? "").toLowerCase();
                 const hasRice = /rice|jollof/.test(name);
                 const hasChicken = /chicken/.test(name);
-                const asks: "chicken" | "rice" | "" =
+                const inKind = (kind: Offer) =>
+                  (pairs[kind] ?? []).some((one) => one.items.some((d) => d.id === open?.item.id));
+                const asks: Offer | "" =
                   via !== "dish" || (hasRice && hasChicken)
                     ? ""
                     : hasRice
                       ? "chicken"
-                      : hasChicken || (pairs.chicken ?? []).some((one) => one.items.some((d) => d.id === open?.item.id))
+                      : hasChicken || inKind("chicken")
                         ? "rice"
-                        : "";
+                        : inKind("soup")
+                          ? "swallow"
+                          : inKind("swallow")
+                            ? "soup"
+                            : "";
                 const food = asks !== "" && !!here && ((pairs[asks]?.find((one) => one.id === here.id)?.items.length ?? 0) > 0);
                 if (via === "dish" && food) {
                   setOffer(asks);
