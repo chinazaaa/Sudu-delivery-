@@ -166,7 +166,7 @@ export default async function HamperPage({
             <span className="text-volt">{box.name}</span>
           </nav>
 
-          <h1 className="break-words font-display text-[min(13vw,5.5rem)] font-black uppercase leading-[0.86]">
+          <h1 className="break-words font-display text-[min(10vw,2.75rem)] font-black uppercase leading-[0.86]">
             {box.name}
           </h1>
 

@@ -84,7 +84,7 @@ export default async function BoxShelf({
         />
         <div className="shell relative flex flex-col gap-4 pb-8 pt-7 sm:gap-5 sm:pb-10 sm:pt-12">
           <span className="ticket text-brand-dark">{ticket}</span>
-          <h1 className="font-display text-[min(16vw,7.5rem)] font-black uppercase leading-[0.86] sm:text-[clamp(3.75rem,9vw,7.5rem)]">
+          <h1 className="font-display text-[min(10vw,2.75rem)] font-black uppercase leading-[0.86] sm:text-[clamp(2.5rem,5vw,4rem)]">
             {title}
           </h1>
           <p className="max-w-[560px] text-[17px] leading-relaxed text-ink/80 sm:text-lg">

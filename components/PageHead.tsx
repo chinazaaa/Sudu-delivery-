@@ -56,7 +56,7 @@ export default function PageHead({
         }}
       />
       <div
-        className={`shell relative flex flex-col gap-4 pb-8 pt-7 sm:gap-5 sm:pb-10 sm:pt-11 ${
+        className={`shell relative flex flex-col gap-2 pb-4 pt-4 sm:gap-3 sm:pb-6 sm:pt-7 ${
           narrow ? "max-w-[900px]" : ""
         }`}
       >
@@ -71,12 +71,12 @@ export default function PageHead({
         >
           {ticket}
         </span>
-        <h1 className="max-w-[900px] font-display text-[min(15vw,7rem)] font-black uppercase leading-[0.86] sm:text-[clamp(3.25rem,8vw,7rem)]">
+        <h1 className="max-w-[900px] font-display text-[min(10vw,2.75rem)] font-black uppercase leading-[0.92] sm:text-[clamp(2.5rem,5vw,4rem)]">
           {title}
         </h1>
         {lead ? (
           <p
-            className={`max-w-[580px] text-[17px] leading-relaxed sm:text-lg ${
+            className={`max-w-[580px] text-[15px] leading-snug sm:text-base ${
               dark ? "text-rail-text" : "text-ink/80"
             }`}
           >

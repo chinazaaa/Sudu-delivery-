@@ -142,7 +142,7 @@ export default async function BoxDetail({
             <span className="text-volt">{occasion.name}</span>
           </nav>
 
-          <h1 className="break-words font-display text-[min(16vw,8rem)] font-black uppercase leading-[0.84] sm:text-[clamp(3.25rem,10vw,8rem)]">
+          <h1 className="break-words font-display text-[min(10vw,2.75rem)] font-black uppercase leading-[0.84] sm:text-[clamp(2.5rem,5vw,4rem)]">
             {occasion.name}
           </h1>
 

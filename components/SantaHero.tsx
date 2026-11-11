@@ -38,7 +38,7 @@ export default function SantaHero({
       />
       <div className="shell relative flex flex-col gap-3.5 pb-8 pt-6 sm:pb-9 sm:pt-7">
         <span className="ticket text-volt">{kicker}</span>
-        <h1 className="font-display text-[min(14vw,6rem)] font-black uppercase leading-[0.86] sm:text-[clamp(3.25rem,8vw,6rem)]">
+        <h1 className="font-display text-[min(10vw,2.75rem)] font-black uppercase leading-[0.86] sm:text-[clamp(2.5rem,5vw,4rem)]">
           {title}
         </h1>
         {lead !== "" && (

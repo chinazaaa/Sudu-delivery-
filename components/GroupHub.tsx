@@ -56,7 +56,7 @@ export default function GroupHub({
           <span className="ticket text-brand-dark">
             Group order · one delivery · one fee
           </span>
-          <h1 className="font-display text-[min(19vw,8.75rem)] font-black uppercase leading-[0.84] sm:text-[clamp(4rem,10vw,8.75rem)]">
+          <h1 className="font-display text-[min(10vw,2.75rem)] font-black uppercase leading-[0.84] sm:text-[clamp(2.5rem,5vw,4rem)]">
             Start a
             <br />
             <span className="text-brand">group</span>

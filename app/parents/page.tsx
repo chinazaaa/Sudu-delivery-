@@ -370,7 +370,7 @@ export default async function ParentsPage() {
                 </a>
               )}
             </div>
-            <h1 className="font-display text-[min(15vw,7.5rem)] font-black uppercase leading-[0.85] sm:text-[clamp(3.5rem,8vw,7.5rem)]">
+            <h1 className="font-display text-[min(10vw,2.75rem)] font-black uppercase leading-[0.85] sm:text-[clamp(2.5rem,5vw,4rem)]">
               Send food to
               <br />
               your child at PAU

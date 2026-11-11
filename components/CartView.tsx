@@ -468,7 +468,7 @@ export default function CartView({
       return (
         <div className="mx-auto max-w-3xl space-y-5 pb-10">
           <div className="flex items-baseline justify-between gap-3">
-            <h1 className="font-display text-[min(16vw,5.5rem)] font-black uppercase leading-[0.88] sm:text-[clamp(3.5rem,7vw,5.5rem)]">
+            <h1 className="font-display text-[min(10vw,2.75rem)] font-black uppercase leading-[0.88] sm:text-[clamp(2.5rem,5vw,4rem)]">
               Your cart
             </h1>
             <Link href={`/g/${group}`} className="text-sm font-bold text-brand">
@@ -1004,7 +1004,7 @@ export default function CartView({
             job is the four lines under it. The desk keeps the big one:
             there the page is wide and the heading is the only thing
             holding the top of it together. */}
-        <h1 className="font-display text-[min(9vw,2.25rem)] font-black uppercase leading-[0.95] sm:text-[clamp(3.5rem,7vw,5.5rem)]">
+        <h1 className="font-display text-[min(9vw,2.25rem)] font-black uppercase leading-[0.95] sm:text-[clamp(2.5rem,5vw,4rem)]">
           Your cart
         </h1>
         {group !== "" && (

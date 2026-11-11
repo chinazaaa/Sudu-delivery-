@@ -121,7 +121,7 @@ export default async function SkincarePage({
             {shop.name} · {total} product{total === 1 ? "" : "s"} ·{" "}
             {skincarePromise(settings)}
           </span>
-          <h1 className="font-display text-[min(15vw,7rem)] font-black uppercase leading-[0.86] sm:text-[clamp(3.5rem,8vw,7rem)]">
+          <h1 className="font-display text-[min(10vw,2.75rem)] font-black uppercase leading-[0.86] sm:text-[clamp(2.5rem,5vw,4rem)]">
             Your fav brands.
             <br />
             To your block.

@@ -51,7 +51,7 @@ export default async function OrdersPage({
   if (phone && back) {
     return (
       <div className="space-y-4">
-        <h1 className="font-display text-[min(16vw,4.5rem)] font-black uppercase leading-[0.88] sm:text-[clamp(3rem,6vw,4.5rem)]">
+        <h1 className="font-display text-[min(10vw,2.75rem)] font-black uppercase leading-[0.88] sm:text-[clamp(2.5rem,5vw,4rem)]">
           You are signed in
         </h1>
         <p className="text-ink/75">
@@ -78,7 +78,7 @@ export default async function OrdersPage({
       <div className="grid items-center gap-10 py-6 lg:grid-cols-2 lg:gap-14 lg:py-14">
         <div className="flex flex-col gap-5">
           <span className="ticket text-brand-dark">My orders</span>
-          <h1 className="font-display text-[min(18vw,6.5rem)] font-black uppercase leading-[0.86] sm:text-[clamp(3.5rem,7vw,6.5rem)]">
+          <h1 className="font-display text-[min(10vw,2.75rem)] font-black uppercase leading-[0.86] sm:text-[clamp(2.5rem,5vw,4rem)]">
             {back ? (
               <>
                 Your number,
@@ -177,7 +177,7 @@ export default async function OrdersPage({
   return (
     <div className="space-y-4">
       <div className="flex items-baseline justify-between gap-3">
-        <h1 className="font-display text-[min(16vw,5.5rem)] font-black uppercase leading-[0.88] sm:text-[clamp(3.5rem,7vw,5.5rem)]">
+        <h1 className="font-display text-[min(10vw,2.75rem)] font-black uppercase leading-[0.88] sm:text-[clamp(2.5rem,5vw,4rem)]">
           My orders
         </h1>
         <form action={forgetMe}>
