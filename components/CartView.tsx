@@ -24,6 +24,7 @@ import { feeRidingAlong, type StepFee } from "@/lib/step-fee";
 import { feeAcross, type ValueBand } from "@/lib/value-bands";
 
 import Link from "next/link";
+import Builder from "./Builder";
 import Empty from "@/components/Empty";
 import { shelfCount, useShelf } from "@/lib/skincare-cart";
 import { useEffect, useRef, useState } from "react";
@@ -118,6 +119,7 @@ export default function CartView({
   // ideas at once and nobody untangles them. The bar at the top says which
   // one is happening.
   const [inParty, setInParty] = useState(false);
+  const [swapping, setSwapping] = useState<{ label: string; aisle?: string; q?: string } | null>(null);
   useEffect(() => {
     // A group can start or end from the page somebody is standing on, so this
     // listens rather than reading once and believing it for ever.
@@ -717,6 +719,24 @@ export default function CartView({
       ? (words[0] ?? "")
       : `${words.slice(0, -1).join(", ")} ${joiner} ${words[words.length - 1]}`;
   const runOnlySaid = listed(runOnlyNames);
+  // Swapping a place: take its food out and open the picker on the same kind
+  // of food, where each place says whether it delivers today.
+  const swapPlace = async () => {
+    const first = runOnlyLines[0];
+    if (!first) return;
+    let aisle = "";
+    try {
+      const reply = await fetch(`/api/aisle-of?item=${encodeURIComponent(first.itemId)}`);
+      aisle = ((await reply.json()) as { aisle?: string }).aisle ?? "";
+    } catch {
+      /* Falls back to searching by the first word of the dish. */
+    }
+    const kind = aisle !== ""
+      ? { label: aisle, aisle }
+      : { label: first.name, q: first.name.split(" ")[0] };
+    runOnlyLines.forEach((line) => setQty(line.key, 0));
+    setSwapping(kind);
+  };
   /*
    * Which shop is in which part of Lagos, said one by one.
    *
@@ -1038,6 +1058,8 @@ export default function CartView({
           to it, because the surprise people hit at checkout is the one
           they hit after the food is already chosen.
        */}
+      {swapping && <Builder kind={swapping} onClose={() => setSwapping(null)} />}
+
       {runOnlyLines.length > 0 && goingWord !== "today" && (
         <div className="rounded-2xl border border-brand/30 bg-brand-tint px-4 py-2.5">
           {runOnlyLines.length < cart.length ? (
@@ -1046,13 +1068,18 @@ export default function CartView({
                 {runOnlySaid} only comes {goingWord || "on a later day"}. The rest could
                 come sooner.
               </p>
-              <button
-                type="button"
-                onClick={() => runOnlyLines.forEach((line) => setQty(line.key, 0))}
-                className="mt-1.5 text-sm font-semibold text-brand-dark underline"
-              >
-                Take out {runOnlySaid}
-              </button>
+              <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold text-brand-dark">
+                <button
+                  type="button"
+                  onClick={() => runOnlyLines.forEach((line) => setQty(line.key, 0))}
+                  className="underline"
+                >
+                  Take out {runOnlySaid}
+                </button>
+                <button type="button" onClick={swapPlace} className="underline">
+                  Switch to another place
+                </button>
+              </div>
             </>
           ) : (
             <p className="text-sm font-bold text-brand-dark">
