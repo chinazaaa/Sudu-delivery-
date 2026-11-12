@@ -188,6 +188,24 @@ export default async function SettingsAdmin() {
             words: "aisle menu browse categories",
           },
           {
+            id: "aisles",
+            title: "Books page photos",
+            where: "Aisles",
+            words: "books photos slider carousel gallery upload reorder uk",
+          },
+          {
+            id: "aisles",
+            title: "Promoted collection (Christmas hampers)",
+            where: "Aisles",
+            words: "promoted collection featured christmas hampers front page menu tile",
+          },
+          {
+            id: "aisles",
+            title: "Front page tiles and Something else photos",
+            where: "Aisles",
+            words: "front page tiles start from here something else photos home",
+          },
+          {
             id: "told",
             title: "Who gets told",
             where: "Team",
