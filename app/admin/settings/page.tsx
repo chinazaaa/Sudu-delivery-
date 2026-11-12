@@ -15,8 +15,7 @@ import DayHours from "@/components/admin/DayHours";
 import ActionButton from "@/components/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { AISLES } from "@/lib/aisles";
-import GalleryField from "@/components/admin/GalleryField";
-import { DEFAULT_BOOK_PHOTOS, DEFAULT_HOME_TILES, DEFAULT_MORE_PHOTOS } from "@/lib/home-tiles";
+import { DEFAULT_HOME_TILES, DEFAULT_MORE_PHOTOS } from "@/lib/home-tiles";
 import { LEAD_DAYS } from "@/lib/plans";
 import { GROUP_FLOOR, parseBands, SAME_DAY_BANDS, URGENT_EXTRA } from "@/lib/fees";
 import { missingSettings } from "@/lib/health";
@@ -186,12 +185,6 @@ export default async function SettingsAdmin() {
             title: "How the whole shop is browsed",
             where: "Aisles",
             words: "aisle menu browse categories",
-          },
-          {
-            id: "aisles",
-            title: "Books page photos",
-            where: "Aisles",
-            words: "books photos slider carousel gallery upload reorder uk",
           },
           {
             id: "aisles",
@@ -1565,22 +1558,6 @@ export default async function SettingsAdmin() {
                 rows={4}
                 defaultValue={settings.more_photos || DEFAULT_MORE_PHOTOS}
                 className="field font-mono text-sm"
-              />
-              <SaveButton look="btn-admin-go">Save photos</SaveButton>
-            </div>
-          </Panel>
-          <Panel
-            title="Books page photos"
-            detail="The photos that slide across the books page. Add, remove or reorder them, then save."
-          >
-            <div className="space-y-3">
-              <GalleryField
-                name="books_gallery"
-                initial={
-                  settings.books_gallery.trim() === ""
-                    ? DEFAULT_BOOK_PHOTOS
-                    : settings.books_gallery.split("\n").map((one) => one.trim()).filter(Boolean)
-                }
               />
               <SaveButton look="btn-admin-go">Save photos</SaveButton>
             </div>
