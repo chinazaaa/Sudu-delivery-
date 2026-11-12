@@ -927,6 +927,7 @@ alter table settings add column if not exists menu_aisles text not null default 
 alter table settings add column if not exists home_tiles text not null default '';
 alter table settings add column if not exists more_photos text not null default '';
 alter table settings add column if not exists featured_shelf text not null default '';
+alter table settings add column if not exists books_gallery text not null default '';
 
 -- What actually sells, so the everything list can open with it rather than
 -- with 5 Alive, 7UP and Aquafina. A trigger keeps it, so nothing in the app

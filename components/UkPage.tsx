@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 
 import { AlsoSee } from "@/components/Guide";
 import PageHead from "@/components/PageHead";
+import BookSlider from "@/components/BookSlider";
 import UkRequestForm from "@/components/UkRequestForm";
+import { DEFAULT_BOOK_PHOTOS } from "@/lib/home-tiles";
 import { hostelNames } from "@/lib/hostels";
 import { safeSettings } from "@/lib/settings";
 import { waLink } from "@/lib/whatsapp";
@@ -111,6 +113,19 @@ export default async function UkPage({
           </a>
           <p className="text-center text-sm font-semibold text-muted">Or fill this in</p>
         </div>
+      )}
+
+      {kind === "book" && !sent && (
+        <BookSlider
+          photos={
+            settings.books_gallery.trim() === ""
+              ? DEFAULT_BOOK_PHOTOS
+              : settings.books_gallery
+                  .split("\n")
+                  .map((one) => one.trim())
+                  .filter(Boolean)
+          }
+        />
       )}
 
       {sent ? (

@@ -95,3 +95,16 @@ export const DEFAULT_MORE_PHOTOS = [
   "Groceries | Indomie Super Pack@Local Market",
   "Small chops | Big Stan Pack@Uncle Stan's",
 ].join("\n");
+
+/** The photos on the books page until admin writes its own list. */
+export const DEFAULT_BOOK_PHOTOS = [
+  "/books/01.jpg",
+  "/books/04.jpg",
+  "/books/09.jpg",
+  "/books/07.jpg",
+  "/books/05.jpg",
+  "/books/03.jpg",
+  "/books/08.jpg",
+  "/books/06.jpg",
+  "/books/10.jpg",
+];

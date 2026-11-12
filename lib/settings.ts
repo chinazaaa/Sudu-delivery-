@@ -143,6 +143,8 @@ export type Settings = {
   more_photos: string;
   /** The slug of the collection promoted on the front page and menu. */
   featured_shelf: string;
+  /** Photos in the books page slider, one address per line. */
+  books_gallery: string;
   /** Every standing plan held at once, for the holidays. A date, or empty. */
   plans_paused_until: string;
   /** How many days before it lands a plan's order is raised. */
@@ -371,6 +373,7 @@ export const EMPTY: Settings = {
   home_tiles: "",
   more_photos: "",
   featured_shelf: "",
+  books_gallery: "",
   plans_paused_until: "",
   plan_lead_days: "",
   same_day_first_hour: "",

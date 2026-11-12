@@ -3455,6 +3455,7 @@ const SETTING_FIELDS = [
   "home_tiles",
   "more_photos",
   "featured_shelf",
+  "books_gallery",
   "plans_paused_until",
   "plan_lead_days",
   "same_day_on",

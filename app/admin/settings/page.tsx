@@ -15,7 +15,7 @@ import DayHours from "@/components/admin/DayHours";
 import ActionButton from "@/components/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { AISLES } from "@/lib/aisles";
-import { DEFAULT_HOME_TILES, DEFAULT_MORE_PHOTOS } from "@/lib/home-tiles";
+import { DEFAULT_BOOK_PHOTOS, DEFAULT_HOME_TILES, DEFAULT_MORE_PHOTOS } from "@/lib/home-tiles";
 import { LEAD_DAYS } from "@/lib/plans";
 import { GROUP_FLOOR, parseBands, SAME_DAY_BANDS, URGENT_EXTRA } from "@/lib/fees";
 import { missingSettings } from "@/lib/health";
@@ -1545,6 +1545,20 @@ export default async function SettingsAdmin() {
                 name="more_photos"
                 rows={4}
                 defaultValue={settings.more_photos || DEFAULT_MORE_PHOTOS}
+                className="field font-mono text-sm"
+              />
+              <SaveButton look="btn-admin-go">Save photos</SaveButton>
+            </div>
+          </Panel>
+          <Panel
+            title="Books page photos"
+            detail="The photos that slide across the books page. One address per line. Empty uses the ones that came with the site."
+          >
+            <div className="space-y-3">
+              <textarea
+                name="books_gallery"
+                rows={6}
+                defaultValue={settings.books_gallery || DEFAULT_BOOK_PHOTOS.join("\n")}
                 className="field font-mono text-sm"
               />
               <SaveButton look="btn-admin-go">Save photos</SaveButton>
