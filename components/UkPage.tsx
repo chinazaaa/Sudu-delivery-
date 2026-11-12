@@ -111,7 +111,7 @@ export default async function UkPage({
           >
             Message us on WhatsApp
           </a>
-          <p className="text-center text-sm font-semibold text-muted">Or fill this in</p>
+          <p className="text-center text-sm font-semibold text-muted">Or fill in the form below</p>
         </div>
       )}
 
