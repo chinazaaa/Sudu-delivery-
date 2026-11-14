@@ -595,7 +595,7 @@ export default function Home() {
             them. Never the restaurant's: a tile in KFC's red with KFC's
             name on it is a shop claiming a relationship it does not have,
             and we are a courier rather than a franchise. */}
-        {SHOW_OLD_HOME && found === null && (shop?.menu.length ?? 0) > 0 && (
+        {found === null && (shop?.menu.length ?? 0) > 0 && (
           <View style={{ gap: 10 }}>
             <View
               style={{
@@ -734,7 +734,7 @@ export default function Home() {
           cards. A door admin has switched off is not drawn, which is why
           each one asks before it appears.
         */}
-        {SHOW_OLD_HOME && (
+        {found === null && (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           <Door
             label="Group order"
