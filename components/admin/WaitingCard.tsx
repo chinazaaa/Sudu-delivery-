@@ -105,6 +105,9 @@ export default function WaitingCard({
             {doorTag(order.source)}
           </span>
         )}
+        {(order.via ?? "") !== "" && (
+          <span className="tag bg-brand-tint text-brand-dark">{order.via}</span>
+        )}
         {order.narration !== "" && !wantsCard && (
           <span className="hint">
             narration <span className="font-mono font-semibold">{order.narration}</span>

@@ -89,6 +89,9 @@ export default function HandOverCard({
             {doorTag(order.source)}
           </span>
         )}
+        {(order.via ?? "") !== "" && (
+          <span className="tag bg-brand-tint text-brand-dark">{order.via}</span>
+        )}
         {order.pin && (
           <span className="hint">
             PIN <span className="font-mono font-semibold">{order.pin}</span>
