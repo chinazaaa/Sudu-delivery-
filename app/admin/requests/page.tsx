@@ -560,12 +560,11 @@ export default async function RequestsPage({
                 waiting on you.
               */}
               {!ask.money_id && isClosed(ask.status) ? (
-                <div className="flex flex-wrap items-center gap-2.5 rounded-xl bg-black/[0.04] px-3 py-2">
-                  <p className="min-w-0 flex-1 text-sm font-semibold">
+                <div className="flex flex-wrap items-center gap-2.5 rounded-xl bg-black/[0.04] px-3 py-2.5">
+                  <p className="w-full text-sm font-semibold">
                     {ask.status === "converted" ? (
                       <>
-                        Finished. It went out as an ordinary order, so the money
-                        is on that order and none is counted here.
+                        Finished. The money is on the order, not counted here.
                         {/* Which order, where somebody has said. The card
                             used to stop at "an ordinary order", which left
                             the one question this list exists to answer, did
