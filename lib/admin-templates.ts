@@ -271,6 +271,8 @@ export function toCard(
     paymentMethod: order.payment_method,
     pin: order.pin,
     reviewed: order.reviewed,
+    isNew: order.isNew,
+    via: order.via,
     /*
      * Whose review the hand-over card is asking for, and whether they have
      * already left one.
