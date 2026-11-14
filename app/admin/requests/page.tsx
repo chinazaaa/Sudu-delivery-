@@ -68,6 +68,7 @@ const isClosed = (status: string): boolean =>
 
 const STATUS: Record<string, string> = {
   new: "Waiting on you",
+  messaged: "Messaged, waiting for their reply",
   quoted: "Priced, waiting on them",
   done: "Bought and delivered",
   // They went and placed it as an ordinary order, so it is finished and
@@ -384,11 +385,29 @@ export default async function RequestsPage({
                     </a>
                   )}
 
+                  {/* Once you have written to them: it moves out of "waiting
+                      on you" and says whose turn it is. The price box stays,
+                      so quoting later is still one step. */}
+                  {ask.status === "new" && (
+                    <form action={markRequest}>
+                      <input type="hidden" name="id" value={ask.id} />
+                      <ActionButton
+                        name="status"
+                        value="messaged"
+                        className="btn-quiet w-full px-3 py-2.5 text-sm"
+                        busy="…"
+                        done="Marked ✓"
+                      >
+                        I have messaged them, waiting for a reply
+                      </ActionButton>
+                    </form>
+                  )}
+
                   {/* The price, where one has not been agreed. Once it is
                       quoted the figure is on the card and the next step is
                       counting, so the box is gone rather than left there
                       to be changed by accident. */}
-                  {ask.status === "new" && (
+                  {(ask.status === "new" || ask.status === "messaged") && (
                     <form action={markRequest} className="flex items-end gap-2">
                       <input type="hidden" name="id" value={ask.id} />
                       <div className="min-w-0 flex-1">

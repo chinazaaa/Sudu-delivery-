@@ -21,7 +21,7 @@ export async function markRequest(form: FormData): Promise<void> {
 
   const id = String(form.get("id") ?? "");
   const status = String(form.get("status") ?? "");
-  if (!["new", "quoted", "done", "converted", "dropped"].includes(status)) return;
+  if (!["new", "messaged", "quoted", "done", "converted", "dropped"].includes(status)) return;
 
   const quoted = Number(String(form.get("quoted") ?? "").replace(/[^\d]/g, ""));
 
