@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -13,6 +14,7 @@ import { Link, useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
 import {
   api,
+  BASE,
   keptShop,
   lagosToday,
   naira,
@@ -774,6 +776,13 @@ export default function Home() {
               onPress={() => router.push("/services" as never)}
             />
           )}
+          {shop?.booksOn && (
+            <Door
+              label="Books from the UK"
+              glyph="books"
+              onPress={() => void Linking.openURL(`${BASE}/books`).catch(() => {})}
+            />
+          )}
           <Door
             label="Anything else"
             glyph="ask"
@@ -852,7 +861,7 @@ function Door({
   onPress,
 }: {
   label: string;
-  glyph: "group" | "parcel" | "skincare" | "pharmacy" | "services" | "ask";
+  glyph: "group" | "parcel" | "skincare" | "pharmacy" | "services" | "books" | "ask";
   onPress: () => void;
 }) {
   return (
@@ -891,7 +900,7 @@ function Door({
 function Glyph({
   kind,
 }: {
-  kind: "group" | "parcel" | "skincare" | "pharmacy" | "services" | "ask";
+  kind: "group" | "parcel" | "skincare" | "pharmacy" | "services" | "books" | "ask";
 }) {
   const name =
     kind === "group"
@@ -904,6 +913,8 @@ function Glyph({
             ? "medkit-outline"
             : kind === "services"
               ? "construct-outline"
-              : "help-circle-outline";
+              : kind === "books"
+                ? "book-outline"
+                : "help-circle-outline";
   return <Ionicons name={name} size={22} color={T.brand} />;
 }

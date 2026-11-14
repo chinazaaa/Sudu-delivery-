@@ -269,6 +269,8 @@ export async function GET(): Promise<NextResponse> {
        * written, instead of waiting on a release neither store is in a
        * hurry to approve.
        */
+      // Whether the books page is switched on, so the app only offers it then.
+      booksOn: settings.books_on === "on",
       services: ERRANDS.map((one) => ({
         slug: one.slug,
         title: one.title,

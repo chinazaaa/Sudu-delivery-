@@ -439,6 +439,8 @@ export type Shop = {
    *  without waiting on a release. Absent on older servers, and then the
    *  app simply does not mention them, which is what it did before. */
   services?: { slug: string; title: string; lead: string; url: string }[];
+  /** The UK books page is on. It opens on the website. */
+  booksOn?: boolean;
   /** Today's automatic offer, for the card in the corner. Null or absent
    *  means nothing is on, which is most days. */
   nudge?: Nudge | null;
