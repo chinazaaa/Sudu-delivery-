@@ -630,15 +630,18 @@ export default async function BatchPage({
                 // Two Tomatoes and neither of them reads as the answer.
                 primary={stopShown === null}
               />
-              <SendSheet
-                batchId={batch.id}
-                open={batch.status === "open" && batch.stage === "ordering"}
-                closeRun={setBatchStage}
-                href={whatsappTo(
-                  settings.whatsapp_number || "0",
-                  sheetAsText(sheet, batchLabel)
-                )}
-              />
+              {/* Nothing paid, nothing to send: a counter sheet of no orders. */}
+              {summary.paidCount > 0 && (
+                <SendSheet
+                  batchId={batch.id}
+                  open={batch.status === "open" && batch.stage === "ordering"}
+                  closeRun={setBatchStage}
+                  href={whatsappTo(
+                    settings.whatsapp_number || "0",
+                    sheetAsText(sheet, batchLabel)
+                  )}
+                />
+              )}
 
               {/* The car is full, said by the person who can see it.
                   Everything else about whether this run can take another
