@@ -54,6 +54,8 @@ export type OrderCardData = {
   /** Whether this customer has been ticked as having left a Google
    *  review. Not a fact Google ever tells anybody: ticked by hand. */
   reviewed?: boolean;
+  /** Their first order with us. */
+  isNew?: boolean;
   /** Whose review to ask for and tick, which on a household order is
    *  whoever is collecting the box rather than whoever paid for it. */
   askPhone?: string;
@@ -247,6 +249,7 @@ export default function OrderCard({
                 </span>
               )}
 
+              {order.isNew && <Tag tone="brand">New</Tag>}
               {(order.via ?? "") !== "" && <Tag tone="volt">{order.via}</Tag>}
 
               {order.parcel && <Tag tone="volt">Parcel · {order.parcel.route}</Tag>}

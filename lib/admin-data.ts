@@ -54,6 +54,8 @@ export type FeedOrder = Order & {
   source: string;
   /** How they found the food on the site: "picker: Pizza", "starter cart". */
   via: string;
+  /** Their first order with us: nothing earlier under this number. */
+  isNew: boolean;
   /** GBP or USD where somebody abroad is paying by card. */
   payCurrency: string;
 };
@@ -143,7 +145,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
   // to whichever of them actually left one.
   // And the last five together, now the list is final: its lines, its runs,
   // the PINs, who to call and who has already been asked for a word.
-  const [lines, batches, pins, called, reviewed] = await Promise.all([
+  const [lines, batches, pins, called, reviewed, firstAt] = await Promise.all([
     linesFor(orders.map((o) => o.id)),
     batchMap(orders.map((o) => o.batch_id)),
     pinMap(orders.map((o) => o.customer_phone)),
@@ -154,6 +156,7 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
         String((o as { deliver_to_phone?: string | null }).deliver_to_phone ?? ""),
       ])
     ),
+    firstOrderTimes(orders.map((o) => o.customer_phone)),
   ]);
 
  return orders.map((order) => {
@@ -203,6 +206,8 @@ export async function orderFeed(filter: OrderFilter = {}): Promise<FeedOrder[]> 
       // is simply not shown.
       source: (order as { source?: string }).source ?? "",
       via: (order as { via?: string }).via ?? "",
+      // The earliest order under this number is the first: nothing before it.
+      isNew: (firstAt.get(order.customer_phone) ?? order.created_at) >= order.created_at,
       payCurrency: (order as { pay_currency?: string }).pay_currency ?? "",
     };
   });
@@ -312,6 +317,30 @@ async function pinMap(phones: string[]): Promise<Map<string, string>> {
  * Forgiving of a database without the column, for the same reason every
  * other lookup here is: an order feed must not fall over for a tick.
  */
+/**
+ * When each of these numbers first ordered, cancelled orders left out, so a
+ * card can say "New" on the one that was their first.
+ */
+async function firstOrderTimes(phones: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(phones.filter((one) => one !== ""))];
+  const out = new Map<string, string>();
+  if (unique.length === 0) return out;
+  try {
+    const { data } = await db()
+      .from("orders")
+      .select("customer_phone, created_at, status")
+      .in("customer_phone", unique);
+    for (const row of (data ?? []) as { customer_phone: string; created_at: string; status: string }[]) {
+      if (isGone(row.status)) continue;
+      const seen = out.get(row.customer_phone);
+      if (!seen || row.created_at < seen) out.set(row.customer_phone, row.created_at);
+    }
+  } catch {
+    /* No answer reads as not new: a missing tag is better than a wrong one. */
+  }
+  return out;
+}
+
 async function reviewedMap(phones: string[]): Promise<Set<string>> {
   const unique = [...new Set(phones.filter((one) => one !== ""))];
   if (unique.length === 0) return new Set();
