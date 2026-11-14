@@ -3,7 +3,9 @@ import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as Notifications from "expo-notifications";
 import * as Linking from "expo-linking";
+import SeasonDecor from "@/components/SeasonDecor";
 import Track from "@/components/Track";
+import { useShop } from "@/lib/use-shop";
 import { BASE } from "@/lib/api";
 import { handledInApp, landingFor } from "@/lib/landing";
 import { greetPush } from "@/lib/push";
@@ -50,6 +52,8 @@ export const unstable_settings = { initialRouteName: "(tabs)" };
 
 export default function Layout() {
   const router = useRouter();
+  // Only for the season: the decorations belong to the whole app, not one tab.
+  const shop = useShop();
 
   // The three faces the shop is set in. Bundled with the app rather than
   // fetched, so the first screen is never a flash of the system font.
@@ -147,6 +151,8 @@ export default function Layout() {
             links at all. */}
         <Stack.Screen name="c/[code]" options={{ title: "Your order" }} />
       </Stack>
+      {/* Over every screen, and deaf to the thumb. */}
+      <SeasonDecor season={shop?.shop?.season} />
     </>
   );
 }
