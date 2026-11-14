@@ -650,7 +650,9 @@ export default async function BatchPage({
                   in the boot. Both ways, because the mistake to expect is
                   pressing it on the wrong run, and a thing that cannot be
                   taken back is a thing nobody presses. */}
-              {!shopped || batch.no_more_orders === true ? (
+              {/* Nothing paid on it, so there is nothing to be full of. Where it
+                  was already shut, the button to open it again stays. */}
+              {(!shopped && summary.paidCount > 0) || batch.no_more_orders === true ? (
                 <form action={noMoreOrders}>
                   <input type="hidden" name="batch_id" value={batch.id} />
                   {batch.no_more_orders === true && (
