@@ -6,6 +6,7 @@ import { db } from "@/lib/supabase";
 import { isSignedIn } from "@/lib/admin-auth";
 import { lagosToday } from "@/lib/time";
 import { ensureCustomer } from "@/lib/orders";
+import { ASK_BUCKET } from "@/lib/uploads";
 
 /**
  * Where a request has got to, and what it was quoted at.
@@ -39,6 +40,41 @@ export async function markRequest(form: FormData): Promise<void> {
         : { answered_at: new Date().toISOString() }),
     })
     .eq("id", id);
+
+  revalidatePath("/admin/requests");
+  revalidatePath("/admin");
+}
+
+/**
+ * Delete a request for good: a test somebody typed in, or something sent by
+ * mistake. Refused once it has an order or counted money behind it, because
+ * that history belongs to the order and the books, not to this list.
+ */
+export async function deleteRequest(form: FormData): Promise<void> {
+  if (!(await isSignedIn())) throw new Error("Not signed in.");
+  const id = String(form.get("id") ?? "");
+  if (id === "") return;
+
+  const { data } = await db()
+    .from("custom_requests")
+    .select("id, order_id, money_id, file_path")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return;
+  const row = data as { order_id: string | null; money_id: string | null; file_path: string };
+  if (row.order_id || row.money_id) {
+    throw new Error("That one has an order or money on it. Drop it instead.");
+  }
+
+  await db().from("custom_requests").delete().eq("id", id);
+  // The picture they attached goes with it. Best effort: the row is gone either way.
+  if (row.file_path) {
+    try {
+      await db().storage.from(ASK_BUCKET).remove([row.file_path]);
+    } catch {
+      /* A stray file is better than a failed delete. */
+    }
+  }
 
   revalidatePath("/admin/requests");
   revalidatePath("/admin");

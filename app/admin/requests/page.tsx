@@ -5,6 +5,7 @@ import { safeSettings, whatsappLink } from "@/lib/settings";
 import { naira } from "@/lib/money";
 import {
   addRequest,
+  deleteRequest,
   linkRequestToOrder,
   markRequest,
   settleRequest,
@@ -12,6 +13,7 @@ import {
   unlinkRequestOrder,
 } from "./actions";
 import ActionButton from "@/components/ActionButton";
+import ConfirmButton from "@/components/admin/ConfirmButton";
 import SaveButton from "@/components/SaveButton";
 import Link from "next/link";
 import { db } from "@/lib/supabase";
@@ -463,6 +465,16 @@ export default async function RequestsPage({
                     ))}
                   </div>
                 </details>
+              )}
+
+              {/* A test or a mistake: gone for good, after one more tap. */}
+              {!ask.money_id && !ask.order_id && (
+                <form action={deleteRequest} className="border-t border-black/5 pt-3">
+                  <input type="hidden" name="id" value={ask.id} />
+                  <ConfirmButton tone="bad" confirm="Delete for good?">
+                    Delete this request
+                  </ConfirmButton>
+                </form>
               )}
 
               {/*
