@@ -99,6 +99,7 @@ export default function WaitingCard({
           whether the chat took it is the cost of leaving it off, paid on
           every order of the day.
         */}
+        {order.isNew && <span className="tag bg-brand text-white">New</span>}
         {doorTag(order.source) !== "" && (
           <span className={`tag ${doorSkin(order.source)}`}>
             {doorTag(order.source)}
