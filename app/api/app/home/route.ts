@@ -56,13 +56,28 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({
       tiles: starters.map(tile),
       more: more.map(tile),
-      featured: featured.map((one) => ({
+      // The collection alone, in the shape the first app version reads: an
+      // app already on a phone expects one object here, not a list.
+      featured: (() => {
+        const shelf = featured.find((one) => one.href.startsWith("/collections/"));
+        return shelf
+          ? {
+              label: shelf.aisle,
+              from: shelf.from,
+              image: shelf.image,
+              slug: shelf.href.split("/").pop() ?? "",
+            }
+          : null;
+      })(),
+      // Everything promoted, market delivery first, for the newer app.
+      featuredList: featured.map((one) => ({
         label: one.aisle,
         from: one.from,
         image: one.image,
         href: one.href,
         note: one.note ?? "",
       })),
+
       arriving: decided?.said ? arrivalShort(decided.said) : "",
       whatsapp:
         whatsappLink(settings.whatsapp_number, "Hi Sudu, I'd like to order: ") ?? "",

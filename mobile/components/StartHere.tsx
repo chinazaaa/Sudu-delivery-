@@ -135,7 +135,7 @@ export default function StartHere() {
         {button("Message us", message, false)}
       </View>
 
-      {(home.more.length > 0 || (home.featured ?? []).length > 0) && (
+      {(home.more.length > 0 || (home.featuredList ?? []).length > 0) && (
         <View style={{ gap: 8, marginTop: 6 }}>
           <Display size={22}>Something else?</Display>
           <ScrollView
@@ -144,7 +144,7 @@ export default function StartHere() {
             style={{ marginHorizontal: -16 }}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
           >
-            {(home.featured ?? []).map((one) => (
+            {(home.featuredList ?? []).map((one) => (
               <Pressable
                 key={one.href}
                 onPress={() => openFeatured(one.href)}

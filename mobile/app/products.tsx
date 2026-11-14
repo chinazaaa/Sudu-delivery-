@@ -154,7 +154,7 @@ export default function ProductsScreen() {
                   router.push({ pathname: "/pick", params: { label: one.label, aisle: one.label } } as never),
               })),
             ];
-            const picked = menuTiles.featured ?? [];
+            const picked = menuTiles.featuredList ?? [];
             all.splice(
               Math.max(0, all.length - 2),
               0,
