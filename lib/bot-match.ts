@@ -1549,3 +1549,20 @@ export function soundsUrgent(said: string): boolean {
   const text = ` ${String(said ?? "").toLowerCase().replace(/[^a-z' ]+/g, " ").replace(/\s+/g, " ")} `;
   return URGENT.some((word) => text.includes(` ${word} `));
 }
+
+/**
+ * Somebody asking for the market run: a list to be bought and brought, not a
+ * dish. "Need a market delivery" and "do you do market delivery" were being
+ * answered with where the shop delivers to, because the word delivery is what
+ * the written answers listen for. The two kitchens that have market in their
+ * name are menus, and are left alone.
+ */
+export function wantsMarket(said: string): boolean {
+  const text = String(said ?? "").toLowerCase();
+  if (/local market|market square/.test(text)) return false;
+  return (
+    /\bmarket\s+(delivery|deliveries|run|list|shopping|day|errand)\b/.test(text) ||
+    /\b(buy|get|shop|shopping|go|pick up|bring)\b[^.?!]*\b(from|at|in)\s+(the\s+)?market\b/.test(text) ||
+    /\bmarket\b[^.?!]*\b(for me|my list)\b/.test(text)
+  );
+}

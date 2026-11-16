@@ -21,6 +21,7 @@ import {
   insteadOf,
   kitchenAsked,
   looksLikeAQuestion,
+  wantsMarket,
   placeAsked,
   namedIn,
   without,
@@ -1351,6 +1352,37 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           changeRef.current?.(swap);
           return;
         }
+      }
+
+      /*
+       * The market run, before any search or written answer.
+       *
+       * A list is the whole of this: nothing is added to a basket. They are
+       * sent to the list page, or to WhatsApp where that is easier.
+       */
+      if (echo && wantsMarket(said)) {
+        misses.current = 0;
+        bot(
+          "Yes, every Saturday. Send us your list and we agree the time and " +
+            "the price on WhatsApp.",
+          500
+        );
+        setAsk({
+          of: "buttons",
+          buttons: [
+            { said: "Send us my list", look: "green", href: "/market" },
+            { said: "Message us on WhatsApp", look: "alt", href: handOver() },
+            {
+              said: "Carry on with food",
+              look: "alt",
+              go: () => {
+                me("Carry on with food");
+                askOrderRef.current?.(true);
+              },
+            },
+          ],
+        });
+        return;
       }
 
       /*

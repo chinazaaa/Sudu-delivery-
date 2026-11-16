@@ -8,7 +8,7 @@ import {
   sellingNow,
   wasPrice,
 } from "../lib/deals";
-import { soundsUrgent } from "../lib/bot-match";
+import { soundsUrgent, wantsMarket } from "../lib/bot-match";
 import { REFERRAL_REWARD, creditToUse, shareText } from "../lib/referrals";
 import { comesRoundAgain, comingRound, daySaidFor, daysSaid, everySaid, leftToRun, offerTrouble, onItsDay, thisTimeSaid } from "../lib/coupons";
 import { asksNothing, blanketFee, dayMatches, dayOfDate, floorFee, seasonCovers } from "../lib/offers";
@@ -8553,4 +8553,12 @@ test("a run only hides cars if it could carry the cart", async () => {
   // The same run could not carry an Ajah cart, so it is not given: nothing is hidden.
   const alone = carsClearOfRuns(slots, [], hourOf);
   assert.equal(alone.length, 3);
+});
+
+test("wantsMarket hears the market run and leaves the market kitchens alone", () => {
+  assert.equal(wantsMarket("Need a market delivery"), true);
+  assert.equal(wantsMarket("Do you do market delivery"), true);
+  assert.equal(wantsMarket("I want to buy tomatoes from the market"), true);
+  assert.equal(wantsMarket("2 chicken from Local Market"), false);
+  assert.equal(wantsMarket("what time do you deliver"), false);
 });
