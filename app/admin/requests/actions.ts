@@ -6,6 +6,10 @@ import { db } from "@/lib/supabase";
 import { isSignedIn } from "@/lib/admin-auth";
 import { lagosToday } from "@/lib/time";
 import { ensureCustomer } from "@/lib/orders";
+import { createPickupOrder } from "@/lib/pickup-order";
+import { normalisePhone } from "@/lib/phone";
+import { redirect } from "next/navigation";
+import { safeSettings } from "@/lib/settings";
 import { ASK_BUCKET } from "@/lib/uploads";
 
 /**
@@ -43,6 +47,63 @@ export async function markRequest(form: FormData): Promise<void> {
 
   revalidatePath("/admin/requests");
   revalidatePath("/admin");
+}
+
+/**
+ * Turn a campus pickup into an ordinary order, in one tap.
+ *
+ * The fee is what was quoted on the card, or the pickup fee in settings. The
+ * order is the same as any other: it has a number, a receipt, goes on the
+ * run list under a pickup car for the day and counts in the profit. It still
+ * has to be marked paid when the money arrives.
+ */
+export async function convertPickup(form: FormData): Promise<void> {
+  if (!(await isSignedIn())) throw new Error("Not signed in.");
+  const id = String(form.get("id") ?? "");
+  const { data } = await db()
+    .from("custom_requests")
+    .select("id, wanted, name, phone, hostel, note, quoted, order_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return;
+  const ask = data as {
+    wanted: string;
+    name: string;
+    phone: string;
+    hostel: string;
+    note: string;
+    quoted: number | null;
+    order_id: string | null;
+  };
+  if (ask.order_id) redirect(`/admin/orders/${ask.order_id}`);
+
+  const phone = normalisePhone(ask.phone);
+  if (!phone) throw new Error("That number does not look right. Fix it on the request first.");
+  const settings = await safeSettings();
+  const fee = ask.quoted && ask.quoted > 0
+    ? ask.quoted
+    : Number(String(settings.pickup_fee).replace(/[^\d]/g, "")) || 0;
+  if (fee <= 0) throw new Error("Put a price on it first, or set the pickup fee in Campus pickup.");
+
+  await ensureCustomer({ phone, name: ask.name, hostel: ask.hostel });
+  const orderId = await createPickupOrder({
+    phone,
+    name: ask.name,
+    hostel: ask.hostel,
+    fee,
+    note: `${ask.wanted}${ask.note ? ` · ${ask.note}` : ""}`,
+  });
+  if (!orderId) throw new Error("Could not make the order. Try again.");
+
+  await db()
+    .from("custom_requests")
+    .update({ status: "converted", order_id: orderId, quoted: fee, answered_at: new Date().toISOString() })
+    .eq("id", id);
+
+  revalidatePath("/admin/requests");
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin");
+  redirect(`/admin/orders/${orderId}`);
 }
 
 /**

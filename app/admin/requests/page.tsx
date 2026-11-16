@@ -5,6 +5,7 @@ import { safeSettings, whatsappLink } from "@/lib/settings";
 import { naira } from "@/lib/money";
 import {
   addRequest,
+  convertPickup,
   deleteRequest,
   linkRequestToOrder,
   markRequest,
@@ -484,6 +485,17 @@ export default async function RequestsPage({
                     ))}
                   </div>
                 </details>
+              )}
+
+              {/* A campus pickup becomes an ordinary order: receipt, profit,
+                  and a number, with no run to set up. */}
+              {ask.wanted.startsWith("Campus pickup") && !ask.order_id && !ask.money_id && (
+                <form action={convertPickup} className="border-t border-black/5 pt-3">
+                  <input type="hidden" name="id" value={ask.id} />
+                  <ActionButton className="btn-primary w-full px-3 py-3 text-sm" busy="Making the order…">
+                    Make it an order
+                  </ActionButton>
+                </form>
               )}
 
               {/* A test or a mistake: gone for good, after one more tap. */}
