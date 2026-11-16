@@ -93,7 +93,9 @@ export async function convertPickup(form: FormData): Promise<void> {
     fee,
     // "Campus pickup · Amethyst hall: chicken and rice" names its place.
     place: /^Campus pickup · ([^:]+):/.exec(ask.wanted)?.[1]?.trim() ?? "",
-    note: `${ask.wanted}${ask.note ? ` · ${ask.note}` : ""}`,
+    // Just what they bought, without the "Campus pickup · place:" start: the
+    // place is already on the line, and this is what gets read at the counter.
+    note: `${ask.wanted.replace(/^Campus pickup[^:]*:\s*/, "")}${ask.note ? ` · ${ask.note}` : ""}`,
   });
   if (!orderId) throw new Error("Could not make the order. Try again.");
 

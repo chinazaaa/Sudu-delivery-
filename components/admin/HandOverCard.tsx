@@ -73,6 +73,11 @@ export default function HandOverCard({
       {/* Where it goes and which car it is on. The PIN is here because it is
           what gets checked at the door, and hunting for it is the reason
           anybody opened the run sheet on the step. */}
+      {order.customerNote && (
+        <p className="line-clamp-2 rounded-lg bg-brand-tint px-2.5 py-1.5 text-[14px] font-semibold">
+          {order.customerNote}
+        </p>
+      )}
       <p className="hint">
         {[order.batchLabel, order.hostel].filter((part) => part !== "").join(" · ")}
       </p>

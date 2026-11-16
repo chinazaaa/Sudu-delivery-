@@ -65,6 +65,11 @@ export default function WaitingCard({
       {/* When it came in, which run it is on, where it is going, and how they
           said they would pay. Everything needed to decide whether this one
           can wait another hour. */}
+      {order.customerNote && (
+        <p className="line-clamp-2 rounded-lg bg-brand-tint px-2.5 py-1.5 text-[14px] font-semibold">
+          {order.customerNote}
+        </p>
+      )}
       <p className="hint">
         {[
           order.createdAt ? placedLabel(order.createdAt) : "",
