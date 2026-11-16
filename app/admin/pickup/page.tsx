@@ -12,7 +12,7 @@ export default async function PickupAdmin() {
     <div>
       <PageHeader
         title="Campus pickup"
-        detail="Customers send a barcode, you scan it and bring the food to their hostel. The page is /pickup."
+        detail="Customers send a barcode or a picture of their order, you scan it or show it and bring the food to their hostel. The page is /pickup."
       />
       <form action={saveSettings} className="card space-y-3">
         <div>

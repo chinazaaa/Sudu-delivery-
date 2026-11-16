@@ -275,7 +275,7 @@ export async function featuredTiles(): Promise<FeaturedTile[]> {
             from: 0,
             image: "",
             href: "/pickup",
-            note: "Send us your barcode",
+            note: "Barcode or picture",
           },
         ];
   return [market, ...pickup, ...(shelf ? [shelf] : [])];

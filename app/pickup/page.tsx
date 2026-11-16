@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 const TITLE = "Campus pickup";
 const BLURB =
-  "Bought food on campus? Send us the barcode and we collect it " +
+  "Bought food on campus? Send us the barcode or a picture and we collect it " +
   "and bring it to your Pan-Atlantic University hostel.";
 
 export const metadata: Metadata = {
@@ -44,7 +44,7 @@ export default async function StudentCenterPage({
           Campus pickup
         </h1>
         <p className="text-sm text-muted">
-          Send us your barcode. We collect it and bring it to your hostel.
+          Send us your barcode or a picture of your order. We collect it and bring it to your hostel.
           {fee > 0 ? ` ${naira(fee)}.` : ""}
           {when ? ` ${when}.` : ""}
         </p>
@@ -54,7 +54,7 @@ export default async function StudentCenterPage({
         {sent ? (
           <div className="rounded-2xl border-2 border-ink bg-paper p-6 shadow-lift">
             <p className="font-display text-[32px] font-black uppercase leading-none text-mint">
-              We have your barcode.
+              We have it.
             </p>
             <p className="mt-2 text-ink/75">
               We will message you on WhatsApp when we are on our way to collect it.
@@ -70,14 +70,14 @@ export default async function StudentCenterPage({
             noBudget
             places={settings.pickup_places.split("\n").map((one) => one.trim()).filter(Boolean)}
             rows={3}
-            opening="Hi Sudu, I would like a campus pickup. My barcode is attached."
-            lead="Open WhatsApp and send your barcode. We confirm and collect it."
+            opening="Hi Sudu, I would like a campus pickup. My barcode or picture is attached."
+            lead="Open WhatsApp and send your barcode or a picture. We confirm and collect it."
             label="What are we collecting?"
             placeholder="Chicken and rice"
             help="A line is enough. Add anything we should know."
-            fileLabel="Your barcode"
-            fileHint="A screenshot or photo of the barcode we scan."
-            send="Send us my barcode"
+            fileLabel="Your barcode or a picture"
+            fileHint="A screenshot of the barcode, or a photo of your receipt or order."
+            send="Send it to us"
           />
         )}
       </div>

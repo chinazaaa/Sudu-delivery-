@@ -1364,14 +1364,14 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       if (echo && wantsPickup(said)) {
         misses.current = 0;
         bot(
-          "Yes. Send us your barcode and we collect your food on campus and " +
+          "Yes. Send us your barcode or a picture of your order and we collect it on campus and " +
             "bring it to your hostel.",
           500
         );
         setAsk({
           of: "buttons",
           buttons: [
-            { said: "Send us my barcode", look: "green", href: "/pickup" },
+            { said: "Send us my barcode or picture", look: "green", href: "/pickup" },
             { said: "Message us on WhatsApp", look: "alt", href: handOver() },
             {
               said: "Carry on with food",
