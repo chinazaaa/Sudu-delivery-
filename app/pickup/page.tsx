@@ -44,7 +44,7 @@ export default async function StudentCenterPage({
           Campus pickup
         </h1>
         <p className="text-sm text-muted">
-          Send us your barcode or a picture of your order. We collect it and bring it to your hostel.
+          Tell us where and what. Add your barcode or a picture if you have one. We collect it and bring it to your hostel.
           {fee > 0 ? ` ${naira(fee)}.` : ""}
           {when ? ` ${when}.` : ""}
         </p>
@@ -70,13 +70,13 @@ export default async function StudentCenterPage({
             noBudget
             places={settings.pickup_places.split("\n").map((one) => one.trim()).filter(Boolean)}
             rows={3}
-            opening="Hi Sudu, I would like a campus pickup. My barcode or picture is attached."
-            lead="Open WhatsApp and send your barcode or a picture. We confirm and collect it."
+            opening="Hi Sudu, I would like a campus pickup. I will send my barcode or a picture if I have one."
+            lead="Open WhatsApp and tell us what you bought, with your barcode or a picture if you have one."
             label="What are we collecting?"
             placeholder="Chicken and rice"
             help="A line is enough. Add anything we should know."
-            fileLabel="Your barcode or a picture"
-            fileHint="A screenshot of the barcode, or a photo of your receipt. If it will not scan, we call or message you."
+            fileLabel="Barcode or picture, if you have one"
+            fileHint="Not everyone has one, so just tell us what you bought. If a barcode will not scan, we call or message you."
             send="Send it to us"
           />
         )}
