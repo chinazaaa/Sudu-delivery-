@@ -57,7 +57,7 @@ async function pickupBatchToday(): Promise<Batch | null> {
 }
 
 /** The one line every pickup order carries, so a receipt says what it was. */
-async function pickupItemId(): Promise<string | null> {
+async function pickupItemId(name: string): Promise<string | null> {
   const { data: shop } = await db()
     .from("restaurants")
     .select("id")
@@ -71,14 +71,14 @@ async function pickupItemId(): Promise<string | null> {
     .from("menu_items")
     .select("id")
     .eq("restaurant_id", restaurantId)
-    .eq("name", PICKUP_LABEL)
+    .eq("name", name)
     .limit(1)
     .maybeSingle();
   if (found) return (found as { id: string }).id;
 
   const { data: made } = await db()
     .from("menu_items")
-    .insert({ restaurant_id: restaurantId, name: PICKUP_LABEL, price_food: 0 })
+    .insert({ restaurant_id: restaurantId, name, price_food: 0 })
     .select("id")
     .single();
   return (made as { id?: string } | null)?.id ?? null;
@@ -90,8 +90,11 @@ export async function createPickupOrder(args: {
   hostel: string;
   fee: number;
   note: string;
+  /** Where it is being collected from, for the name of the line. */
+  place?: string;
 }): Promise<string | null> {
-  const [batch, itemId] = await Promise.all([pickupBatchToday(), pickupItemId()]);
+  const line = args.place ? `${PICKUP_LABEL} from ${args.place}` : PICKUP_LABEL;
+  const [batch, itemId] = await Promise.all([pickupBatchToday(), pickupItemId(line)]);
   if (!batch || !itemId) return null;
 
   const { data: order, error } = await db()

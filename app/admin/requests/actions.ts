@@ -91,6 +91,8 @@ export async function convertPickup(form: FormData): Promise<void> {
     name: ask.name,
     hostel: ask.hostel,
     fee,
+    // "Campus pickup · Amethyst hall: chicken and rice" names its place.
+    place: /^Campus pickup · ([^:]+):/.exec(ask.wanted)?.[1]?.trim() ?? "",
     note: `${ask.wanted}${ask.note ? ` · ${ask.note}` : ""}`,
   });
   if (!orderId) throw new Error("Could not make the order. Try again.");
