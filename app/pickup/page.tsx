@@ -76,7 +76,7 @@ export default async function StudentCenterPage({
             placeholder="Chicken and rice"
             help="A line is enough. Add anything we should know."
             fileLabel="Your barcode or a picture"
-            fileHint="A screenshot of the barcode, or a photo of your receipt or order."
+            fileHint="A screenshot of the barcode, or a photo of your receipt. If it will not scan, we call or message you."
             send="Send it to us"
           />
         )}
