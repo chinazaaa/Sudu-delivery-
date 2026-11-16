@@ -17,6 +17,9 @@ import { waLink } from "@/lib/whatsapp";
  * uncontrolled form the moment a server action comes back, so a refusal used
  * to wipe everything somebody had written.
  */
+/** The dropdown entry for a place that is not on the list. */
+const OTHER_PLACE = "__other__";
+
 export default function AskForm({
   hostels,
   whatsapp,
@@ -89,7 +92,10 @@ export default function AskForm({
   });
 
   const [wanted, setWanted] = useState(preset);
-  const [place, setPlace] = useState("");
+  const [chosen, setChosen] = useState("");
+  const [otherPlace, setOtherPlace] = useState("");
+  // Somewhere not on the list: what they typed stands in for the choice.
+  const place = chosen === OTHER_PLACE ? otherPlace.trim() : chosen;
   const [budget, setBudget] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -156,8 +162,8 @@ export default function AskForm({
             <select
               id="place"
               required
-              value={place}
-              onChange={(event) => setPlace(event.target.value)}
+              value={chosen}
+              onChange={(event) => setChosen(event.target.value)}
               className="field"
             >
               <option value="">Choose a place</option>
@@ -166,7 +172,17 @@ export default function AskForm({
                   {one}
                 </option>
               ))}
+              <option value={OTHER_PLACE}>Somewhere else</option>
             </select>
+            {chosen === OTHER_PLACE && (
+              <input
+                required
+                value={otherPlace}
+                onChange={(event) => setOtherPlace(event.target.value)}
+                placeholder="Where should we collect it from?"
+                className="field mt-2"
+              />
+            )}
           </div>
         )}
 

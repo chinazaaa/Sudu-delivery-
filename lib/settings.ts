@@ -387,7 +387,7 @@ export const EMPTY: Settings = {
   pickup_fee: "1500",
   pickup_days: "Every day",
   pickup_hours: "10am to 7pm",
-  pickup_places: "Student center\nAmethyst hall\nSchool cafeteria",
+  pickup_places: "Student center\nAmethyst hall\nSchool cafeteria\nRedwood\nSST food truck",
   pickup_banner: "We pick up your food from the student center, cafeteria and more.",
   plans_paused_until: "",
   plan_lead_days: "",

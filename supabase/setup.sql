@@ -932,7 +932,7 @@ alter table settings add column if not exists pickup_on text not null default 'o
 alter table settings add column if not exists pickup_fee text not null default '1500';
 alter table settings add column if not exists pickup_days text not null default 'Every day';
 alter table settings add column if not exists pickup_hours text not null default '10am to 7pm';
-alter table settings add column if not exists pickup_places text not null default E'Student center\nAmethyst hall\nSchool cafeteria';
+alter table settings add column if not exists pickup_places text not null default E'Student center\nAmethyst hall\nSchool cafeteria\nRedwood\nSST food truck';
 alter table settings add column if not exists pickup_banner text not null default 'We pick up your food from the student center, cafeteria and more.';
 
 -- What actually sells, so the everything list can open with it rather than

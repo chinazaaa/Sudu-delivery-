@@ -45,7 +45,7 @@ export default async function PickupAdmin() {
             id="pickup_places"
             name="pickup_places"
             rows={5}
-            defaultValue={settings.pickup_places || "Student center\nAmethyst hall\nSchool cafeteria"}
+            defaultValue={settings.pickup_places || "Student center\nAmethyst hall\nSchool cafeteria\nRedwood\nSST food truck"}
             className="field"
           />
           <p className="hint mt-1">One place a line. Add a line to add a place. It is the dropdown customers choose from.</p>
