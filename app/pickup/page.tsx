@@ -68,6 +68,7 @@ export default async function StudentCenterPage({
             back="/pickup"
             noChips
             noBudget
+            notePlaceholder="Need it before 5pm"
             places={settings.pickup_places.split("\n").map((one) => one.trim()).filter(Boolean)}
             rows={3}
             opening="Hi Sudu, I would like a campus pickup. I will send my barcode or a picture if I have one."

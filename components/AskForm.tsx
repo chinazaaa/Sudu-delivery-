@@ -47,6 +47,7 @@ export default function AskForm({
   help = "The more exact the better. Colour, size, make, anything you know.",
   simple = false,
   noChips = false,
+  notePlaceholder = "Needed before Friday",
   places,
   noBudget = false,
   back = "",
@@ -61,6 +62,8 @@ export default function AskForm({
   simple?: boolean;
   /** Hide the taps above the box, or the limit box, on their own. */
   noChips?: boolean;
+  /** The grey example in the "Anything else?" box. */
+  notePlaceholder?: string;
   /** Where to collect from, as a dropdown above the box. */
   places?: string[];
   noBudget?: boolean;
@@ -364,7 +367,7 @@ export default function AskForm({
             name="note"
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            placeholder="Needed before Friday"
+            placeholder={notePlaceholder}
             className="field"
           />
         </div>
