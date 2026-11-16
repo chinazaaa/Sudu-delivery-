@@ -8,7 +8,7 @@ import {
   sellingNow,
   wasPrice,
 } from "../lib/deals";
-import { soundsUrgent, wantsMarket } from "../lib/bot-match";
+import { soundsUrgent, wantsMarket, wantsPickup } from "../lib/bot-match";
 import { REFERRAL_REWARD, creditToUse, shareText } from "../lib/referrals";
 import { comesRoundAgain, comingRound, daySaidFor, daysSaid, everySaid, leftToRun, offerTrouble, onItsDay, thisTimeSaid } from "../lib/coupons";
 import { asksNothing, blanketFee, dayMatches, dayOfDate, floorFee, seasonCovers } from "../lib/offers";
@@ -8561,4 +8561,10 @@ test("wantsMarket hears the market run and leaves the market kitchens alone", ()
   assert.equal(wantsMarket("I want to buy tomatoes from the market"), true);
   assert.equal(wantsMarket("2 chicken from Local Market"), false);
   assert.equal(wantsMarket("what time do you deliver"), false);
+});
+
+test("wantsPickup hears a student center barcode pickup", () => {
+  assert.equal(wantsPickup("who can help me buy food at student center"), true);
+  assert.equal(wantsPickup("I will send you the barcode"), true);
+  assert.equal(wantsPickup("2 chicken pies"), false);
 });

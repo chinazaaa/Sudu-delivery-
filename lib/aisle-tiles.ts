@@ -261,6 +261,22 @@ async function readMarket(): Promise<FeaturedTile> {
 
 /** What the shop is pushing: market delivery first, then the promoted collection. */
 export async function featuredTiles(): Promise<FeaturedTile[]> {
-  const [market, shelf] = await Promise.all([readMarket(), featuredTile()]);
-  return shelf ? [market, shelf] : [market];
+  const [market, shelf, settings] = await Promise.all([
+    readMarket(),
+    featuredTile(),
+    safeSettings(),
+  ]);
+  const pickup: FeaturedTile[] =
+    settings.pickup_on === "off"
+      ? []
+      : [
+          {
+            aisle: "Campus pickup",
+            from: 0,
+            image: "",
+            href: "/pickup",
+            note: "Send us your barcode",
+          },
+        ];
+  return [market, ...pickup, ...(shelf ? [shelf] : [])];
 }

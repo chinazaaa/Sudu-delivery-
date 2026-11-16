@@ -108,6 +108,28 @@ export default function StartHere() {
 
   return (
     <View style={{ gap: 10 }}>
+      {(home.pickupBanner ?? "") !== "" && (
+        <Pressable
+          onPress={() => void Linking.openURL(`${BASE}/pickup`).catch(() => {})}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            backgroundColor: T.volt,
+            borderWidth: 2,
+            borderColor: T.ink,
+            borderRadius: 16,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+          }}
+        >
+          <Text style={{ flex: 1, fontFamily: F.bodyBold, fontSize: 15, color: T.ink }}>
+            {home.pickupBanner}
+          </Text>
+          <Text style={{ fontFamily: F.bodyBold, fontSize: 18, color: T.ink }}>→</Text>
+        </Pressable>
+      )}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <Display size={28}>Start from here</Display>
         {home.arriving !== "" && (

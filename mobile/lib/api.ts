@@ -1842,6 +1842,8 @@ export type HomeView = {
   arriving: string;
   /** A wa.me link, or empty when the shop has no number. */
   whatsapp: string;
+  /** The campus pickup line, empty when it is off. */
+  pickupBanner?: string;
   /** The collection the shop is promoting, if it has picked one. */
   featured?: unknown;
   /** Everything the shop is promoting, market delivery first. */

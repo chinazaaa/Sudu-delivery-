@@ -145,6 +145,15 @@ export type Settings = {
   featured_shelf: string;
   /** Photos in the books page slider, one address per line. */
   books_gallery: string;
+  /** Student center pickup: on or off, the fee in naira, and when it runs. */
+  pickup_on: string;
+  pickup_fee: string;
+  pickup_days: string;
+  pickup_hours: string;
+  /** Where we collect from, one place a line. */
+  pickup_places: string;
+  /** The line on the front page that points at campus pickup. */
+  pickup_banner: string;
   /** Every standing plan held at once, for the holidays. A date, or empty. */
   plans_paused_until: string;
   /** How many days before it lands a plan's order is raised. */
@@ -374,6 +383,12 @@ export const EMPTY: Settings = {
   more_photos: "",
   featured_shelf: "",
   books_gallery: "",
+  pickup_on: "on",
+  pickup_fee: "1500",
+  pickup_days: "Every day",
+  pickup_hours: "10am to 7pm",
+  pickup_places: "Student center\nAmethyst hall\nSchool cafeteria",
+  pickup_banner: "We pick up your food from the student center, cafeteria and more.",
   plans_paused_until: "",
   plan_lead_days: "",
   same_day_first_hour: "",

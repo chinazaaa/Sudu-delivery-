@@ -78,6 +78,7 @@ export async function GET(): Promise<NextResponse> {
         note: one.note ?? "",
       })),
 
+      pickupBanner: settings.pickup_on === "off" ? "" : settings.pickup_banner,
       arriving: decided?.said ? arrivalShort(decided.said) : "",
       whatsapp:
         whatsappLink(settings.whatsapp_number, "Hi Sudu, I'd like to order: ") ?? "",

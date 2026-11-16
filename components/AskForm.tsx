@@ -43,6 +43,9 @@ export default function AskForm({
   placeholder = "A black 20,000mAh power bank",
   help = "The more exact the better. Colour, size, make, anything you know.",
   simple = false,
+  noChips = false,
+  places,
+  noBudget = false,
   back = "",
 }: {
   /** Put in front of what they wrote when it is saved, so admin can tell
@@ -53,6 +56,11 @@ export default function AskForm({
   help?: string;
   /** No picture and no limit: a list is just a list. */
   simple?: boolean;
+  /** Hide the taps above the box, or the limit box, on their own. */
+  noChips?: boolean;
+  /** Where to collect from, as a dropdown above the box. */
+  places?: string[];
+  noBudget?: boolean;
   /** Where to land after sending, where it is not the custom order page. */
   back?: string;
   hostels: string[];
@@ -81,6 +89,7 @@ export default function AskForm({
   });
 
   const [wanted, setWanted] = useState(preset);
+  const [place, setPlace] = useState("");
   const [budget, setBudget] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -101,6 +110,7 @@ export default function AskForm({
   // is theirs to send: we never send anything on anybody's behalf.
   const message =
     opening +
+    (place !== "" ? `\n\nCollect from: ${place}` : "") +
     (wanted.trim() ? `\n\n${tag === "" ? "What: " : ""}${wanted.trim()}` : "") +
     (budget.trim() ? `\nLimit: ${budget.trim()}` : "") +
     (hostel.trim() ? `\nBlock: ${hostel.trim()}` : "") +
@@ -138,6 +148,28 @@ export default function AskForm({
       </p>
 
       <form action={action} encType="multipart/form-data" className="card space-y-3">
+        {places && places.length > 0 && (
+          <div>
+            <label className="label" htmlFor="place">
+              Where are we collecting from?
+            </label>
+            <select
+              id="place"
+              required
+              value={place}
+              onChange={(event) => setPlace(event.target.value)}
+              className="field"
+            >
+              <option value="">Choose a place</option>
+              {places.map((one) => (
+                <option key={one} value={one}>
+                  {one}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div>
           <label className="label" htmlFor="wanted">
             {label}
@@ -152,7 +184,7 @@ export default function AskForm({
             placeholder={placeholder}
             className="field"
           />
-          {tag !== "" && <input type="hidden" name="wanted" value={`${tag}: ${wanted}`} />}
+          {tag !== "" && <input type="hidden" name="wanted" value={`${tag}${place !== "" ? ` · ${place}` : ""}: ${wanted}`} />}
           {back !== "" && <input type="hidden" name="back" value={back} />}
           <p className="mt-1 text-xs text-muted">{help}</p>
 
@@ -160,7 +192,7 @@ export default function AskForm({
               further down the page looking like buttons and doing nothing,
               which is the worst a chip can be: it says the shop does these
               and then ignores the finger. */}
-          <div className={`mt-2 flex flex-wrap gap-2 ${simple ? "hidden" : ""}`}>
+          <div className={`mt-2 flex flex-wrap gap-2 ${simple || noChips ? "hidden" : ""}`}>
             {(chips ?? [
               "Tailoring: ",
               "Laundry: ",
@@ -232,7 +264,7 @@ export default function AskForm({
             is the one thing actually needed at this end: whether to go
             ahead without asking again.
           */}
-          <div className={simple ? "hidden" : ""}>
+          <div className={simple || noBudget ? "hidden" : ""}>
             <label className="label" htmlFor="budget">
               A limit, if you have one
             </label>

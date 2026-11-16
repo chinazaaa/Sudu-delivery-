@@ -22,6 +22,7 @@ import {
   kitchenAsked,
   looksLikeAQuestion,
   wantsMarket,
+  wantsPickup,
   placeAsked,
   namedIn,
   without,
@@ -1360,6 +1361,31 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
        * A list is the whole of this: nothing is added to a basket. They are
        * sent to the list page, or to WhatsApp where that is easier.
        */
+      if (echo && wantsPickup(said)) {
+        misses.current = 0;
+        bot(
+          "Yes. Send us your barcode and we collect your food on campus and " +
+            "bring it to your hostel.",
+          500
+        );
+        setAsk({
+          of: "buttons",
+          buttons: [
+            { said: "Send us my barcode", look: "green", href: "/pickup" },
+            { said: "Message us on WhatsApp", look: "alt", href: handOver() },
+            {
+              said: "Carry on with food",
+              look: "alt",
+              go: () => {
+                me("Carry on with food");
+                askOrderRef.current?.(true);
+              },
+            },
+          ],
+        });
+        return;
+      }
+
       if (echo && wantsMarket(said)) {
         misses.current = 0;
         bot(

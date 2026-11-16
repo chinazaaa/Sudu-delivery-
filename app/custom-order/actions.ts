@@ -57,5 +57,7 @@ export async function sendRequest(
     /* The request is saved either way. */
   }
 
-  redirect(said("back") === "/market" ? "/market?sent=1" : "/custom-order?sent=1");
+  redirect(["/market", "/pickup"].includes(said("back"))
+      ? `${said("back")}?sent=1`
+      : "/custom-order?sent=1");
 }

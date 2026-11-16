@@ -1566,3 +1566,16 @@ export function wantsMarket(said: string): boolean {
     /\bmarket\b[^.?!]*\b(for me|my list)\b/.test(text)
   );
 }
+
+/**
+ * Somebody who has bought food at the student center and needs it collected
+ * with a barcode. Not a dish, so it is never searched for on a menu.
+ */
+export function wantsPickup(said: string): boolean {
+  const text = String(said ?? "").toLowerCase();
+  return (
+    /\bbarcode\b/.test(text) ||
+    /\bstudent\s*(center|centre)\b/.test(text) ||
+    /\b(school\s+)?cafeteria\b/.test(text)
+  );
+}

@@ -130,6 +130,7 @@ export const GROUPS: Group[] = [
     items: [
       { href: "/admin/home", label: "Home page" },
       { href: "/admin/books", label: "Books" },
+      { href: "/admin/pickup", label: "Campus pickup" },
       { href: "/admin/santa", label: "Secret Santa" },
       { href: "/admin/email", label: "Email" },
       { href: "/admin/notifications", label: "Notifications" },

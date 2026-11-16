@@ -65,6 +65,7 @@ export default function Home({
   todayOffer = null,
   starters = [],
   featured = [],
+  pickupBanner = "",
   more = [],
   askUs = "",
   areaExtras = [],
@@ -121,6 +122,8 @@ export default function Home({
   askUs?: string;
   starters?: { aisle: string; from: number; image: string }[];
   featured?: { aisle: string; from: number; image: string; href: string; note?: string }[];
+  /** One line pointing at campus pickup, empty when it is off. */
+  pickupBanner?: string;
   /** The other aisles, in the same tile design. */
   more?: { aisle: string; from: number; image: string }[];
   todayOffer?: {
@@ -350,6 +353,17 @@ export default function Home({
           {/* First thing seen: people who open the shop not knowing what to
               pick get a ready answer, and a person to ask if it is not one. */}
           {building !== null && <Builder kind={building} onClose={() => setBuilding(null)} />}
+          {pickupBanner !== "" && (
+            <div className="shell pt-3">
+              <Link
+                href="/pickup"
+                className="flex items-center justify-between gap-3 rounded-2xl border-2 border-ink bg-volt px-4 py-3 text-[15px] font-extrabold leading-snug"
+              >
+                <span>{pickupBanner}</span>
+                <span aria-hidden className="shrink-0 text-lg">→</span>
+              </Link>
+            </div>
+          )}
           {starters.length > 0 && (
             <section>
               <div className="shell space-y-2 pb-2 pt-3">
