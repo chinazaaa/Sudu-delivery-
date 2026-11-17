@@ -541,7 +541,9 @@ export default function Checkout({
   const farLines = cart.filter((line) =>
     far.some((one) => one.id === (areaOf[line.restaurantId] ?? ""))
   );
-  const noRunThere = far.length > 0 && openable.length === 0;
+  // A car on the day counts as something going there, not only a shared run:
+  // Ikoyi is car-only on Tuesdays, so no run covers it and a car still does.
+  const noRunThere = far.length > 0 && openable.length === 0 && dayChoices.length === 0;
 
   /*
    * The counters holding the cart up, by their own names.
