@@ -151,7 +151,16 @@ export default function RestaurantMenu({
             <div className="relative">
               <input
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  // The list shrinks as you type, which leaves the page
+                  // sitting at the footer with the results above it.
+                  if (e.target.value.trim().length >= 2) {
+                    window.requestAnimationFrame(() =>
+                      listTop.current?.scrollIntoView({ block: "start" })
+                    );
+                  }
+                }}
                 placeholder={`Search ${place.restaurant.name}`}
                 aria-label={`Search ${place.restaurant.name}`}
                 className="field rounded-full py-3 pl-11"
