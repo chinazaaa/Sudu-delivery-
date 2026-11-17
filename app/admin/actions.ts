@@ -6974,7 +6974,15 @@ export async function tellEveryoneRun(form: FormData): Promise<void> {
   const id = String(form.get("batch_id") ?? "");
   const { data } = await db().from("batches").select("*").eq("id", id).maybeSingle();
   if (!data) return;
-  const batch = data as { run_date: string; cut_off_at: string; areas: string | null; status: string };
+  const batch = data as {
+    run_date: string;
+    cut_off_at: string;
+    areas: string | null;
+    status: string;
+    told_at?: string | null;
+  };
+  // Once only: a second send is the same message to the same people.
+  if (batch.told_at) redirect(`/admin/batch/${id}?told=already`);
   if (batch.status !== "open" || new Date(batch.cut_off_at).getTime() < Date.now()) {
     redirect(`/admin/batch/${id}?told=closed`);
   }
@@ -6993,11 +7001,19 @@ export async function tellEveryoneRun(form: FormData): Promise<void> {
       : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
   const day = batch.run_date === today() ? "today" : "on " + new Date(batch.run_date + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" });
 
+  // Claimed before sending, so two taps at once cannot both send.
+  const { data: claimed } = await db()
+    .from("batches")
+    .update({ told_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("told_at", null)
+    .select("id");
+  if ((claimed ?? []).length === 0) redirect(`/admin/batch/${id}?told=already`);
+
   const sent = await pushDeal({
     title: "We are going out",
     body: `Going to ${places} ${day}. Order before ${lagosClockWord(batch.cut_off_at)}.`,
     path: "/",
   });
-  await db().from("batches").update({ told_at: new Date().toISOString() }).eq("id", id);
   redirect(`/admin/batch/${id}?told=${sent.sent}`);
 }

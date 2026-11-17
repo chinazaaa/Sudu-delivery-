@@ -633,14 +633,19 @@ export default async function BatchPage({
               />
               {/* One tap to tell everyone with the app where it is going and
                   when ordering closes, worked out from this run. */}
-              {batch.status === "open" && batch.stage === "ordering" && (
-                <form action={tellEveryoneRun}>
-                  <input type="hidden" name="batch_id" value={batch.id} />
-                  <ActionButton className="btn-admin btn-admin-sm" busy="Sending…" done="Sent ✓">
-                    Tell everyone we are going
-                  </ActionButton>
-                </form>
-              )}
+              {batch.status === "open" && batch.stage === "ordering" &&
+                ((batch as { told_at?: string | null }).told_at ? (
+                  <span className="btn-admin btn-admin-sm pointer-events-none opacity-60">
+                    Everyone told ✓
+                  </span>
+                ) : (
+                  <form action={tellEveryoneRun}>
+                    <input type="hidden" name="batch_id" value={batch.id} />
+                    <ConfirmButton tone="admin" confirm="Send to every customer with the app?">
+                      Tell everyone we are going
+                    </ConfirmButton>
+                  </form>
+                ))}
               {/* Nothing paid, nothing to send: a counter sheet of no orders. */}
               {summary.paidCount > 0 && (
                 <SendSheet
@@ -688,6 +693,8 @@ export default async function BatchPage({
         <p className="mb-[18px] rounded-2xl border-[1.5px] border-ink bg-volt px-3.5 py-2.5 text-[14.5px] font-semibold">
           {query.told === "closed"
             ? "This run has closed, so nothing was sent."
+            : query.told === "already"
+              ? "Everyone has already been told about this run, so nothing was sent again."
             : `Sent to ${query.told} phone${query.told === "1" ? "" : "s"} with the app.`}
         </p>
       )}
