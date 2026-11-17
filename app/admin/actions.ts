@@ -6954,3 +6954,43 @@ export async function rejectReferralMove(form: FormData): Promise<void> {
   revalidatePath("/admin", "layout");
   revalidatePath("/orders");
 }
+
+/**
+ * Tell everyone with the app that this run is going, and where.
+ *
+ * "Going to Sangotedo, Ajah, Lekki and Ikoyi today. Order before 1pm." The
+ * places come from what the run covers and the time from when it closes, so
+ * nobody types them. Only phones that have left deals on are sent it, which
+ * is how everything the shop starts on its own is handled.
+ */
+export async function tellEveryoneRun(form: FormData): Promise<void> {
+  await assertAdmin();
+  const id = String(form.get("batch_id") ?? "");
+  const { data } = await db().from("batches").select("*").eq("id", id).maybeSingle();
+  if (!data) return;
+  const batch = data as { run_date: string; cut_off_at: string; areas: string | null; status: string };
+  if (batch.status !== "open" || new Date(batch.cut_off_at).getTime() < Date.now()) {
+    redirect(`/admin/batch/${id}?told=closed`);
+  }
+
+  const { allAreas } = await import("@/lib/areas-server");
+  const { areasOfRun } = await import("@/lib/areas");
+  const { lagosClockWord, lagosToday: today } = await import("@/lib/time");
+  const areas = await allAreas();
+  const firstTown = (name: string) => name.split(/\s*[/,]\s*|\s+and\s+/i)[0].trim() || name.trim();
+  const names = areasOfRun(batch.areas ?? "").map((one) =>
+    one === "" ? "Sangotedo" : firstTown(areas.find((a) => a.id === one)?.name ?? one)
+  );
+  const places =
+    names.length < 2
+      ? (names[0] ?? "Sangotedo")
+      : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  const day = batch.run_date === today() ? "today" : "on " + new Date(batch.run_date + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" });
+
+  const sent = await pushDeal({
+    title: "We are going out",
+    body: `Going to ${places} ${day}. Order before ${lagosClockWord(batch.cut_off_at)}.`,
+    path: "/",
+  });
+  redirect(`/admin/batch/${id}?told=${sent.sent}`);
+}

@@ -80,6 +80,7 @@ import {
   deleteRun,
   moveStop,
   noMoreOrders,
+  tellEveryoneRun,
   notAtTheCounter,
   nowAtTheCounter,
 } from "../../actions";
@@ -190,7 +191,7 @@ export default async function BatchPage({
   /** Which counter is being read, one-based. The sheet is one counter at a
    *  time on a phone, and the counter is in the address so it can be sent
    *  to somebody and so the back button walks the stops. */
-  searchParams: Promise<{ stop?: string; moved?: string }>;
+  searchParams: Promise<{ stop?: string; moved?: string; told?: string }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -630,6 +631,16 @@ export default async function BatchPage({
                 // Two Tomatoes and neither of them reads as the answer.
                 primary={stopShown === null}
               />
+              {/* One tap to tell everyone with the app where it is going and
+                  when ordering closes, worked out from this run. */}
+              {batch.status === "open" && batch.stage === "ordering" && (
+                <form action={tellEveryoneRun}>
+                  <input type="hidden" name="batch_id" value={batch.id} />
+                  <ActionButton className="btn-admin btn-admin-sm" busy="Sending…" done="Sent ✓">
+                    Tell everyone we are going
+                  </ActionButton>
+                </form>
+              )}
               {/* Nothing paid, nothing to send: a counter sheet of no orders. */}
               {summary.paidCount > 0 && (
                 <SendSheet
@@ -672,6 +683,14 @@ export default async function BatchPage({
           ) : null
         }
       />
+
+      {query.told && (
+        <p className="mb-[18px] rounded-2xl border-[1.5px] border-ink bg-volt px-3.5 py-2.5 text-[14.5px] font-semibold">
+          {query.told === "closed"
+            ? "This run has closed, so nothing was sent."
+            : `Sent to ${query.told} phone${query.told === "1" ? "" : "s"} with the app.`}
+        </p>
+      )}
 
       {batch.no_more_orders === true && (
         <p className="mb-[18px] rounded-2xl border-[1.5px] border-ink bg-wash px-3.5 py-2.5 text-[14.5px] font-semibold">
