@@ -1301,3 +1301,6 @@ alter table settings add column if not exists area_pairs text not null default '
 alter table customers add column if not exists heard_said text not null default '';
 
 alter table settings add column if not exists season text not null default '';
+
+-- Set when somebody has been told a paid car is going.
+alter table batches add column if not exists told_at timestamptz;

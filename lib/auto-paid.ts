@@ -2,6 +2,7 @@ import { db } from "./supabase";
 import { readAlert, likelyOrders } from "./alerts";
 import { safeSettings } from "./settings";
 import { unpaidOrdersForMatching } from "./admin-data";
+import { openCarsForPaid } from "./batches";
 
 /**
  * A payment alert marking its own order paid.
@@ -52,6 +53,7 @@ export async function maybeMarkPaid(letter: {
       // together cannot both claim the same order.
       .eq("status", "pending");
     if (error) return null;
+    await openCarsForPaid([one.id]);
 
     return { marked: one.orderNo ? `#${one.orderNo}` : one.id.slice(0, 7) };
   } catch {

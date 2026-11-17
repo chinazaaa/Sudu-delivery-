@@ -3074,3 +3074,6 @@ update menu_items mi
 set price_cost = round(mi.price_food / 1.15)
 from restaurants r
 where r.id = mi.restaurant_id and r.name = 'KFC' and mi.price_food > 0;
+
+-- Set when somebody has been told a paid car is going.
+alter table batches add column if not exists told_at timestamptz;

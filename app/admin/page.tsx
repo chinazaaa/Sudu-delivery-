@@ -16,6 +16,7 @@ import { newRequests } from "@/lib/requests";
 import { plansWaiting } from "@/lib/plans";
 import { parcelJobs } from "@/lib/parcel-jobs";
 import { tendBatches } from "@/lib/batches";
+import { db } from "@/lib/supabase";
 import { SLOT_LABEL } from "@/lib/config";
 import { naira } from "@/lib/money";
 import {
@@ -84,6 +85,22 @@ export default async function AdminHome() {
   }
 
   const open = batches.filter((batch) => batch.status === "open");
+
+  // Runs that opened out of a paid car and nobody has been told about yet.
+  let toTell: { id: string; run_date: string }[] = [];
+  try {
+    const { data } = await db()
+      .from("batches")
+      .select("id, run_date, cut_off_at")
+      .eq("kind", "run")
+      .eq("status", "open")
+      .not("deliver_at", "is", null)
+      .is("told_at", null)
+      .gt("cut_off_at", new Date().toISOString());
+    toTell = (data ?? []) as { id: string; run_date: string }[];
+  } catch {
+    /* A dashboard that cannot ask shows nothing extra. */
+  }
   // What is actually happening. A list of every run for the next three weeks
   // is a planning document, and this page is about today: the question in
   // the morning is whether a car is going, not what Sunday week looks like.
@@ -472,6 +489,17 @@ export default async function AdminHome() {
   return (
     <div>
       <AdminLive />
+
+      {toTell.map((one) => (
+        <Link
+          key={one.id}
+          href={`/admin/batch/${one.id}`}
+          className="mb-3 flex items-center justify-between gap-3 rounded-2xl border-[1.5px] border-ink bg-volt px-4 py-3 text-[15px] font-bold"
+        >
+          <span>A car is paid and going. Tell everyone so they can order.</span>
+          <span aria-hidden>→</span>
+        </Link>
+      ))}
 
       <PageHeader
         /* The weekday on a phone, which is what the board heads this page

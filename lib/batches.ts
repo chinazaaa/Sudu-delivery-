@@ -1174,12 +1174,58 @@ export async function openCarAsRun(car: Batch, goingTo: string[]): Promise<void>
     const covered = order.slice(0, furthest + 1);
     const areas = covered.length === 0 ? "" : `|${covered.join("|")}|`;
 
-    await db()
+    const { data: changed } = await db()
       .from("batches")
       .update({ kind: "run", areas })
       .eq("id", car.id)
-      .eq("kind", "same_day");
+      .eq("kind", "same_day")
+      .select("id");
+
+    // Opened just now: remind the shopkeeper to tell everyone, since nobody
+    // else will know it is going until they do.
+    if ((changed ?? []).length > 0) {
+      const { tellAdmin } = await import("./admin-alerts");
+      await tellAdmin({
+        title: "A car is paid and going",
+        body: "It is open to everyone on the way. Tap to tell customers it is going.",
+        url: `/admin/batch/${car.id}`,
+      });
+    }
   } catch (error) {
     console.error("openCarAsRun failed:", error);
+  }
+}
+
+/**
+ * A car is only going once somebody has paid for it. Called whenever orders
+ * are marked paid: for each one that is on a car of its own, work out where
+ * its food comes from and open the car as a shared run for everywhere on the
+ * way. Anything that is not on a car is left alone, and a failure here never
+ * stops the payment.
+ */
+export async function openCarsForPaid(orderIds: string[]): Promise<void> {
+  try {
+    for (const id of new Set(orderIds)) {
+      const { data: order } = await db()
+        .from("orders")
+        .select("batch_id")
+        .eq("id", id)
+        .maybeSingle();
+      const batchId = (order as { batch_id?: string } | null)?.batch_id;
+      if (!batchId) continue;
+      const car = await getBatch(batchId);
+      if (!car || car.kind !== "same_day") continue;
+
+      const { data: lines } = await db()
+        .from("order_items")
+        .select("menu_items(restaurants(area))")
+        .eq("order_id", id);
+      const areas = ((lines ?? []) as unknown as {
+        menu_items: { restaurants: { area: string | null } | null } | null;
+      }[]).map((row) => row.menu_items?.restaurants?.area ?? "");
+      await openCarAsRun(car, areas);
+    }
+  } catch (error) {
+    console.error("openCarsForPaid failed:", error);
   }
 }

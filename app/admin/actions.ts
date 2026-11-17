@@ -35,6 +35,7 @@ import {
   clearDeadGroups,
   createSameDayBatch,
   ensureUpcomingBatches,
+  openCarsForPaid,
   openRunsBetween,
 } from "@/lib/batches";
 import { closeGroup } from "@/lib/groups";
@@ -180,6 +181,10 @@ export async function markPaid(form: FormData): Promise<void> {
       payment_ref: ref || null,
     })
     .eq("id", id);
+
+  // Paid, so if this is on a car it is really going: open it to everyone
+  // on the way there.
+  await openCarsForPaid([id]);
 
   // What was actually taken, so an order edited afterwards can still say who
   // owes whom. Separate from the update above: a database without the column
@@ -6301,6 +6306,7 @@ export async function doManyOrders(
       .in("id", ids)
       .eq("status", "pending");
     if (error) return { error: error.message, done: null };
+    await openCarsForPaid(ids);
 
     // What each one was actually charged, so an order edited afterwards can
     // still say who owes whom. One at a time because each total is its own
@@ -6992,5 +6998,6 @@ export async function tellEveryoneRun(form: FormData): Promise<void> {
     body: `Going to ${places} ${day}. Order before ${lagosClockWord(batch.cut_off_at)}.`,
     path: "/",
   });
+  await db().from("batches").update({ told_at: new Date().toISOString() }).eq("id", id);
   redirect(`/admin/batch/${id}?told=${sent.sent}`);
 }
