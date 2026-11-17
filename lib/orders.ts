@@ -41,6 +41,7 @@ import { lagosToday, runDateLabel, weekdayLabel } from "./time";
 import {
   countersStillAhead,
   createSameDayBatch,
+  openCarAsRun,
   getBatch,
   isOrderable,
   nobodyToDrive,
@@ -875,6 +876,11 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
         });
 
   if (!result.ok) return result;
+
+  // The car is going now, so it opens to everyone on the way there.
+  if (sameDay && batch.kind === "same_day") {
+    await openCarAsRun(batch, where.all.map((one) => one.id));
+  }
 
   /*
    * And out of the wallet, written against the order that spent it.

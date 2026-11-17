@@ -1149,3 +1149,37 @@ export async function carsStillGoing(): Promise<Batch[]> {
     return [];
   }
 }
+
+/**
+ * A car going somewhere is a run for everywhere on the way.
+ *
+ * Once somebody has paid for a car, it is going anyway. The drive to Ikoyi
+ * passes Sangotedo, Ajah and Lekki, so anybody else who wants something
+ * that day should be able to see it and order onto it, at the shared price,
+ * instead of finding nothing is going. The car becomes an ordinary shared
+ * run covering every area up to the furthest one it is going to, in the
+ * order the shop lists them. The order already on it keeps what it paid.
+ *
+ * Left as a car when there is under twenty minutes before it closes: a run
+ * that shuts as it opens helps nobody and only confuses the list.
+ */
+export async function openCarAsRun(car: Batch, goingTo: string[]): Promise<void> {
+  try {
+    if (car.kind !== "same_day" || car.status !== "open" || car.stage !== "ordering") return;
+    if (new Date(car.cut_off_at).getTime() < Date.now() + 20 * 60_000) return;
+
+    const { allAreas } = await import("./areas-server");
+    const order = (await allAreas()).map((one) => one.id);
+    const furthest = Math.max(-1, ...goingTo.filter((id) => id !== "").map((id) => order.indexOf(id)));
+    const covered = order.slice(0, furthest + 1);
+    const areas = covered.length === 0 ? "" : `|${covered.join("|")}|`;
+
+    await db()
+      .from("batches")
+      .update({ kind: "run", areas })
+      .eq("id", car.id)
+      .eq("kind", "same_day");
+  } catch (error) {
+    console.error("openCarAsRun failed:", error);
+  }
+}
