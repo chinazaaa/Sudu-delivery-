@@ -30,6 +30,17 @@ export default async function MorePage() {
       />
 
       <div className="space-y-2.5">
+        {/* Settings is the page used most, so on a phone it is the first
+            thing here instead of the last. */}
+        <Link
+          href="/admin/settings"
+          className="flex min-h-[52px] items-center gap-2.5 rounded-2xl border-[1.5px] border-ink bg-paper px-4 py-3 shadow-card"
+        >
+          <span className="flex-1 text-[16px] font-bold">Settings</span>
+          <span aria-hidden className="text-[17px] text-muted">
+            ›
+          </span>
+        </Link>
         <MoreList
           waiting={waiting}
           notice={
@@ -53,7 +64,7 @@ export default async function MorePage() {
           {/* Read off the same list the rail's footer pins, rather than
               written out here: these two were also filed under the Site
               heading above, so the More screen listed each of them twice. */}
-          {YOU.map((item) => (
+          {YOU.filter((item) => item.href !== "/admin/settings").map((item) => (
             <Link
               key={item.href}
               href={item.href}
