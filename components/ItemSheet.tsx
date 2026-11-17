@@ -112,14 +112,42 @@ export default function ItemSheet({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-black/[0.06] font-bold"
-            aria-label="Close"
-          >
-            ✕
-          </button>
+          <div className="flex shrink-0 flex-col gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="grid size-9 place-items-center rounded-full bg-black/[0.06] font-bold"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+            {/* Send it to somebody: the phone's own share sheet where there
+                is one, and WhatsApp straight away where there is not. */}
+            <button
+              type="button"
+              aria-label={`Share ${item.name}`}
+              onClick={() => {
+                const link = `${window.location.origin}/p/${item.href}`;
+                const text = `${item.name} from ${restaurant.name}, ${naira(item.price)}`;
+                if (navigator.share) {
+                  void navigator.share({ title: item.name, text, url: link }).catch(() => {});
+                } else {
+                  window.open(
+                    `https://wa.me/?text=${encodeURIComponent(`${text}\n${link}`)}`,
+                    "_blank",
+                    "noopener"
+                  );
+                }
+              }}
+              className="grid size-9 place-items-center rounded-full bg-black/[0.06]"
+            >
+              <svg viewBox="0 0 24 24" className="size-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 16V4" />
+                <path d="M8 8l4-4 4 4" />
+                <path d="M5 13v6h14v-6" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto p-4 pt-0">
