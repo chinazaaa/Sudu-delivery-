@@ -1364,7 +1364,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       if (echo && wantsPickup(said)) {
         misses.current = 0;
         bot(
-          "Yes. Send us your barcode or a picture of your order and we collect it on campus and " +
+          "Yes. Send us your barcode or a picture of your order, or tell us it is laundry or printing, and we collect it on campus and " +
             "bring it to your hostel.",
           500
         );
