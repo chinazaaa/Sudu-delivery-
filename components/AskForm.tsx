@@ -108,6 +108,8 @@ export default function AskForm({
   const [wanted, setWanted] = useState(preset);
   const [chosen, setChosen] = useState("");
   const [kind, setKind] = useState<"Food" | "Laundry" | "Printing">("Food");
+  // Where their files are, for a print job: one link can hold any number.
+  const [filesLink, setFilesLink] = useState("");
   const [way, setWay] = useState<(typeof LAUNDRY_WAYS)[number]["label"]>("There and back");
   // Food is the usual one and needs no word; the others say what they are.
   const what =
@@ -117,8 +119,6 @@ export default function AskForm({
         ? `Laundry: ${way.toLowerCase()}`
         : `Printing${filesLink.trim() !== "" ? `, files: ${filesLink.trim()}` : ""}`;
   const [otherPlace, setOtherPlace] = useState("");
-  // Where their files are, for a print job: one link can hold any number.
-  const [filesLink, setFilesLink] = useState("");
   // Somewhere not on the list: what they typed stands in for the choice.
   const place = chosen === OTHER_PLACE ? otherPlace.trim() : chosen;
   const [budget, setBudget] = useState("");
