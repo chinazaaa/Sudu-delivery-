@@ -3466,6 +3466,7 @@ const SETTING_FIELDS = [
   "pickup_days",
   "pickup_hours",
   "pickup_places",
+  "pickup_print_places",
   "pickup_banner",
   "plans_paused_until",
   "plan_lead_days",

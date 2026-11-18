@@ -50,6 +50,17 @@ export default async function PickupAdmin() {
           />
           <p className="hint mt-1">One place a line. Add a line to add a place. It is the dropdown customers choose from.</p>
         </div>
+        <div>
+          <label className="label" htmlFor="pickup_print_places">Places for printing</label>
+          <textarea
+            id="pickup_print_places"
+            name="pickup_print_places"
+            rows={3}
+            defaultValue={settings.pickup_print_places || "Student center\nSchool"}
+            className="field"
+          />
+          <p className="hint mt-1">One a line. Laundry is typed in by the customer for now.</p>
+        </div>
         <SaveButton>Save</SaveButton>
       </form>
     </div>

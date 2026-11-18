@@ -54,6 +54,7 @@ export default function AskForm({
   help = "The more exact the better. Colour, size, make, anything you know.",
   simple = false,
   noChips = false,
+  printPlaces,
   kinds = false,
   notePlaceholder = "Needed before Friday",
   places,
@@ -73,6 +74,8 @@ export default function AskForm({
   /** Ask what is being collected as three taps: food, laundry or printing,
    *  and for laundry which way it is going. */
   kinds?: boolean;
+  /** Where print jobs are collected from. Laundry is free text. */
+  printPlaces?: string[];
   /** The grey example in the "Anything else?" box. */
   notePlaceholder?: string;
   /** Where to collect from, as a dropdown above the box. */
@@ -120,7 +123,16 @@ export default function AskForm({
         : `Printing${filesLink.trim() !== "" ? `, files: ${filesLink.trim()}` : ""}`;
   const [otherPlace, setOtherPlace] = useState("");
   // Somewhere not on the list: what they typed stands in for the choice.
-  const place = chosen === OTHER_PLACE ? otherPlace.trim() : chosen;
+  const [laundryPlace, setLaundryPlace] = useState("");
+  // Laundry has no fixed places yet, so it is whatever they type; a print
+  // job has its own short list; food has the full one.
+  const list = kinds && kind === "Printing" ? (printPlaces ?? []) : (places ?? []);
+  const place =
+    kinds && kind === "Laundry"
+      ? laundryPlace.trim()
+      : chosen === OTHER_PLACE
+        ? otherPlace.trim()
+        : chosen;
   const [budget, setBudget] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -197,7 +209,10 @@ export default function AskForm({
                     name="kind"
                     value={one}
                     checked={kind === one}
-                    onChange={() => setKind(one)}
+                    onChange={() => {
+                      setKind(one);
+                      setChosen("");
+                    }}
                     className="sr-only"
                   />
                   {one}
@@ -232,7 +247,23 @@ export default function AskForm({
           </div>
         )}
 
-        {places && places.length > 0 && (
+        {kinds && kind === "Laundry" && (
+          <div>
+            <label className="label" htmlFor="laundry-place">
+              Where is the laundry?
+            </label>
+            <input
+              id="laundry-place"
+              required
+              value={laundryPlace}
+              onChange={(event) => setLaundryPlace(event.target.value)}
+              placeholder="Where should we collect it from?"
+              className="field"
+            />
+          </div>
+        )}
+
+        {!(kinds && kind === "Laundry") && list.length > 0 && (
           <div>
             <label className="label" htmlFor="place">
               Where are we collecting from?
@@ -245,12 +276,14 @@ export default function AskForm({
               className="field"
             >
               <option value="">Choose a place</option>
-              {places.map((one) => (
+              {list.map((one) => (
                 <option key={one} value={one}>
                   {one}
                 </option>
               ))}
-              <option value={OTHER_PLACE}>Somewhere else</option>
+              {!(kinds && kind === "Printing") && (
+                <option value={OTHER_PLACE}>Somewhere else</option>
+              )}
             </select>
             {chosen === OTHER_PLACE && (
               <input

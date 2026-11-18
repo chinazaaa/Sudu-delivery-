@@ -152,6 +152,8 @@ export type Settings = {
   pickup_hours: string;
   /** Where we collect from, one place a line. */
   pickup_places: string;
+  /** Where print jobs are collected from, one place a line. */
+  pickup_print_places: string;
   /** The line on the front page that points at campus pickup. */
   pickup_banner: string;
   /** Every standing plan held at once, for the holidays. A date, or empty. */
@@ -388,6 +390,7 @@ export const EMPTY: Settings = {
   pickup_days: "Every day",
   pickup_hours: "10am to 7pm",
   pickup_places: "Student center\nAmethyst hall\nSchool cafeteria\nRedwood\nSST food truck",
+  pickup_print_places: "Student center\nSchool",
   pickup_banner: "We pick up your food, laundry and printing from campus.",
   plans_paused_until: "",
   plan_lead_days: "",

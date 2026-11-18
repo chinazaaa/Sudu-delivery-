@@ -1304,3 +1304,4 @@ alter table settings add column if not exists season text not null default '';
 
 -- Set when somebody has been told a paid car is going.
 alter table batches add column if not exists told_at timestamptz;
+alter table settings add column if not exists pickup_print_places text not null default E'Student center\nSchool';
