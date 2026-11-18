@@ -67,14 +67,15 @@ export default async function StudentCenterPage({
             tag="Campus pickup"
             back="/pickup"
             noChips
+            kinds
             noBudget
             notePlaceholder="Need it before 5pm"
             places={settings.pickup_places.split("\n").map((one) => one.trim()).filter(Boolean)}
             rows={3}
             opening="Hi Sudu, I would like a campus pickup. I will send my barcode or a picture if I have one."
             lead="Open WhatsApp and tell us what to collect, with your barcode or a picture if you have one."
-            label="What should we collect?"
-            placeholder="Chicken and rice, or my laundry, or my print job"
+            label={"Tell us about it"}
+            placeholder="Chicken and rice, or two bags of laundry, or 40 pages to print"
             help="Food is the usual one. Laundry and printing are fine too. A line is enough."
             fileLabel="Barcode or picture, if you have one"
             fileHint="Not everyone has one, so just tell us what you bought. If a barcode will not scan, we call or message you."

@@ -17,6 +17,13 @@ import { waLink } from "@/lib/whatsapp";
  * uncontrolled form the moment a server action comes back, so a refusal used
  * to wipe everything somebody had written.
  */
+/** The three ways a laundry job can go, said the way a student would. */
+const LAUNDRY_WAYS = [
+  { label: "There and back", hint: "We take it to the laundry, then bring it to you when it is ready." },
+  { label: "Take it to the laundry", hint: "We take it there. You collect it yourself." },
+  { label: "Bring it back", hint: "You already dropped it off. We bring it to you when it is ready." },
+] as const;
+
 /** The dropdown entry for a place that is not on the list. */
 const OTHER_PLACE = "__other__";
 
@@ -47,6 +54,7 @@ export default function AskForm({
   help = "The more exact the better. Colour, size, make, anything you know.",
   simple = false,
   noChips = false,
+  kinds = false,
   notePlaceholder = "Needed before Friday",
   places,
   noBudget = false,
@@ -62,6 +70,9 @@ export default function AskForm({
   simple?: boolean;
   /** Hide the taps above the box, or the limit box, on their own. */
   noChips?: boolean;
+  /** Ask what is being collected as three taps: food, laundry or printing,
+   *  and for laundry which way it is going. */
+  kinds?: boolean;
   /** The grey example in the "Anything else?" box. */
   notePlaceholder?: string;
   /** Where to collect from, as a dropdown above the box. */
@@ -96,6 +107,15 @@ export default function AskForm({
 
   const [wanted, setWanted] = useState(preset);
   const [chosen, setChosen] = useState("");
+  const [kind, setKind] = useState<"Food" | "Laundry" | "Printing">("Food");
+  const [way, setWay] = useState<(typeof LAUNDRY_WAYS)[number]["label"]>("There and back");
+  // Food is the usual one and needs no word; the others say what they are.
+  const what =
+    !kinds || kind === "Food"
+      ? ""
+      : kind === "Laundry"
+        ? `Laundry: ${way.toLowerCase()}`
+        : "Printing";
   const [otherPlace, setOtherPlace] = useState("");
   // Somewhere not on the list: what they typed stands in for the choice.
   const place = chosen === OTHER_PLACE ? otherPlace.trim() : chosen;
@@ -120,6 +140,7 @@ export default function AskForm({
   const message =
     opening +
     (place !== "" ? `\n\nCollect from: ${place}` : "") +
+    (what !== "" ? `\n\nFor: ${what}` : "") +
     (wanted.trim() ? `\n\n${tag === "" ? "What: " : ""}${wanted.trim()}` : "") +
     (budget.trim() ? `\nLimit: ${budget.trim()}` : "") +
     (hostel.trim() ? `\nBlock: ${hostel.trim()}` : "") +
@@ -157,6 +178,58 @@ export default function AskForm({
       </p>
 
       <form action={action} encType="multipart/form-data" className="card space-y-3">
+        {kinds && (
+          <div className="space-y-2">
+            <p className="label">What should we collect?</p>
+            {/* Taps, not a dropdown: three answers are better all in sight. */}
+            <div className="flex flex-wrap gap-2">
+              {(["Food", "Laundry", "Printing"] as const).map((one) => (
+                <label
+                  key={one}
+                  className={`chip cursor-pointer text-sm font-bold ${
+                    kind === one ? "bg-ink text-shell" : ""
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="kind"
+                    value={one}
+                    checked={kind === one}
+                    onChange={() => setKind(one)}
+                    className="sr-only"
+                  />
+                  {one}
+                </label>
+              ))}
+            </div>
+            {kind === "Laundry" && (
+              <div className="space-y-1.5">
+                {LAUNDRY_WAYS.map((one) => (
+                  <label
+                    key={one.label}
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border-2 px-3 py-2.5 ${
+                      way === one.label ? "border-ink bg-white" : "border-black/10"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="laundry_way"
+                      value={one.label}
+                      checked={way === one.label}
+                      onChange={() => setWay(one.label)}
+                      className="mt-1"
+                    />
+                    <span>
+                      <span className="block font-bold">{one.label}</span>
+                      <span className="block text-sm text-muted">{one.hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {places && places.length > 0 && (
           <div>
             <label className="label" htmlFor="place">
@@ -203,7 +276,7 @@ export default function AskForm({
             placeholder={placeholder}
             className="field"
           />
-          {tag !== "" && <input type="hidden" name="wanted" value={`${tag}${place !== "" ? ` · ${place}` : ""}: ${wanted}`} />}
+          {tag !== "" && <input type="hidden" name="wanted" value={`${tag}${place !== "" ? ` · ${place}` : ""}: ${what !== "" ? `${what}. ` : ""}${wanted}`} />}
           {back !== "" && <input type="hidden" name="back" value={back} />}
           <p className="mt-1 text-xs text-muted">{help}</p>
 
