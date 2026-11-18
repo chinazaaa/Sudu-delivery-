@@ -115,8 +115,10 @@ export default function AskForm({
       ? ""
       : kind === "Laundry"
         ? `Laundry: ${way.toLowerCase()}`
-        : "Printing";
+        : `Printing${filesLink.trim() !== "" ? `, files: ${filesLink.trim()}` : ""}`;
   const [otherPlace, setOtherPlace] = useState("");
+  // Where their files are, for a print job: one link can hold any number.
+  const [filesLink, setFilesLink] = useState("");
   // Somewhere not on the list: what they typed stands in for the choice.
   const place = chosen === OTHER_PLACE ? otherPlace.trim() : chosen;
   const [budget, setBudget] = useState("");
@@ -318,7 +320,23 @@ export default function AskForm({
             picture is for changes with the page, so each errand says it in
             its own words rather than one sentence trying to cover all of
             them. */}
-        <div className={simple ? "hidden" : ""}>
+        {kinds && kind === "Printing" && (
+          <div>
+            <label className="label" htmlFor="files">
+              Link to your files
+            </label>
+            <input
+              id="files"
+              value={filesLink}
+              onChange={(event) => setFilesLink(event.target.value)}
+              placeholder="Google Drive link, or send them on WhatsApp"
+              className="field"
+            />
+            <p className="mt-1 text-xs text-muted">Optional. Several files? Put them in one folder.</p>
+          </div>
+        )}
+
+        <div className={simple || (kinds && kind !== "Food") ? "hidden" : ""}>
           <label className="label" htmlFor="photo">
             {fileLabel}
           </label>
