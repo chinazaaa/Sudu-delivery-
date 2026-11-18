@@ -308,7 +308,15 @@ export default function AskForm({
             required
             value={wanted}
             onChange={(event) => setWanted(event.target.value)}
-            placeholder={placeholder}
+            placeholder={
+              kinds
+                ? kind === "Laundry"
+                  ? "Two bags of clothes, delicate wash"
+                  : kind === "Printing"
+                    ? "40 pages, double sided, stapled"
+                    : placeholder
+                : placeholder
+            }
             className="field"
           />
           {tag !== "" && <input type="hidden" name="wanted" value={`${tag}${place !== "" ? ` · ${place}` : ""}: ${what !== "" ? `${what}. ` : ""}${wanted}`} />}
@@ -362,7 +370,7 @@ export default function AskForm({
               id="files"
               value={filesLink}
               onChange={(event) => setFilesLink(event.target.value)}
-              placeholder="Google Drive link, or send them on WhatsApp"
+              placeholder="Paste a Google Drive link"
               className="field"
             />
             <p className="mt-1 text-xs text-muted">Optional. Several files? Put them in one folder.</p>

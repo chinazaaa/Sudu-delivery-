@@ -76,7 +76,7 @@ export default async function StudentCenterPage({
             opening="Hi Sudu, I would like a campus pickup. I will send my barcode or a picture if I have one."
             lead="Send us what to collect."
             label={"Tell us about it"}
-            placeholder="Chicken and rice, or two bags of laundry, or 40 pages to print"
+            placeholder="Chicken and rice"
             help="A line is enough."
             fileLabel="Barcode or picture, if you have one"
             fileHint="Optional. If it will not scan, we call you."
