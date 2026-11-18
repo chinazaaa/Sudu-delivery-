@@ -174,7 +174,7 @@ export default function AskForm({
       )}
 
       <p className="text-center text-sm font-semibold text-muted">
-        {link ? "Or fill this in and we will come back to you" : "Tell us what you need"}
+        {link ? "Or fill this in" : "Tell us what you need"}
       </p>
 
       <form action={action} encType="multipart/form-data" className="card space-y-3">
