@@ -298,7 +298,7 @@ export default function OrderCard({
                   )}`}
                   className="tag bg-wash text-ink hover:text-brand"
                 >
-                  Via {order.promoter.name}
+                  From {order.promoter.name}
                 </Link>
               )}
             </div>

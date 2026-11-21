@@ -286,6 +286,11 @@ async function orderPage(id: string, said: string) {
                 {doorTag((order as { source?: string }).source ?? "")}
               </span>
             )}
+            {card?.promoter && (
+              <span className="tag ml-2 bg-brand align-middle text-white">
+                From {card.promoter.name}
+              </span>
+            )}
             {((order as { via?: string }).via ?? "") !== "" && (
               <span className="tag ml-2 align-middle">
                 {(order as { via?: string }).via}

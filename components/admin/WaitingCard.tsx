@@ -105,6 +105,7 @@ export default function WaitingCard({
           every order of the day.
         */}
         {order.isNew && <span className="tag bg-brand text-white">New</span>}
+        {order.promoter && <span className="tag bg-brand text-white">From {order.promoter.name}</span>}
         {doorTag(order.source) !== "" && (
           <span className={`tag ${doorSkin(order.source)}`}>
             {doorTag(order.source)}

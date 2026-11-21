@@ -89,6 +89,7 @@ export default function HandOverCard({
         {/* The same on the paid half of the list, so the day reads the
             same way all the way down it. */}
         {order.isNew && <span className="tag bg-brand text-white">New</span>}
+        {order.promoter && <span className="tag bg-brand text-white">From {order.promoter.name}</span>}
         {doorTag(order.source) !== "" && (
           <span className={`tag ${doorSkin(order.source)}`}>
             {doorTag(order.source)}
