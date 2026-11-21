@@ -3078,3 +3078,6 @@ where r.id = mi.restaurant_id and r.name = 'KFC' and mi.price_food > 0;
 -- Set when somebody has been told a paid car is going.
 alter table batches add column if not exists told_at timestamptz;
 alter table settings add column if not exists pickup_print_places text not null default E'Student center\nSchool';
+
+-- Set when the shopkeeper has sent themselves a test of the tell-everyone push.
+alter table batches add column if not exists test_at timestamptz;

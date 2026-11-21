@@ -6984,6 +6984,7 @@ export async function tellEveryoneRun(form: FormData): Promise<void> {
   };
   // Once only: a second send is the same message to the same people.
   if (batch.told_at) redirect(`/admin/batch/${id}?told=already`);
+  const isTest = String(form.get("test") ?? "") === "1";
   if (batch.status !== "open" || new Date(batch.cut_off_at).getTime() < Date.now()) {
     redirect(`/admin/batch/${id}?told=closed`);
   }
@@ -7002,6 +7003,20 @@ export async function tellEveryoneRun(form: FormData): Promise<void> {
       : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
   const day = batch.run_date === today() ? "today" : "on " + new Date(batch.run_date + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" });
 
+  const body =
+    names.length > 1
+      ? `Going to ${places} ${day}. Order before ${lagosClockWord(batch.cut_off_at)}.`
+      : `We are going out ${day}. Order before ${lagosClockWord(batch.cut_off_at)}.`;
+
+  // A test goes to the shopkeeper's own phone only, with the exact words, and
+  // changes nothing else: the real send is still to come.
+  if (isTest) {
+    const { tellAdmin } = await import("@/lib/admin-alerts");
+    const got = await tellAdmin({ title: "TEST: We are going out", body, url: `/admin/batch/${id}` });
+    await db().from("batches").update({ test_at: new Date().toISOString() }).eq("id", id);
+    redirect(`/admin/batch/${id}?told=${got > 0 ? "test" : "testnone"}`);
+  }
+
   // Claimed before sending, so two taps at once cannot both send.
   const { data: claimed } = await db()
     .from("batches")
@@ -7013,12 +7028,7 @@ export async function tellEveryoneRun(form: FormData): Promise<void> {
 
   const sent = await pushDeal({
     title: "We are going out",
-    // A run that only covers Sangotedo is just "we are going out": every run
-    // goes there, so naming it as the destination says nothing.
-    body:
-      names.length > 1
-        ? `Going to ${places} ${day}. Order before ${lagosClockWord(batch.cut_off_at)}.`
-        : `We are going out ${day}. Order before ${lagosClockWord(batch.cut_off_at)}.`,
+    body,
     path: "/",
   });
   redirect(`/admin/batch/${id}?told=${sent.sent}`);

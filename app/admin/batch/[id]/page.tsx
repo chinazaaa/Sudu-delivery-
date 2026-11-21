@@ -639,12 +639,31 @@ export default async function BatchPage({
                     Everyone told ✓
                   </span>
                 ) : (
-                  <form action={tellEveryoneRun}>
-                    <input type="hidden" name="batch_id" value={batch.id} />
-                    <ConfirmButton tone="admin" confirm="Send to every customer with the app?">
-                      Tell everyone we are going
-                    </ConfirmButton>
-                  </form>
+                  (batch as { test_at?: string | null }).test_at ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <form action={tellEveryoneRun}>
+                        <input type="hidden" name="batch_id" value={batch.id} />
+                        <ConfirmButton tone="admin" confirm="Send to every customer with the app?">
+                          Tell everyone we are going
+                        </ConfirmButton>
+                      </form>
+                      <form action={tellEveryoneRun}>
+                        <input type="hidden" name="batch_id" value={batch.id} />
+                        <input type="hidden" name="test" value="1" />
+                        <ActionButton className="text-sm font-semibold text-muted underline" busy="…" done="Sent ✓">
+                          Send the test again
+                        </ActionButton>
+                      </form>
+                    </div>
+                  ) : (
+                    <form action={tellEveryoneRun}>
+                      <input type="hidden" name="batch_id" value={batch.id} />
+                      <input type="hidden" name="test" value="1" />
+                      <ActionButton className="btn-admin btn-admin-sm" busy="Sending…" done="Sent ✓">
+                        Send me a test first
+                      </ActionButton>
+                    </form>
+                  )
                 ))}
               {/* Nothing paid, nothing to send: a counter sheet of no orders. */}
               {summary.paidCount > 0 && (
@@ -693,7 +712,11 @@ export default async function BatchPage({
         <p className="mb-[18px] rounded-2xl border-[1.5px] border-ink bg-volt px-3.5 py-2.5 text-[14.5px] font-semibold">
           {query.told === "closed"
             ? "This run has closed, so nothing was sent."
-            : query.told === "already"
+            : query.told === "test"
+              ? "Test sent to your phone. If it looks right, tap Tell everyone."
+              : query.told === "testnone"
+                ? "Nothing went to your phone: admin notifications are not switched on here. Turn them on under Notifications, then try again."
+                : query.told === "already"
               ? "Everyone has already been told about this run, so nothing was sent again."
             : `Sent to ${query.told} phone${query.told === "1" ? "" : "s"} with the app.`}
         </p>
