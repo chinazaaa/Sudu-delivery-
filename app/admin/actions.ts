@@ -7013,7 +7013,12 @@ export async function tellEveryoneRun(form: FormData): Promise<void> {
 
   const sent = await pushDeal({
     title: "We are going out",
-    body: `Going to ${places} ${day}. Order before ${lagosClockWord(batch.cut_off_at)}.`,
+    // A run that only covers Sangotedo is just "we are going out": every run
+    // goes there, so naming it as the destination says nothing.
+    body:
+      names.length > 1
+        ? `Going to ${places} ${day}. Order before ${lagosClockWord(batch.cut_off_at)}.`
+        : `We are going out ${day}. Order before ${lagosClockWord(batch.cut_off_at)}.`,
     path: "/",
   });
   redirect(`/admin/batch/${id}?told=${sent.sent}`);
