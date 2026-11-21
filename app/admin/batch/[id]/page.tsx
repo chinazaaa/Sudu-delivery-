@@ -2446,7 +2446,7 @@ export default async function BatchPage({
                       <Row
                         key={group.restaurant}
                         label={`Pay at ${group.restaurant}`}
-                        value={`−${naira(group.expectedFoodTotal)}`}
+                        value={`−${naira(group.shopPaid ?? group.expectedFoodTotal)}`}
                       />
                     ))}
                     {/* One line per promoter, named. "Promoter commission
@@ -2466,7 +2466,25 @@ export default async function BatchPage({
                         />
                       ))
                     )}
-                    {summary.reconciled.lines === 0 &&
+                    {counter.some((group) => group.shopPaid != null) &&
+                      (() => {
+                        // The shops above are shown at what was paid where a
+                        // total was typed; whatever else moved is the rest.
+                        const shown = counter.reduce(
+                          (t, group) => t + (group.shopPaid ?? group.expectedFoodTotal),
+                          0
+                        );
+                        const gap = shown - summary.foodCost;
+                        if (gap === 0) return null;
+                        return (
+                          <Row
+                            label={gap > 0 ? "Bought under the menu price" : "Cost over the menu price"}
+                            value={`${gap > 0 ? "+" : "−"}${naira(Math.abs(gap))}`}
+                          />
+                        );
+                      })()}
+                    {!counter.some((group) => group.shopPaid != null) &&
+                      summary.reconciled.lines === 0 &&
                       batch.food_spend > 0 &&
                       batch.food_spend < summary.menuCost && (
                         <Row
@@ -2474,7 +2492,9 @@ export default async function BatchPage({
                           value={`+${naira(summary.menuCost - batch.food_spend)}`}
                         />
                       )}
-                    {summary.reconciled.lines > 0 && summary.foodCost !== summary.menuCost && (
+                    {!counter.some((group) => group.shopPaid != null) &&
+                      summary.reconciled.lines > 0 &&
+                      summary.foodCost !== summary.menuCost && (
                       <Row
                         label={
                           summary.foodCost < summary.menuCost
