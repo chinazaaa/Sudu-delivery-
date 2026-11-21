@@ -693,14 +693,16 @@ export default async function BatchPage({
                   {batch.no_more_orders === true && (
                     <input type="hidden" name="open_again" value="1" />
                   )}
-                  <ActionButton
-                    className="btn-admin btn-admin-sm"
-                    done={batch.no_more_orders === true ? "Open ✓" : "Shut ✓"}
-                  >
-                    {batch.no_more_orders === true
-                      ? "Take orders again"
-                      : "No more orders · the car is full"}
-                  </ActionButton>
+                  {batch.no_more_orders === true ? (
+                    <ActionButton className="btn-admin btn-admin-sm" done="Open ✓">
+                      Take orders again
+                    </ActionButton>
+                  ) : (
+                    // Shutting the run to everybody, so it asks first.
+                    <ConfirmButton tone="admin" confirm="Stop taking orders on this run?">
+                      No more orders · the car is full
+                    </ConfirmButton>
+                  )}
                 </form>
               ) : null}
             </>
