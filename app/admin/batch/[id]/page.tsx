@@ -13,6 +13,7 @@ import {
   raiseMenuPrice,
   reopenRun,
   setCounterSpend,
+  setShopTotal,
   settleRun,
 } from "@/app/admin/actions";
 import ShortGroups from "@/components/admin/ShortGroups";
@@ -1869,6 +1870,40 @@ export default async function BatchPage({
                       say otherwise.
                     </p>
                     <div className="mt-3 space-y-3">
+                    {/* One figure per counter, for when the whole receipt is
+                        all there is: no going line by line. */}
+                    <div className="soft space-y-2 bg-shell p-3">
+                      <p className="text-sm font-bold">Paid in total, per shop</p>
+                      {counter.map((group) => (
+                        <form
+                          key={`shop-${group.restaurant}`}
+                          action={setShopTotal}
+                          className="flex flex-wrap items-center justify-between gap-2"
+                        >
+                          <input type="hidden" name="batch_id" value={batch.id} />
+                          <input type="hidden" name="restaurant" value={group.restaurant} />
+                          <span className="min-w-0 text-sm">
+                            <span className="font-semibold">{group.restaurant}</span>
+                            <span className="block text-xs text-muted">
+                              menu says{" "}
+                              {naira(
+                                group.lines.reduce((t, l) => t + l.qty * l.unitPrice, 0)
+                              )}
+                            </span>
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <input
+                              name="paid"
+                              inputMode="numeric"
+                              defaultValue={group.shopPaid ?? ""}
+                              placeholder="0"
+                              className="field field-admin min-h-[44px] w-28 sm:min-h-[42px]"
+                            />
+                            <SaveButton look={ROW_ACTION}>Save</SaveButton>
+                          </span>
+                        </form>
+                      ))}
+                    </div>
                     {/* The books for the run, once anything has been typed:
                         what the menu said against what the counters took, so
                         the end of the day is one line rather than a scroll

@@ -992,6 +992,36 @@ export async function setCounterSpend(form: FormData): Promise<void> {
 }
 
 /**
+ * One figure for everything bought at one counter.
+ *
+ * "I paid Domino's 67,810": typed once, instead of line by line. It replaces
+ * the per-line figures for that counter in the run's profit. Blank puts the
+ * counter back to how it was.
+ */
+export async function setShopTotal(form: FormData): Promise<void> {
+  await assertAdmin();
+  const batchId = String(form.get("batch_id") ?? "");
+  const restaurant = String(form.get("restaurant") ?? "").trim();
+  if (!batchId || !restaurant) return;
+
+  const key = `shop:${restaurant}`;
+  const raw = String(form.get("paid") ?? "").replace(/[,\s₦]/g, "");
+  const value = Math.round(Number(raw));
+
+  if (raw === "" || !Number.isFinite(value) || value < 0) {
+    await db().from("counter_spend").delete().eq("batch_id", batchId).eq("line_key", key);
+  } else {
+    await db()
+      .from("counter_spend")
+      .upsert(
+        { batch_id: batchId, line_key: key, paid: value, recovered: 0, updated_at: new Date().toISOString() },
+        { onConflict: "batch_id,line_key" }
+      );
+  }
+  revalidatePath("/admin", "layout");
+}
+
+/**
  * Put a menu price up, because a counter really has put it up.
  *
  * Only ever upward, and only from a figure somebody typed after paying it.

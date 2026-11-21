@@ -97,10 +97,17 @@ export type HandoutBag = {
   lines: OrderLine[];
 };
 
+/**
+ * The row that holds one figure for a whole counter: "I paid Domino's
+ * 67,810 in all". Kept beside the per-line figures, under a key no line can
+ * have, so nothing new has to exist in the database.
+ */
+export const shopKey = (restaurant: string) => `shop:${restaurant}`;
+
 export type BatchSheet = {
   batch: Batch;
   /** Paid orders only, because those are the ones that travel. */
-  counter: CounterGroup[];
+  counter: (CounterGroup & { shopPaid?: number | null })[];
   handout: HandoutBag[];
   unpaid: HandoutOrder[];
   refunds: Order[];
@@ -395,9 +402,17 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
     line: { qty: number; unitPrice: number; itemId: string; picks?: Chosen[] }
   ) => costOne(restaurant, line) * line.qty;
 
+  // One figure for a whole counter beats every line under it: it is the
+  // receipt total, which is the one number that was really counted.
+  const shopPaidFor = (restaurant: string): number | null =>
+    spentOn.has(shopKey(restaurant)) ? (spentOn.get(shopKey(restaurant)) as number) : null;
+  const anyShopTotal = counterLines.some((place) => shopPaidFor(place.restaurant) !== null);
+
   const reckoned = counterLines.reduce(
     (total, place) =>
-      total +
+      shopPaidFor(place.restaurant) !== null
+        ? total + (shopPaidFor(place.restaurant) as number)
+        : total +
       place.lines.reduce(
         (here, line) =>
           here +
@@ -410,7 +425,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
   );
 
   const foodCost =
-    reconciled.length > 0
+    reconciled.length > 0 || anyShopTotal
       ? reckoned
       : batch.food_spend > 0
         ? batch.food_spend
@@ -428,6 +443,7 @@ export async function batchSheet(batchId: string): Promise<BatchSheet | null> {
     ).map(
       (place) => ({
         ...place,
+        shopPaid: shopPaidFor(place.restaurant),
         lines: place.lines.map((line) => ({
           ...line,
           paid: spentOn.has(line.key) ? (spentOn.get(line.key) as number) : null,
@@ -1834,7 +1850,9 @@ export function chargedByRestaurant(
     return {
       restaurant: place.restaurant,
       menu: place.expectedFoodTotal,
-      charged: place.lines.reduce((total, line) => {
+      charged: spentOn.has(shopKey(place.restaurant))
+        ? (spentOn.get(shopKey(place.restaurant)) as number)
+        : place.lines.reduce((total, line) => {
         // A receipt somebody typed is the truth. Then a cost somebody
         // wrote down off the board. Then the sum, and only then the menu
         // price, which claims the shop handed the counter every naira it
