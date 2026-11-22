@@ -698,7 +698,9 @@ export default async function OrderPage({
           Only on their own order, because the link and the reward are
           theirs: a parent reading their son's order page is not who this
           is addressed to. */}
-      <ReferralStrip code={myCode} site={site} welcome={welcome} />
+      {/* Not while it is unpaid: asking somebody to recruit their friends
+          before they have paid is one ask too many on a page that has one job. */}
+      {paid && <ReferralStrip code={myCode} site={site} welcome={welcome} />}
 
       {/* The car is the thing worth sharing: one delivery fee covers whatever
           is in it, so every friend who joins makes it cheaper for all of them.
@@ -713,12 +715,19 @@ export default async function OrderPage({
         !isParcel &&
         !isPaid(order.status) &&
         !over && (
+        <details className="card">
+          <summary className="cursor-pointer font-bold">
+            Share the delivery with friends
+          </summary>
+          <div className="mt-3">
         <ShareDelivery
           url={`${site}/join/${order.shared_with ?? order.id}`}
           name={(order.for_name ?? order.customer_name).split(" ")[0]}
           closes={clockLabel(order.batch.cut_off_at)}
           what={COUNTERS[order.batch.kind ?? ""]?.fallbackName.toLowerCase() ?? "food"}
         />
+          </div>
+        </details>
       )}
 
       {/* What it looked like when we took it and when we gave it back. This
