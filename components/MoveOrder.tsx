@@ -16,6 +16,7 @@ export default function MoveOrder({
   paid = false,
   currentFee,
   helpHref = "",
+  demo = false,
   collapsed = false,
   openLabel = "Change to another delivery",
 }: {
@@ -34,6 +35,8 @@ export default function MoveOrder({
   currentFee?: number;
   /** Where to message the shop from, for somebody who cannot find a day. */
   helpHref?: string;
+  /** Sample data on a demo page: nothing is sent anywhere or saved. */
+  demo?: boolean;
   /** A paid order moves as it is: no repricing, no refund, no top-up. */
   paid?: boolean;
   /** Start as a single line, for a page where moving is not the main thing. */
@@ -42,7 +45,12 @@ export default function MoveOrder({
 }) {
   const [open, setOpen] = useState(!collapsed);
   const [state, action, pending] = useActionState<MoveState, FormData>(
-    moveOrderToRun,
+    demo
+      ? async (_prev: MoveState, form: FormData) => ({
+          error: null,
+          movedTo: String(form.get("run_label") ?? "the new day") + " (demo, nothing moved)",
+        })
+      : moveOrderToRun,
     { error: null, movedTo: null }
   );
 

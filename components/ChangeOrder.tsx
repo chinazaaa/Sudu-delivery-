@@ -44,7 +44,10 @@ export default function ChangeOrder({
   backHref,
   total,
   lines,
+  demo = false,
 }: {
+  /** Sample data on a demo page: nothing is sent anywhere or saved. */
+  demo?: boolean;
   orderId: string;
   /** Where the order page is, to go back to once it is saved. */
   backHref: string;
@@ -53,10 +56,19 @@ export default function ChangeOrder({
   lines: ChangeableLine[];
 }) {
   const router = useRouter();
-  const [state, action, pending] = useActionState<ChangeState, FormData>(changeMyOrder, {
-    ok: false,
-    error: null,
-  });
+  const [state, action, pending] = useActionState<ChangeState, FormData>(
+    demo
+      ? async () => ({
+          ok: false,
+          error:
+            "Demo only: nothing was saved. On a real order this saves and takes you back to it.",
+        })
+      : changeMyOrder,
+    {
+      ok: false,
+      error: null,
+    }
+  );
   const [view, setView] = useState<View>(() => {
     const names = [...new Set(lines.map((line) => line.restaurant))];
     if (names.length > 1) return { at: "kitchens" };
@@ -90,6 +102,33 @@ export default function ChangeOrder({
     return to ? { ...line, name: to.name, base: to.base, groups: to.groups } : line;
   };
 
+  // On a demo page the new total is worked out here from the sample prices,
+  // with a plain delivery ladder, instead of asking the server.
+  const previewFn = async (
+    id: string,
+    qtys: Record<string, number>,
+    picks: Record<string, string[]>,
+    swaps: Record<string, string>
+  ): Promise<ChangePreview> => {
+    if (!demo) return previewMyOrderChange(id, qtys, picks, swaps);
+    let food = 0;
+    let items = 0;
+    for (const line of lines) {
+      const count = qtys[line.id] ?? line.qty;
+      if (count <= 0) continue;
+      const to = swaps[line.id] ? line.swaps.find((one) => one.id === swaps[line.id]) : undefined;
+      const unit = to
+        ? pickedPrice(to.base, to.groups, picks[line.id] ?? [])
+        : line.id in picks
+          ? pickedPrice(line.base, line.groups, picks[line.id])
+          : line.unitPrice;
+      food += unit * count;
+      items += count;
+    }
+    const fee = items <= 3 ? 4000 : items <= 6 ? 6000 : items <= 10 ? 8000 : 10000;
+    return { ok: true, from: total, to: food + fee };
+  };
+
   // What goes to the server: every quantity, the choices of lines that
   // changed, and which lines were swapped for what.
   const payload = () => {
@@ -116,7 +155,7 @@ export default function ChangeOrder({
     setAsking("loading");
     const { qtys, picks, swaps } = payload();
     try {
-      setAsking(await previewMyOrderChange(orderId, qtys, picks, swaps));
+      setAsking(await previewFn(orderId, qtys, picks, swaps));
     } catch {
       setAsking({ ok: false, error: "Could not work that out. Try again." });
     }
@@ -144,7 +183,7 @@ export default function ChangeOrder({
     const timer = setTimeout(async () => {
       const { qtys, picks, swaps } = payload();
       try {
-        const answer = await previewMyOrderChange(orderId, qtys, picks, swaps);
+        const answer = await previewFn(orderId, qtys, picks, swaps);
         if (token.current === mine) setShown(answer);
       } catch {
         if (token.current === mine) setShown(null);
