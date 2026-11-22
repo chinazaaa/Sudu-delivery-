@@ -12,6 +12,9 @@ import { useEffect, useRef, useState } from "react";
  * to fit the screen. A screenshot is then the document, and the PDF is the
  * same document.
  *
+ * Scaled with a transform rather than `zoom`, which some phone browsers
+ * apply to the box and not to the type inside it.
+ *
  * On paper none of this applies: the print rules in globals.css put it back
  * to the printer's own page.
  */
@@ -19,21 +22,46 @@ const PAPER = 560;
 
 export default function ReceiptSheet({ children }: { children: React.ReactNode }) {
   const holder = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
+  const paper = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState({ scale: 1, height: 0, left: 0 });
 
   useEffect(() => {
-    const el = holder.current;
-    if (!el) return;
-    const fit = () => setScale(Math.min(1, el.clientWidth / PAPER));
-    fit();
-    const watch = new ResizeObserver(fit);
-    watch.observe(el);
+    const outer = holder.current;
+    const inner = paper.current;
+    if (!outer || !inner) return;
+    const measure = () => {
+      const scale = Math.min(1, outer.clientWidth / PAPER);
+      setFit({
+        scale,
+        height: inner.offsetHeight * scale,
+        left: Math.max(0, (outer.clientWidth - PAPER * scale) / 2),
+      });
+    };
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(outer);
+    watch.observe(inner);
     return () => watch.disconnect();
   }, []);
 
   return (
-    <div ref={holder} className="receipt-holder">
-      <div className="receipt-paper" style={{ width: PAPER, zoom: scale }}>
+    <div
+      ref={holder}
+      className="receipt-holder"
+      style={{ height: fit.height || undefined }}
+    >
+      <div
+        ref={paper}
+        className="receipt-paper"
+        style={{
+          width: PAPER,
+          transform: `scale(${fit.scale})`,
+          transformOrigin: "top left",
+          position: "relative",
+          left: fit.left,
+          WebkitTextSizeAdjust: "100%",
+        }}
+      >
         {children}
       </div>
     </div>

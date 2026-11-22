@@ -367,17 +367,19 @@ body {
 .receipt-holder {
   overflow: hidden;
 }
-.receipt-paper {
-  margin: 0 auto;
-}
 .receipt-a4 {
   min-height: 792px;
 }
 
 @media print {
+  .receipt-holder {
+    height: auto !important;
+    overflow: visible !important;
+  }
   .receipt-paper {
     width: auto !important;
-    zoom: 1 !important;
+    transform: none !important;
+    left: 0 !important;
   }
   .receipt-a4 {
     min-height: 0;
