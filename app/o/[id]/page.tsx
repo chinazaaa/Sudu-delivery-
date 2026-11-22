@@ -18,6 +18,7 @@ import StageTimeline from "@/components/StageTimeline";
 import GetTheApp from "@/components/GetTheApp";
 import ShareDelivery from "@/components/ShareDelivery";
 import ShareLink from "@/components/ShareLink";
+import PayExtras from "@/components/PayExtras";
 import SplitCollect from "@/components/SplitCollect";
 import CopyText from "@/components/CopyText";
 import RepeatOrder from "@/components/RepeatOrder";
@@ -470,59 +471,47 @@ export default async function OrderPage({
             </p>
           )}
 
-          {/* Everything that is not "pay now" is folded away: a page that
-              shows every option at once reads as too much. */}
-          <details className="rounded-2xl bg-shell px-3 py-2.5">
-            <summary className="cursor-pointer text-sm font-bold">
-              Change it, pay by card, or send to someone
-            </summary>
-            <div className="mt-3 space-y-3">
-          {/* The duplicate this exists to stop.
-
-              Somebody orders one pack of rice and then wants two. Ordering
-              again is one tap and changing the first was not, so people
-              ordered again and the shop cancelled the first by hand, every
-              time. Only while nothing has been paid: once the money has
-              landed the shop may already have bought the food, and what
-              comes back is a refund rather than a smaller number.
-
-              The bag of ice is left out. It is on the order because
-              something in it travels on ice, and it is not the customer's
-              to take off. */}
+          {/* Changing the order is the one thing worth a proper button; the
+              rest are small tiles. A screen of equal buttons reads as a
+              screen of decisions, and most people are here to pay. */}
           {canStillMove && order.shares.length <= 1 && (
             <Link
               href={`/o/${shortRef(order)}/change`}
-              className="block w-full rounded-xl bg-shell px-3 py-2.5 text-left text-sm font-semibold text-brand-dark"
+              className="flex w-full items-center justify-between gap-3 rounded-xl border-2 border-ink bg-white px-4 py-3 font-extrabold"
             >
-              Want something different?{" "}
-              <span className="underline decoration-dotted underline-offset-4">
-                Change this order
-              </span>
+              <span>✏️ Change this order</span>
+              <span aria-hidden>→</span>
             </Link>
           )}
 
-          {/* Before paying is exactly when somebody realises they want another
-              night. Nothing has been charged, so it simply reprices. */}
-          {canStillMove && (
-            <MoveOrder
-              orderId={order.id}
-              total={order.total}
-              collapsed
-              openLabel="Want it on another delivery instead?"
-              runs={others.map((run) => ({
-                id: run.id,
-                label: `${dayWord(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
-                closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
-              }))}
-            />
-          )}
-
-          {order.payment_method !== "card" && (
-            <CardPayment order={order} settings={settings} batchLabel={batchLabel} />
-          )}
-          {!split && <ShareLink label="Send this to whoever is paying" />}
-            </div>
-          </details>
+          <PayExtras
+            cardHref={
+              order.payment_method !== "card"
+                ? whatsappLink(
+                    settings.whatsapp_number,
+                    `Hi, I want to pay by card for my Sudu Delivery order.\n\n` +
+                      `Name: ${order.customer_name}\n` +
+                      `Batch: ${batchLabel}\n` +
+                      `Total: ${naira(order.total)}\n` +
+                      `Order: ${order.id.slice(0, 8)}`
+                  ) || ""
+                : ""
+            }
+            move={
+              canStillMove ? (
+                <MoveOrder
+                  orderId={order.id}
+                  total={order.total}
+                  runs={others.map((run) => ({
+                    id: run.id,
+                    label: `${dayWord(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
+                    closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
+                  }))}
+                />
+              ) : null
+            }
+            send={!split ? <ShareLink label="Send this to whoever is paying" /> : null}
+          />
         </section>
       )}
 
