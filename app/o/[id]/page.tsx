@@ -25,7 +25,7 @@ import RepeatOrder from "@/components/RepeatOrder";
 import MoveOrder from "@/components/MoveOrder";
 import { openBatches, takesMoney } from "@/lib/batches";
 import { SLOT_LABEL } from "@/lib/config";
-import { naira, shareRef } from "@/lib/money";
+import { naira, orderRef, shareRef } from "@/lib/money";
 import { shortRef } from "@/lib/links";
 import ReferralStrip from "@/components/ReferralStrip";
 import { currentCustomer } from "@/lib/customer-auth";
@@ -491,9 +491,9 @@ export default async function OrderPage({
                     settings.whatsapp_number,
                     `Hi, I want to pay by card for my Sudu Delivery order.\n\n` +
                       `Name: ${order.customer_name}\n` +
-                      `Batch: ${batchLabel}\n` +
+                      `Delivery: ${batchLabel}\n` +
                       `Total: ${naira(order.total)}\n` +
-                      `Order: ${order.id.slice(0, 8)}`
+                      `Order: ${shareRef(order, order.shares)}`
                   ) || ""
                 : ""
             }
@@ -1483,7 +1483,7 @@ function CardPayment({
   batchLabel,
   waiting = false,
 }: {
-  order: { id: string; customer_name: string; total: number };
+  order: { id: string; order_no: number | null; customer_name: string; total: number };
   settings: Awaited<ReturnType<typeof getSettings>>;
   batchLabel: string;
   /** They already chose card and are waiting on the link. */
@@ -1493,9 +1493,9 @@ function CardPayment({
     settings.whatsapp_number,
     `Hi, I want to pay by card for my Sudu Delivery order.\n\n` +
       `Name: ${order.customer_name}\n` +
-      `Batch: ${batchLabel}\n` +
+      `Delivery: ${batchLabel}\n` +
       `Total: ${naira(order.total)}\n` +
-      `Order: ${order.id.slice(0, 8)}`
+      `Order: ${orderRef(order)}`
   );
   if (!link) return null;
 
