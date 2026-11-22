@@ -56,6 +56,7 @@ export default function ChangeOrder({
   lines: ChangeableLine[];
 }) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [state, action, pending] = useActionState<ChangeState, FormData>(
     demo
       ? async () => ({
@@ -406,6 +407,19 @@ export default function ChangeOrder({
           return group.required && first ? [first.id] : [];
         });
       const original = lines.find((one) => one.id === line.id)!;
+      // Everything else of its kind, the thing it started as included, and
+      // never the one it is now: offering the current choice as a swap does
+      // nothing, and leaving the original out leaves no way back to it.
+      const current = swapped[line.id]?.id ?? original.itemId;
+      const originalAsTarget: SwapTarget = {
+        id: original.itemId,
+        name: original.name,
+        base: original.base,
+        groups: original.groups,
+      };
+      const choices = [...(swapped[line.id] ? [originalAsTarget] : []), ...original.swaps].filter(
+        (target) => target.id !== current
+      );
       return (
         <>
           <div className="flex items-baseline justify-between gap-2">
@@ -413,13 +427,28 @@ export default function ChangeOrder({
             {back({ at: "line", id: line.id })}
           </div>
           <div className="grid gap-2">
-            {original.swaps.map((target) => {
+            {choices.map((target) => {
               const ids = carry(target);
               return (
                 <button
                   key={target.id}
                   type="button"
                   onClick={() => {
+                    // Back to what it started as: the same as undoing the swap.
+                    if (target.id === original.itemId) {
+                      setSwapped((was) => {
+                        const next = { ...was };
+                        delete next[line.id];
+                        return next;
+                      });
+                      setPicked((was) => {
+                        const next = { ...was };
+                        delete next[line.id];
+                        return next;
+                      });
+                      setView({ at: "line", id: line.id });
+                      return;
+                    }
                     setSwapped((was) => ({ ...was, [line.id]: target }));
                     setPicked((was) => ({ ...was, [line.id]: ids }));
                     // Nothing to ask about a plain drink: that was the one tap.
@@ -551,7 +580,7 @@ export default function ChangeOrder({
   })();
 
   return (
-    <form action={action} className="space-y-3 pb-24">
+    <form ref={formRef} action={action} className="space-y-3 pb-24">
       <input type="hidden" name="order_id" value={orderId} />
       {lines.map((line) => (
         <input key={line.id} type="hidden" name={`qty_${line.id}`} value={qtyOf(line)} />
@@ -565,13 +594,19 @@ export default function ChangeOrder({
 
       <div className="card space-y-3 p-4">{body}</div>
 
-      {state.error && (
+      {state.error && !demo && (
         <p className="soft bg-brand-wash px-3 py-2 text-sm text-brand-dark">{state.error}</p>
       )}
 
       {/* Always there, so nobody has to hunt for how to save. Dim until
           something has changed. */}
       <div className="sticky bottom-24 z-10 space-y-1.5 rounded-2xl border-2 border-ink bg-paper px-3 py-2.5 shadow-card">
+        {demo && state.error && (
+          <p className="rounded-xl bg-mint/10 px-3 py-2 text-sm font-bold text-mint">
+            ✓ Saved (demo). On a real order you would now go back to your order, which would show
+            the new total. Nothing was really saved here.
+          </p>
+        )}
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-sm font-semibold text-muted">
             {changed ? "Was" : "Total"}{" "}
@@ -620,8 +655,14 @@ export default function ChangeOrder({
                 </p>
                 <div className="grid gap-2">
                   <button
-                    type="submit"
-                    onClick={() => setAsking(null)}
+                    type="button"
+                    onClick={() => {
+                      // Sent first and closed after. A submit button that
+                      // removes itself as it is pressed takes the submit
+                      // with it, which is how this once did nothing at all.
+                      formRef.current?.requestSubmit();
+                      setAsking(null);
+                    }}
                     className="btn-primary w-full"
                   >
                     Yes, save it

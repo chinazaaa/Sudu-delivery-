@@ -252,11 +252,20 @@ function coldStone(): ChangeLineData {
 
 /* -------------------------------- Orders -------------------------------- */
 
+/** What an order of these lines comes to: the food plus the same sample
+ *  delivery ladder the demo screen uses, so "Was" and "Now" always agree. */
+export function sampleTotal(lines: ChangeLineData[]): number {
+  const food = lines.reduce((sum, line) => sum + line.unitPrice * line.qty, 0);
+  const items = lines.reduce((sum, line) => sum + line.qty, 0);
+  const fee = items <= 3 ? 4000 : items <= 6 ? 6000 : items <= 10 ? 8000 : 10000;
+  return food + fee;
+}
+
 const POOL = ["7UP", "Aquafina", "Mirinda Orange", "Pepsi", "Pepsi Lite", "Supa Komando", "Teem Bitter Lemon"];
 
 export function demoOrders(): DemoOrder[] {
   n = 0;
-  return [
+  const scenarios = [
     {
       slug: "half-and-half",
       title: "One Half & Half",
@@ -336,4 +345,5 @@ export function demoOrders(): DemoOrder[] {
       ],
     },
   ];
+  return scenarios.map((one) => ({ ...one, total: sampleTotal(one.lines) }));
 }
