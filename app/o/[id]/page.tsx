@@ -382,15 +382,11 @@ export default async function OrderPage({
           >
             {headline}
           </h1>
-          <p
-            className={`text-[16px] leading-relaxed text-rail-text sm:text-[17px] ${
-              paid ? "" : "hidden"
-            }`}
-          >
-            {order.customer_name} ·{" "}
+          <p className="text-[16px] leading-relaxed text-rail-text sm:text-[17px]">
             {isParcel
               ? order.batch.delivery_window_text
               : `${runLabel} · ${order.batch.delivery_window_text}`}
+            {paid ? ` · ${naira(order.total)}` : ""}
           </p>
 
           {/* A box on a day of its own. Said here because it is the answer to
@@ -418,6 +414,47 @@ export default async function OrderPage({
               updates before you pay.
             </p>
           )}
+
+          <dl className="grid grid-cols-2 gap-3 border-t-2 border-dashed border-white/25 pt-3.5 text-sm sm:grid-cols-3">
+            <div className="flex flex-col gap-0.5">
+              <dt className="ticket text-[#b9b0a5]">Drop-off</dt>
+              <dd className="font-bold text-shell">{order.hostel}</dd>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <dt className="ticket text-[#b9b0a5]">For</dt>
+              <dd className="font-bold text-shell">{order.customer_name}</dd>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {/* The label and the answer have to be about the same thing.
+                  Once ordering had shut, the label turned into "Going out"
+                  while the answer stayed "Closed", which was the answer to
+                  the question the label had just stopped asking: a run on
+                  the road told whoever ordered from it "Going out: Closed",
+                  which says nothing and sounds like bad news.
+
+                  It only ever goes past tense and keeps its own answer. When
+                  this run stopped taking orders is a real thing to know, and
+                  where the food has got to is the list underneath. */}
+              <dt className="ticket text-[#b9b0a5]">
+                {isParcel || order.batch.kind === "same_day"
+                  ? "Going out"
+                  : expired
+                    ? "Orders closed"
+                    : "Orders close"}
+              </dt>
+              <dd className="font-bold text-shell">
+                {isParcel
+                  ? order.batch.deliver_at
+                    ? runDateLabel(order.batch.run_date)
+                    : "Day not agreed yet"
+                  : order.batch.kind === "same_day"
+                    ? order.batch.delivery_window_text
+                    : `${clockLabel(order.batch.cut_off_at)}, ${dayLabel(
+                        order.batch.cut_off_at
+                      )}`}
+              </dd>
+            </div>
+          </dl>
         </div>
       </header>
 
@@ -522,66 +559,6 @@ export default async function OrderPage({
         </section>
       )}
 
-      {/* The run, on a ticket of its own. */}
-      <section className="rounded-2xl border-2 border-ink bg-paper p-5 shadow-[5px_5px_0_#e5321d]">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="ticket text-brand-dark">Your run</span>
-          <span className="font-display text-[26px] font-extrabold leading-none">
-            {naira(order.total)}
-          </span>
-        </div>
-        <p className="mt-2 font-display text-[28px] font-extrabold uppercase leading-none sm:text-[32px]">
-          {isParcel
-            ? order.batch.delivery_window_text
-            : `${runLabel} · ${order.batch.delivery_window_text}`}
-        </p>
-        <div className="my-3.5 border-t-2 border-dashed border-line" />
-        <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-          <div className="flex flex-col gap-0.5">
-            <dt className="ticket text-muted">Drop-off</dt>
-            <dd className="font-bold">{order.hostel}</dd>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <dt className="ticket text-muted">For</dt>
-            <dd className="font-bold">{order.customer_name}</dd>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            {/* The label and the answer have to be about the same thing.
-                Once ordering had shut, the label turned into "Going out"
-                while the answer stayed "Closed", which was the answer to
-                the question the label had just stopped asking: a run on
-                the road told whoever ordered from it "Going out: Closed",
-                which says nothing and sounds like bad news.
-
-                It only ever goes past tense and keeps its own answer. When
-                this run stopped taking orders is a real thing to know, and
-                where the food has got to is the list underneath. */}
-            <dt className="ticket text-muted">
-              {isParcel || order.batch.kind === "same_day"
-                ? "Going out"
-                : expired
-                  ? "Orders closed"
-                  : "Orders close"}
-            </dt>
-            <dd className="font-bold">
-              {isParcel
-                ? order.batch.deliver_at
-                  ? runDateLabel(order.batch.run_date)
-                  : "Day not agreed yet"
-                : order.batch.kind === "same_day"
-                  ? order.batch.delivery_window_text
-                  : `${clockLabel(order.batch.cut_off_at)}, ${dayLabel(
-                      order.batch.cut_off_at
-                    )}`}
-            </dd>
-          </div>
-        </dl>
-        {/* No clock here any more. It read as the time of whatever step
-            was lit, and a run ticked off two hours after the bags changed
-            hands therefore told everybody their food arrived two hours
-            late. The three moments the shop actually records carry their
-            own times on the line below. */}
-      </section>
 
       {/*
         The receipt, where the person who paid for it is standing.
