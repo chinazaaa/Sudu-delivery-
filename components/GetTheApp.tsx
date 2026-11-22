@@ -1,7 +1,4 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 /**
  * The app, offered on the one page where it is actually worth something.
@@ -21,8 +18,6 @@ import { useEffect, useState } from "react";
  * lib/push.ts and the stage buttons in admin. Nothing is promised here that
  * a phone would not actually get.
  */
-const HIDDEN = "sudu-app-asked";
-
 export default function GetTheApp({
   /** Empty where the shop has no app to mention, which keeps this silent. */
   appId = "",
@@ -31,30 +26,7 @@ export default function GetTheApp({
   appId?: string;
   androidPackage?: string;
 }) {
-  const [gone, setGone] = useState(true);
-
-  // Decided after mount, so a dismissal is never flashed up before it is
-  // read back. Storage can throw in a private window, and a card nobody
-  // can hide is better than a page that will not draw.
-  useEffect(() => {
-    try {
-      setGone(window.localStorage.getItem(HIDDEN) === "1");
-    } catch {
-      setGone(false);
-    }
-  }, []);
-
-  if (gone) return null;
   if (appId === "" && androidPackage === "") return null;
-
-  const hide = () => {
-    setGone(true);
-    try {
-      window.localStorage.setItem(HIDDEN, "1");
-    } catch {
-      /* Hidden for this page either way, which is what the tap asked for. */
-    }
-  };
 
   return (
     <section className="flex items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3 text-white">
@@ -68,14 +40,6 @@ export default function GetTheApp({
         >
           Get the app
         </Link>
-        <button
-          type="button"
-          onClick={hide}
-          aria-label="No thanks"
-          className="px-1.5 text-lg leading-none text-white/70"
-        >
-          ×
-        </button>
       </div>
     </section>
   );
