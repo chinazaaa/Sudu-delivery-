@@ -41,6 +41,7 @@ import { lagosToday, runDateLabel, weekdayLabel } from "./time";
 import {
   countersStillAhead,
   createSameDayBatch,
+  carsOnOffer,
   getBatch,
   isOrderable,
   nobodyToDrive,
@@ -2411,6 +2412,65 @@ export async function moveOrder(
   }
 
   return { ok: true, orderId };
+}
+
+/**
+ * What this order's delivery would be on another trip, worked out the way
+ * moving it would. Shown beside each option before anybody moves, so the
+ * number they read is the one they are charged.
+ *
+ * A car keeps whatever the order was already charged where that is dearer,
+ * the same as the move itself does.
+ */
+export async function feeForTrip(
+  order: FullOrder,
+  trip: { kind?: string | null; flash_fee?: number | null } & Partial<Batch>
+): Promise<number> {
+  const repriced = await repeatLines(order);
+  const { fee } = await foodAndFee(
+    { ...order.batch, ...trip } as Batch,
+    repriced.lines.map((line) => ({
+      itemId: line.itemId,
+      restaurantId: line.restaurantId,
+      qty: line.qty,
+      unitPrice: line.unitPrice,
+    }))
+  );
+  return String(trip.kind ?? "") === "same_day" ? Math.max(fee, Number(order.fee ?? 0)) : fee;
+}
+
+/**
+ * Moving an unpaid order onto a car of its own, on a day no shared
+ * delivery is going.
+ *
+ * The time is checked against what is on offer right now rather than
+ * trusted: a page left open since this morning still lists this morning's
+ * times, and a car for a time that has gone is a car nobody can make.
+ */
+export async function moveOrderToCar(
+  orderId: string,
+  at: string
+): Promise<MoveResult> {
+  const settings = await safeSettings();
+  if (settings.same_day_on !== "on") {
+    return { ok: false, error: "Cars of their own are not running at the moment." };
+  }
+  const slot = (
+    await carsOnOffer(
+      deliverySlots(new Date(), await hoursByDay(), settings.order_horizon_days || 7)
+    )
+  ).find((one) => sameInstant(one.at, at));
+  if (!slot) {
+    return { ok: false, error: "That time has gone. Pick another, or message us." };
+  }
+
+  const car = await createSameDayBatch({
+    deliverAt: slot.at,
+    label: slot.day === "today" ? `Today, ${slot.label}` : slot.label,
+  });
+  if (!car) return { ok: false, error: "Could not set that day up. Message us." };
+
+  return moveOrder(orderId, car.id);
 }
 
 /**

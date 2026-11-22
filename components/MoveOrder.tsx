@@ -14,12 +14,26 @@ export default function MoveOrder({
   total,
   runs,
   paid = false,
+  currentFee,
+  helpHref = "",
   collapsed = false,
   openLabel = "Change to another delivery",
 }: {
   orderId: string;
   total: number;
-  runs: { id: string; label: string; closes: string }[];
+  runs: {
+    id: string;
+    /** For a car of its own: the moment it is aimed at. */
+    at?: string;
+    label: string;
+    closes: string;
+    /** What delivery would come to there. */
+    fee?: number;
+  }[];
+  /** What delivery is now, to show what changes. */
+  currentFee?: number;
+  /** Where to message the shop from, for somebody who cannot find a day. */
+  helpHref?: string;
   /** A paid order moves as it is: no repricing, no refund, no top-up. */
   paid?: boolean;
   /** Start as a single line, for a page where moving is not the main thing. */
@@ -72,13 +86,13 @@ export default function MoveOrder({
       <p className="text-sm font-semibold">Move it to:</p>
       <ul className="space-y-2">
         {runs.map((run) => (
-          <li key={run.id}>
+          <li key={run.id || run.at}>
             <button
               type="submit"
-              name="batch_id"
-              value={run.id}
+              name={run.at ? "deliver_at" : "batch_id"}
+              value={run.at ? run.at : run.id}
               disabled={pending}
-              // The label rides along so the confirmation can name the run
+              // The label rides along so the confirmation can name the day
               // rather than saying something moved somewhere.
               onClick={(event) => {
                 const form = event.currentTarget.form;
@@ -93,8 +107,21 @@ export default function MoveOrder({
                 <span className="block font-semibold">{run.label}</span>
                 <span className="block text-sm text-muted">{run.closes}</span>
               </span>
-              <span className="shrink-0 font-bold text-brand">
-                {pending ? "…" : "Move"}
+              <span className="shrink-0 text-right">
+                {/* The new delivery fee is the thing that decides it, so it
+                    is the loudest thing on the row. */}
+                {run.fee !== undefined && !paid && (
+                  <span
+                    className={`block rounded-full px-2.5 py-0.5 text-sm font-extrabold ${
+                      currentFee !== undefined && run.fee > currentFee
+                        ? "bg-brand-tint text-brand-dark"
+                        : "bg-mint/10 text-mint"
+                    }`}
+                  >
+                    Delivery {naira(run.fee)}
+                  </span>
+                )}
+                <span className="block font-bold text-brand">{pending ? "…" : "Move"}</span>
               </span>
             </button>
           </li>
@@ -104,6 +131,20 @@ export default function MoveOrder({
       {state.error && (
         <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
           {state.error}
+        </p>
+      )}
+
+      {helpHref !== "" && (
+        <p className="text-sm text-muted">
+          Cannot find a day that suits?{" "}
+          <a
+            href={helpHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold text-brand-dark underline"
+          >
+            Message us
+          </a>
         </p>
       )}
 

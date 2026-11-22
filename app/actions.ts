@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { changeOrderLines,
+  moveOrderToCar,
   previewOrderChange, getOrder, moveOrder, orderLinkId, placeOrder, previewCoupon, saveRating } from "@/lib/orders";
 import { lastOrderForPhone, perkFor, type LinkPerk } from "@/lib/orders";
 import { accountNumber, normalisePhone } from "@/lib/phone";
@@ -286,10 +287,11 @@ export async function moveOrderToRun(
   _prev: MoveState,
   form: FormData
 ): Promise<MoveState> {
-  const result = await moveOrder(
-    String(form.get("order_id")),
-    String(form.get("batch_id"))
-  );
+  const car = String(form.get("deliver_at") ?? "").trim();
+  const result =
+    car !== ""
+      ? await moveOrderToCar(String(form.get("order_id")), car)
+      : await moveOrder(String(form.get("order_id")), String(form.get("batch_id")));
   if (!result.ok) return { error: result.error, movedTo: null };
 
   revalidatePath(`/o/${result.orderId}`);

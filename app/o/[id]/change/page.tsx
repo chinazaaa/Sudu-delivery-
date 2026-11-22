@@ -36,9 +36,9 @@ export default async function ChangeOrderPage({
   const lines = no === "" ? await changeLinesFor(order, settings.ice_item_id ?? "").catch(() => []) : [];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 pb-10">
+    <div className="mx-auto max-w-2xl space-y-3 pb-6">
       <div className="flex items-baseline justify-between gap-3">
-        <h1 className="font-display text-[28px] font-black uppercase leading-none">
+        <h1 className="font-display text-[22px] font-black uppercase leading-none">
           Change this order
         </h1>
         <Link href={back} className="text-sm font-semibold text-muted underline">

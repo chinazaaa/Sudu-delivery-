@@ -19,6 +19,7 @@ import GetTheApp from "@/components/GetTheApp";
 import ShareDelivery from "@/components/ShareDelivery";
 import ShareLink from "@/components/ShareLink";
 import PayExtras from "@/components/PayExtras";
+import { moveChoicesFor } from "@/lib/move-options";
 import SplitCollect from "@/components/SplitCollect";
 import CopyText from "@/components/CopyText";
 import RepeatOrder from "@/components/RepeatOrder";
@@ -291,6 +292,26 @@ export default async function OrderPage({
                   ? "Collecting your food"
                   : "Your delivery is booked";
 
+  // Where an order could go. Unpaid: the shared deliveries and, on days none
+  // is going, the car the shop would send, each with its delivery fee. Paid:
+  // the shared deliveries only, since a paid order moves as it is.
+  const moveChoices = over
+    ? []
+    : await moveChoicesFor(order, others, { cars: !paid, fees: !paid }).catch(() =>
+        others.map((run) => ({
+          id: run.id,
+          at: "",
+          label: `${dayWord(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
+          closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
+          car: false,
+        }))
+      );
+  const moveHelp =
+    whatsappLink(
+      settings.whatsapp_number,
+      `Hi, I need a different day for my Sudu order ${shareRef(order, order.shares)}.`
+    ) || "";
+
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-10">
       {(justPlaced || fromMyGroup) && (
@@ -502,11 +523,7 @@ export default async function OrderPage({
                 <MoveOrder
                   orderId={order.id}
                   total={order.total}
-                  runs={others.map((run) => ({
-                    id: run.id,
-                    label: `${dayWord(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
-                    closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
-                  }))}
+                  runs={moveChoices} currentFee={order.fee} helpHref={moveHelp}
                 />
               ) : null
             }
@@ -548,11 +565,7 @@ export default async function OrderPage({
           <MoveOrder
             orderId={order.id}
             total={order.total}
-            runs={others.map((run) => ({
-              id: run.id,
-              label: `${dayWord(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
-              closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
-            }))}
+            runs={moveChoices} currentFee={order.fee} helpHref={moveHelp}
           />
         </section>
       )}
@@ -659,11 +672,7 @@ export default async function OrderPage({
               paid
               collapsed
               openLabel="Want it on another night instead?"
-              runs={others.map((run) => ({
-                id: run.id,
-                label: `${dayWord(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
-                closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
-              }))}
+              runs={moveChoices} currentFee={order.fee} helpHref={moveHelp}
             />
           )}
         </section>

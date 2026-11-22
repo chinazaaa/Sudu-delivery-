@@ -257,12 +257,11 @@ export default function ChangeOrder({
             <p className="font-extrabold [overflow-wrap:anywhere]">{line.name}</p>
             {onlyOne ? null : back(kitchenView)}
           </div>
-          <p className="text-sm text-muted">What do you want to change?</p>
           <div className="grid gap-2">
             <button
               type="button"
               onClick={() => setView({ at: "qty", id: line.id })}
-              className="rounded-xl border-2 border-ink bg-white px-3.5 py-3 text-left font-bold"
+              className="rounded-xl border-2 border-ink bg-white px-3.5 py-2.5 text-left font-bold"
             >
               How many
               <span className="ml-2 font-normal text-muted">{qtyOf(line)} now</span>
@@ -271,7 +270,7 @@ export default function ChangeOrder({
               <button
                 type="button"
                 onClick={() => setView({ at: "opts", id: line.id })}
-                className="rounded-xl border-2 border-ink bg-white px-3.5 py-3 text-left font-bold"
+                className="rounded-xl border-2 border-ink bg-white px-3.5 py-2.5 text-left font-bold"
               >
                 {line.groups.map((group) => group.name.toLowerCase()).slice(0, 3).join(", ")}
                 <span className="block text-xs font-normal text-muted [overflow-wrap:anywhere]">
@@ -283,7 +282,7 @@ export default function ChangeOrder({
               <button
                 type="button"
                 onClick={() => setView({ at: "swap", id: line.id })}
-                className="rounded-xl border-2 border-ink bg-white px-3.5 py-3 text-left font-bold"
+                className="rounded-xl border-2 border-ink bg-white px-3.5 py-2.5 text-left font-bold"
               >
                 Swap it for something else
                 <span className="block text-xs font-normal text-muted">
@@ -326,7 +325,7 @@ export default function ChangeOrder({
                         : kitchenView
                   );
                 }}
-                className="rounded-xl border-2 border-brand/40 bg-white px-3.5 py-3 text-left font-bold text-brand-dark"
+                className="rounded-xl border-2 border-brand/40 bg-white px-3.5 py-2.5 text-left font-bold text-brand-dark"
               >
                 Take it off
               </button>
@@ -483,7 +482,7 @@ export default function ChangeOrder({
   })();
 
   return (
-    <form action={action} className="space-y-4 pb-28">
+    <form action={action} className="space-y-3 pb-24">
       <input type="hidden" name="order_id" value={orderId} />
       {lines.map((line) => (
         <input key={line.id} type="hidden" name={`qty_${line.id}`} value={qtyOf(line)} />
@@ -495,7 +494,7 @@ export default function ChangeOrder({
         <input key={`s-${lineId}`} type="hidden" name={`swap_${lineId}`} value={itemId} />
       ))}
 
-      <div className="card space-y-4">{body}</div>
+      <div className="card space-y-3 p-4">{body}</div>
 
       {state.error && (
         <p className="soft bg-brand-wash px-3 py-2 text-sm text-brand-dark">{state.error}</p>
@@ -503,7 +502,7 @@ export default function ChangeOrder({
 
       {/* Always there, so nobody has to hunt for how to save. Dim until
           something has changed. */}
-      <div className="sticky bottom-24 z-10 space-y-1.5 rounded-2xl border-2 border-ink bg-paper p-3 shadow-card">
+      <div className="sticky bottom-24 z-10 space-y-1.5 rounded-2xl border-2 border-ink bg-paper px-3 py-2.5 shadow-card">
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-sm font-semibold text-muted">
             {changed ? "Was" : "Total"}{" "}
@@ -535,9 +534,6 @@ export default function ChangeOrder({
         >
           {pending ? "Saving…" : changed ? "Save the change" : "Make a change to save"}
         </button>
-        <p className="text-center text-xs text-muted">
-          Delivery is worked out again, so the total can move. Nothing is charged until you pay.
-        </p>
       </div>
 
       {asking !== null && (
