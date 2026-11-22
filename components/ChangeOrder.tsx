@@ -63,6 +63,14 @@ export default function ChangeOrder({
 
   const kitchens = [...new Set(lines.map((line) => line.restaurant))];
   const find = (id: string) => lines.find((line) => line.id === id);
+  // Nobody is asked a question with one answer: one kitchen goes straight to
+  // its things, and one thing goes straight to what to change about it.
+  const startView = (): View => {
+    if (kitchens.length > 1) return { at: "kitchens" };
+    if (lines.length === 1) return { at: "line", id: lines[0].id };
+    return { at: "kitchen", name: kitchens[0] };
+  };
+  const onlyOne = kitchens.length === 1 && lines.length === 1;
 
   if (!open) {
     return (
@@ -70,7 +78,7 @@ export default function ChangeOrder({
         type="button"
         onClick={() => {
           setOpen(true);
-          setView({ at: "kitchens" });
+          setView(startView());
         }}
         className="block w-full rounded-xl bg-shell px-3 py-2.5 text-left text-sm font-semibold text-brand-dark"
       >
@@ -178,7 +186,7 @@ export default function ChangeOrder({
         <>
           <div className="flex items-baseline justify-between gap-2">
             <p className="font-extrabold [overflow-wrap:anywhere]">{line.name}</p>
-            {back(kitchenView)}
+            {onlyOne ? null : back(kitchenView)}
           </div>
           <p className="text-sm text-muted">What do you want to change?</p>
           <div className="grid gap-2">
@@ -212,7 +220,9 @@ export default function ChangeOrder({
                   setView(
                     live.some((one) => one.id !== line.id && one.restaurant === line.restaurant)
                       ? kitchenView
-                      : { at: "kitchens" }
+                      : kitchens.length > 1
+                        ? { at: "kitchens" }
+                        : kitchenView
                   );
                 }}
                 className="rounded-xl border-2 border-brand/40 bg-white px-3.5 py-3 text-left font-bold text-brand-dark"
