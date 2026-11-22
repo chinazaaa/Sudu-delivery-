@@ -295,9 +295,9 @@ export default async function OrderPage({
   // Where an order could go. Unpaid: the shared deliveries and, on days none
   // is going, the car the shop would send, each with its delivery fee. Paid:
   // the shared deliveries only, since a paid order moves as it is.
-  const moveChoices = over
+  const moveChoices = over || paid
     ? []
-    : await moveChoicesFor(order, others, { cars: !paid, fees: !paid }).catch(() =>
+    : await moveChoicesFor(order, others, { cars: true, fees: true }).catch(() =>
         others.map((run) => ({
           id: run.id,
           at: "",
@@ -665,16 +665,6 @@ export default async function OrderPage({
             />
           )}
 
-          {canStillMove && (
-            <MoveOrder
-              orderId={order.id}
-              total={order.total}
-              paid
-              collapsed
-              openLabel="Want it on another night instead?"
-              runs={moveChoices} currentFee={order.fee} helpHref={moveHelp}
-            />
-          )}
         </section>
       )}
 

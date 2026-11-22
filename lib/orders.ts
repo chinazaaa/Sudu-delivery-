@@ -2268,6 +2268,15 @@ export async function moveOrder(
   }
 
   const paid = isPaid(order.status);
+  // Not the customer's to do once they have paid. Another day is another
+  // delivery fee, and what they paid was priced for this one; the shop sorts
+  // it out with them, and charges or refunds the difference by hand.
+  if (!asAdmin && paid) {
+    return {
+      ok: false,
+      error: "This order is paid for, so message us and we will change the day.",
+    };
+  }
   if (!asAdmin && paid && !isOrderable(order.batch)) {
     return {
       ok: false,
