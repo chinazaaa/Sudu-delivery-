@@ -464,7 +464,6 @@ export default async function OrderPage({
           ) : accounts.length > 0 ? (
             <>
               <PayTo accounts={accounts} narration={narration(order, order.shares)} />
-              <p className="text-sm text-ink/75">Transfer only, no cash on delivery.</p>
             </>
           ) : (
             <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -473,6 +472,13 @@ export default async function OrderPage({
             </p>
           )}
 
+          {/* Everything that is not "pay now" is folded away: a page that
+              shows every option at once reads as too much. */}
+          <details className="rounded-2xl bg-shell px-3 py-2.5">
+            <summary className="cursor-pointer text-sm font-bold">
+              Change it, pay by card, or send to someone
+            </summary>
+            <div className="mt-3 space-y-3">
           {/* The duplicate this exists to stop.
 
               Somebody orders one pack of rice and then wants two. Ordering
@@ -521,6 +527,8 @@ export default async function OrderPage({
             <CardPayment order={order} settings={settings} batchLabel={batchLabel} />
           )}
           {!split && <ShareLink label="Send this to whoever is paying" />}
+            </div>
+          </details>
         </section>
       )}
 

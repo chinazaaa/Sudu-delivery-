@@ -38,13 +38,10 @@ export default function PayTo({
           it, which leaves a payment nobody can match to an order. */}
       <div className="rounded-2xl border-2 border-brand/40 bg-brand-tint px-3 py-3 text-center">
         <p className="text-xs font-extrabold uppercase tracking-wide text-brand-dark">
-          Type this in the narration
+          Put this in the narration
         </p>
         <p className="mt-0.5 text-4xl font-extrabold tracking-wider text-brand-dark">
           {narration}
-        </p>
-        <p className="mt-1 text-xs font-semibold text-ink/70">
-          Without it we cannot match your transfer to your order.
         </p>
       </div>
 
@@ -63,9 +60,7 @@ export default function PayTo({
 
       {accounts.length > 1 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-semibold text-muted">
-            Bank with one of these? Send it there instead:
-          </span>
+          <span className="text-xs font-semibold text-muted">Other bank:</span>
           {accounts.map((option, index) => (
             <button
               key={option.id}
