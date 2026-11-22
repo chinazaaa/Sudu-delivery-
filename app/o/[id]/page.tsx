@@ -16,8 +16,6 @@ import { PHOTO_LABEL } from "@/lib/parcels";
 import { photosFor } from "@/lib/parcel-photos";
 import StageTimeline from "@/components/StageTimeline";
 import GetTheApp from "@/components/GetTheApp";
-import ChangeOrder from "@/components/ChangeOrder";
-import { changeLinesFor } from "@/lib/change-data";
 import ShareDelivery from "@/components/ShareDelivery";
 import ShareLink from "@/components/ShareLink";
 import SplitCollect from "@/components/SplitCollect";
@@ -292,13 +290,6 @@ export default async function OrderPage({
                   ? "Collecting your food"
                   : "Your delivery is booked";
 
-  // What the change screen is built from: only worth reading while the
-  // order can still be changed.
-  const changeLines =
-    !paid && canStillMove && order.shares.length <= 1
-      ? await changeLinesFor(order, settings.ice_item_id ?? "").catch(() => [])
-      : [];
-
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-10">
       {(justPlaced || fromMyGroup) && (
@@ -499,7 +490,15 @@ export default async function OrderPage({
               something in it travels on ice, and it is not the customer's
               to take off. */}
           {canStillMove && order.shares.length <= 1 && (
-            <ChangeOrder orderId={order.id} lines={changeLines} />
+            <Link
+              href={`/o/${shortRef(order)}/change`}
+              className="block w-full rounded-xl bg-shell px-3 py-2.5 text-left text-sm font-semibold text-brand-dark"
+            >
+              Want something different?{" "}
+              <span className="underline decoration-dotted underline-offset-4">
+                Change this order
+              </span>
+            </Link>
           )}
 
           {/* Before paying is exactly when somebody realises they want another

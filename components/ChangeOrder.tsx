@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { changeMyOrder, type ChangeState } from "@/app/actions";
 import { naira } from "@/lib/money";
 import { halfShown, pickedPrice, sizeShown } from "@/lib/pricing";
 import type { ChangeLineData } from "@/lib/change-data";
-import SaveButton from "@/components/SaveButton";
 
 export type ChangeableLine = ChangeLineData;
 
@@ -31,17 +31,30 @@ type View =
  */
 export default function ChangeOrder({
   orderId,
+  backHref,
   lines,
 }: {
   orderId: string;
+  /** Where the order page is, to go back to once it is saved. */
+  backHref: string;
   lines: ChangeableLine[];
 }) {
-  const [open, setOpen] = useState(false);
-  const [view, setView] = useState<View>({ at: "kitchens" });
-  const [state, action] = useActionState<ChangeState, FormData>(changeMyOrder, {
+  const router = useRouter();
+  const [state, action, pending] = useActionState<ChangeState, FormData>(changeMyOrder, {
     ok: false,
     error: null,
   });
+  const [view, setView] = useState<View>(() => {
+    const names = [...new Set(lines.map((line) => line.restaurant))];
+    if (names.length > 1) return { at: "kitchens" };
+    if (lines.length === 1) return { at: "line", id: lines[0].id };
+    return { at: "kitchen", name: names[0] };
+  });
+
+  // Saved: back to the order, which now shows the new total.
+  useEffect(() => {
+    if (state.ok) router.push(backHref);
+  }, [state, router, backHref]);
 
   const [qty, setQty] = useState<Record<string, number>>(() =>
     Object.fromEntries(lines.map((line) => [line.id, line.qty]))
@@ -63,32 +76,7 @@ export default function ChangeOrder({
 
   const kitchens = [...new Set(lines.map((line) => line.restaurant))];
   const find = (id: string) => lines.find((line) => line.id === id);
-  // Nobody is asked a question with one answer: one kitchen goes straight to
-  // its things, and one thing goes straight to what to change about it.
-  const startView = (): View => {
-    if (kitchens.length > 1) return { at: "kitchens" };
-    if (lines.length === 1) return { at: "line", id: lines[0].id };
-    return { at: "kitchen", name: kitchens[0] };
-  };
   const onlyOne = kitchens.length === 1 && lines.length === 1;
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => {
-          setOpen(true);
-          setView(startView());
-        }}
-        className="block w-full rounded-xl bg-shell px-3 py-2.5 text-left text-sm font-semibold text-brand-dark"
-      >
-        Want something different?{" "}
-        <span className="underline decoration-dotted underline-offset-4">
-          Change this order
-        </span>
-      </button>
-    );
-  }
 
   const back = (to: View) => (
     <button
@@ -330,7 +318,7 @@ export default function ChangeOrder({
   })();
 
   return (
-    <form action={action} className="soft space-y-3 bg-shell px-3.5 py-3">
+    <form action={action} className="space-y-4 pb-28">
       <input type="hidden" name="order_id" value={orderId} />
       {lines.map((line) => (
         <input key={line.id} type="hidden" name={`qty_${line.id}`} value={qtyOf(line)} />
@@ -346,35 +334,26 @@ export default function ChangeOrder({
           />
         ))}
 
-      <div className="flex items-baseline justify-between gap-2">
-        <h3 className="font-extrabold">Change this order</h3>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="text-sm font-semibold text-muted underline"
-        >
-          Close
-        </button>
-      </div>
-
-      {body}
+      <div className="card space-y-4">{body}</div>
 
       {state.error && (
         <p className="soft bg-brand-wash px-3 py-2 text-sm text-brand-dark">{state.error}</p>
       )}
-      {state.ok && !changed && (
-        <p className="text-sm font-semibold text-ink">Changed. The new total is above.</p>
-      )}
 
-      {changed ? (
-        <>
-          <p className="text-xs text-muted">
-            Delivery is worked out again, so the total can move either way. Nothing is
-            charged until you pay.
-          </p>
-          <SaveButton look="btn-primary w-full">Save the change</SaveButton>
-        </>
-      ) : null}
+      {/* Always there, so nobody has to hunt for how to save. Dim until
+          something has changed. */}
+      <div className="sticky bottom-24 z-10 space-y-1.5 rounded-2xl border-2 border-ink bg-paper p-3 shadow-card">
+        <button
+          type="submit"
+          disabled={!changed || pending}
+          className="btn-primary w-full disabled:opacity-40"
+        >
+          {pending ? "Saving…" : changed ? "Save the change" : "Change something to save"}
+        </button>
+        <p className="text-center text-xs text-muted">
+          Delivery is worked out again, so the total can move. Nothing is charged until you pay.
+        </p>
+      </div>
     </form>
   );
 }
