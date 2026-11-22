@@ -370,10 +370,23 @@ export default async function OrderPage({
               {status}
             </span>
           </div>
-          <h1 className="font-display text-[min(13vw,4.5rem)] font-black uppercase leading-[0.88] sm:text-[clamp(2.75rem,6vw,4.5rem)]">
+          {/* Smaller while it is unpaid: the money has to be on the first
+              screen, and a headline filling it pushes the account number
+              out of sight. */}
+          <h1
+            className={`font-display font-black uppercase leading-[0.88] ${
+              paid
+                ? "text-[min(13vw,4.5rem)] sm:text-[clamp(2.75rem,6vw,4.5rem)]"
+                : "text-[min(9vw,3rem)]"
+            }`}
+          >
             {headline}
           </h1>
-          <p className="text-[16px] leading-relaxed text-rail-text sm:text-[17px]">
+          <p
+            className={`text-[16px] leading-relaxed text-rail-text sm:text-[17px] ${
+              paid ? "" : "hidden"
+            }`}
+          >
             {order.customer_name} ·{" "}
             {isParcel
               ? order.batch.delivery_window_text
@@ -407,6 +420,107 @@ export default async function OrderPage({
           )}
         </div>
       </header>
+
+      {/* First thing under the status, because nobody scrolls: the app, said
+          as the thing it gives them, in one line. */}
+      {!over && order.batch.stage !== "handed_out" && order.status !== "delivered" && (
+        <GetTheApp
+          appId={settings.ios_app_id}
+          androidPackage={settings.android_package}
+        />
+      )}
+
+      {/* Payment sits straight under the status while it is unpaid. It used
+          to come after the run ticket, a screen down, and somebody who does
+          not scroll concluded there were no payment details at all. */}
+      {/* Paying comes first while it is unpaid, and drops away once it is not. */}
+      {!paid && !waitingOnGroup && !over && !expired && (
+        <section className="card space-y-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg font-extrabold">Pay {naira(order.total)}</h2>
+            <ExpiryNote cutOffISO={order.batch.cut_off_at} />
+          </div>
+
+          {order.payment_method === "card" ? (
+            externalUrl(order.payment_link) ? (
+              <a
+                href={externalUrl(order.payment_link)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary w-full"
+              >
+                Pay {naira(order.total)} by card
+              </a>
+            ) : (
+              <CardPayment
+                order={order}
+                settings={settings}
+                batchLabel={batchLabel}
+                waiting
+              />
+            )
+          ) : accounts.length > 0 ? (
+            <>
+              <PayTo accounts={accounts} narration={narration(order, order.shares)} />
+              <p className="text-sm text-ink/75">Transfer only, no cash on delivery.</p>
+            </>
+          ) : (
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Transfer details are being set up. Message us and we will send them
+              to you.
+            </p>
+          )}
+
+          {/* The duplicate this exists to stop.
+
+              Somebody orders one pack of rice and then wants two. Ordering
+              again is one tap and changing the first was not, so people
+              ordered again and the shop cancelled the first by hand, every
+              time. Only while nothing has been paid: once the money has
+              landed the shop may already have bought the food, and what
+              comes back is a refund rather than a smaller number.
+
+              The bag of ice is left out. It is on the order because
+              something in it travels on ice, and it is not the customer's
+              to take off. */}
+          {canStillMove && order.shares.length <= 1 && (
+            <ChangeOrder
+              orderId={order.id}
+              lines={order.lines
+                .filter((line) => line.menu_item_id !== settings.ice_item_id)
+                .map((line) => ({
+                  id: line.id,
+                  name: line.name,
+                  restaurant: line.restaurant,
+                  qty: line.qty,
+                  unitPrice: line.unit_price_at_order,
+                  choices: line.choices.join(", "),
+                }))}
+            />
+          )}
+
+          {/* Before paying is exactly when somebody realises they want another
+              night. Nothing has been charged, so it simply reprices. */}
+          {canStillMove && (
+            <MoveOrder
+              orderId={order.id}
+              total={order.total}
+              collapsed
+              openLabel="Want it on another run instead?"
+              runs={others.map((run) => ({
+                id: run.id,
+                label: `${dayWord(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
+                closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
+              }))}
+            />
+          )}
+
+          {order.payment_method !== "card" && (
+            <CardPayment order={order} settings={settings} batchLabel={batchLabel} />
+          )}
+          {!split && <ShareLink label="Send this to whoever is paying" />}
+        </section>
+      )}
 
       {/* The run, on a ticket of its own. */}
       <section className="rounded-2xl border-2 border-ink bg-paper p-5 shadow-[5px_5px_0_#e5321d]">
@@ -507,102 +621,6 @@ export default async function OrderPage({
               closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
             }))}
           />
-        </section>
-      )}
-
-      {/* Paying comes first while it is unpaid, and drops away once it is not. */}
-      {!paid && !waitingOnGroup && !over && !expired && (
-        <section className="card space-y-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-lg font-extrabold">Pay {naira(order.total)}</h2>
-            <ExpiryNote cutOffISO={order.batch.cut_off_at} />
-          </div>
-
-          {order.payment_method === "card" ? (
-            externalUrl(order.payment_link) ? (
-              <a
-                href={externalUrl(order.payment_link)!}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary w-full"
-              >
-                Pay {naira(order.total)} by card
-              </a>
-            ) : (
-              <CardPayment
-                order={order}
-                settings={settings}
-                batchLabel={batchLabel}
-                waiting
-              />
-            )
-          ) : accounts.length > 0 ? (
-            <>
-              <PayTo accounts={accounts} narration={narration(order, order.shares)} />
-              <p className="text-sm text-ink/75">
-                Type{" "}
-                <span className="font-extrabold text-brand-dark">
-                  {narration(order, order.shares)}
-                </span>{" "}
-                in the narration. That is how this transfer is matched to your
-                part of the order. Transfer only, no cash on delivery.
-              </p>
-            </>
-          ) : (
-            <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              Transfer details are being set up. Message us and we will send them
-              to you.
-            </p>
-          )}
-
-          {/* The duplicate this exists to stop.
-
-              Somebody orders one pack of rice and then wants two. Ordering
-              again is one tap and changing the first was not, so people
-              ordered again and the shop cancelled the first by hand, every
-              time. Only while nothing has been paid: once the money has
-              landed the shop may already have bought the food, and what
-              comes back is a refund rather than a smaller number.
-
-              The bag of ice is left out. It is on the order because
-              something in it travels on ice, and it is not the customer's
-              to take off. */}
-          {canStillMove && order.shares.length <= 1 && (
-            <ChangeOrder
-              orderId={order.id}
-              lines={order.lines
-                .filter((line) => line.menu_item_id !== settings.ice_item_id)
-                .map((line) => ({
-                  id: line.id,
-                  name: line.name,
-                  restaurant: line.restaurant,
-                  qty: line.qty,
-                  unitPrice: line.unit_price_at_order,
-                  choices: line.choices.join(", "),
-                }))}
-            />
-          )}
-
-          {/* Before paying is exactly when somebody realises they want another
-              night. Nothing has been charged, so it simply reprices. */}
-          {canStillMove && (
-            <MoveOrder
-              orderId={order.id}
-              total={order.total}
-              collapsed
-              openLabel="Want it on another run instead?"
-              runs={others.map((run) => ({
-                id: run.id,
-                label: `${dayWord(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
-                closes: `Closes ${clockLabel(run.cut_off_at)}, ${run.delivery_window_text}`,
-              }))}
-            />
-          )}
-
-          {order.payment_method !== "card" && (
-            <CardPayment order={order} settings={settings} batchLabel={batchLabel} />
-          )}
-          {!split && <ShareLink label="Send this to whoever is paying" />}
         </section>
       )}
 
@@ -731,17 +749,6 @@ export default async function OrderPage({
           theirs: a parent reading their son's order page is not who this
           is addressed to. */}
       <ReferralStrip code={myCode} site={site} welcome={welcome} />
-
-      {/* Offered here because this is the page somebody refreshes waiting
-          for their dinner, and the app is the thing that would stop them
-          having to. Only while there is still something to be told: under
-          a delivered order it is an advert with no argument in it. */}
-      {!over && order.batch.stage !== "handed_out" && order.status !== "delivered" && (
-        <GetTheApp
-          appId={settings.ios_app_id}
-          androidPackage={settings.android_package}
-        />
-      )}
 
       {/* The car is the thing worth sharing: one delivery fee covers whatever
           is in it, so every friend who joins makes it cheaper for all of them.

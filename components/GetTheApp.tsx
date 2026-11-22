@@ -57,17 +57,11 @@ export default function GetTheApp({
   };
 
   return (
-    <section className="card flex flex-wrap items-center justify-between gap-3">
-      <div className="min-w-0">
-        <h2 className="font-display text-[19px] font-black uppercase leading-tight">
-          Stop refreshing this page
-        </h2>
-        <p className="mt-1 text-sm text-ink/75">
-          The app buzzes your phone when your food leaves the restaurants, and
-          again when we are at your block. Same orders, same account.
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-3">
+    <section className="flex items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3 text-white">
+      <p className="min-w-0 text-sm font-bold leading-snug">
+        Get live updates on where your order is
+      </p>
+      <div className="flex shrink-0 items-center gap-2">
         <Link
           href="/app"
           className="rounded-full bg-brand px-3.5 py-2 text-sm font-extrabold text-white"
@@ -77,9 +71,10 @@ export default function GetTheApp({
         <button
           type="button"
           onClick={hide}
-          className="px-1 text-sm font-semibold text-muted underline"
+          aria-label="No thanks"
+          className="px-1.5 text-lg leading-none text-white/70"
         >
-          No thanks
+          ×
         </button>
       </div>
     </section>
