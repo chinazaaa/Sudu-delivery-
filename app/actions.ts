@@ -789,7 +789,17 @@ export async function changeMyOrder(
     wanted.push({ lineId: key.slice(4), qty: Number(value) });
   }
 
-  const result = await changeOrderLines(id, wanted);
+  // New choices, sent only for the lines whose size or flavour was changed.
+  const picks: Record<string, string[]> = {};
+  for (const [key, value] of form.entries()) {
+    if (!key.startsWith("opts_")) continue;
+    picks[key.slice(5)] = String(value)
+      .split(",")
+      .map((one) => one.trim())
+      .filter((one) => one !== "");
+  }
+
+  const result = await changeOrderLines(id, wanted, picks);
   if (!result.ok) return { ok: false, error: result.error };
 
   revalidatePath("/o", "layout");

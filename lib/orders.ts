@@ -2434,7 +2434,10 @@ export async function moveOrder(
  */
 export async function changeOrderLines(
   orderId: string,
-  wanted: WantedQty[]
+  wanted: WantedQty[],
+  /** New choices for a line, by line id: size, flavour, crust. Only the
+   *  lines whose choices should be replaced. */
+  picks: Record<string, string[]> = {}
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const order = await getOrder(orderId);
   if (!order) return { ok: false, error: "That order no longer exists." };
@@ -2460,16 +2463,110 @@ export async function changeOrderLines(
   );
 
   const now = theirs.map((line) => ({ id: line.id, qty: line.qty }));
-  if (!somethingChanged(now, asked)) return { ok: true };
+
+  // What each line has chosen right now, so a pick that is the same as
+  // what is already there is not counted as a change.
+  const { data: chosenRows } = await db()
+    .from("order_item_options")
+    .select("order_item_id, option_id")
+    .in("order_item_id", order.lines.map((line) => line.id));
+  const chosenNow = new Map<string, string[]>();
+  for (const row of (chosenRows ?? []) as { order_item_id: string; option_id: string | null }[]) {
+    if (!row.option_id) continue;
+    chosenNow.set(row.order_item_id, [...(chosenNow.get(row.order_item_id) ?? []), row.option_id]);
+  }
+  const sameSet = (x: string[], y: string[]) =>
+    x.length === y.length && x.every((id) => y.includes(id));
+  const pickedLines = Object.keys(picks).filter(
+    (lineId) =>
+      theirs.some((line) => line.id === lineId) &&
+      !sameSet(picks[lineId] ?? [], chosenNow.get(lineId) ?? [])
+  );
+
+  if (!somethingChanged(now, asked) && pickedLines.length === 0) return { ok: true };
   if (emptiesIt(now, asked)) {
     return {
       ok: false,
       error:
-        "That takes everything off the order. Use cancel below if you no longer want it.",
+        "There has to be at least one thing on the order. Change it to something else instead, or cancel the order below.",
     };
   }
 
   const { keep, drop } = applyWanted(now, asked);
+
+  // New choices are checked against what the item really offers, here and
+  // not in the browser: a size that does not exist on this pizza, two sizes
+  // where one is allowed, or a required question left unanswered.
+  for (const lineId of pickedLines) {
+    if (drop.includes(lineId)) continue;
+    const line = theirs.find((one) => one.id === lineId)!;
+    const ids = [...new Set(picks[lineId] ?? [])];
+
+    const { data: groupRows } = await db()
+      .from("item_option_groups")
+      .select("id, name, required, max_select")
+      .eq("menu_item_id", line.menu_item_id);
+    const groups = (groupRows ?? []) as {
+      id: string;
+      name: string;
+      required: boolean;
+      max_select: number;
+    }[];
+    const { data: optionRows } = groups.length
+      ? await db()
+          .from("item_options")
+          .select("id, group_id, name, price_delta, available")
+          .in("group_id", groups.map((g) => g.id))
+      : { data: [] };
+    const options = (optionRows ?? []) as {
+      id: string;
+      group_id: string;
+      name: string;
+      price_delta: number;
+      available: boolean;
+    }[];
+
+    for (const id of ids) {
+      const option = options.find((one) => one.id === id);
+      if (!option) {
+        return { ok: false, error: `A choice on ${line.name} is no longer offered.` };
+      }
+      if (!option.available) {
+        return { ok: false, error: `${option.name} is unavailable on ${line.name} today.` };
+      }
+    }
+    for (const group of groups) {
+      const inGroup = ids.filter(
+        (id) => options.find((one) => one.id === id)?.group_id === group.id
+      ).length;
+      if (group.required && inGroup === 0) {
+        return { ok: false, error: `Choose ${group.name.toLowerCase()} on ${line.name}.` };
+      }
+      if (inGroup > Math.max(1, group.max_select)) {
+        return {
+          ok: false,
+          error: `Only ${Math.max(1, group.max_select)} ${group.name.toLowerCase()} on ${line.name}.`,
+        };
+      }
+    }
+
+    await db().from("order_item_options").delete().eq("order_item_id", lineId);
+    if (ids.length > 0) {
+      await db()
+        .from("order_item_options")
+        .insert(
+          ids.map((id) => {
+            const option = options.find((one) => one.id === id)!;
+            return {
+              order_item_id: lineId,
+              option_id: id,
+              name_at_order: option.name,
+              price_delta_at_order: option.price_delta,
+            };
+          })
+        );
+    }
+  }
 
   // The options go first: a line with choices hanging off it is a line the
   // database will not delete, and a half removed line is worse than none.
@@ -2504,18 +2601,42 @@ export async function changeOrderLines(
     }
   }
 
-  // Priced again from what is actually on it now, the same way a move
-  // prices an unpaid order. Read back rather than worked out from the
-  // patch, so what is charged follows the database and not this function's
-  // opinion of it.
+  // Priced again from what is actually on it now, by the same till that
+  // priced it at checkout, halves and all. Read back rather than worked out
+  // from the patch, so what is charged follows the database and not this
+  // function's opinion of it.
   const after = await getOrder(orderId);
   if (!after) return { ok: false, error: "That order no longer exists." };
 
-  const repriced = await repeatLines(after);
-  if (repriced.blocked.length > 0) {
-    const names = repriced.blocked.map((item) => `${item.name} is ${item.reason}`);
-    return { ok: false, error: `${names.join(", ")}. Take it off the order first.` };
+  const { data: afterChosen } = await db()
+    .from("order_item_options")
+    .select("order_item_id, option_id")
+    .in("order_item_id", after.lines.map((line) => line.id));
+  const optionsOf = new Map<string, string[]>();
+  for (const row of (afterChosen ?? []) as { order_item_id: string; option_id: string | null }[]) {
+    if (!row.option_id) continue;
+    optionsOf.set(row.order_item_id, [...(optionsOf.get(row.order_item_id) ?? []), row.option_id]);
   }
+
+  const priced = await priceLines(
+    after.lines.map((line) => ({
+      menu_item_id: line.menu_item_id,
+      qty: line.qty,
+      option_ids: optionsOf.get(line.id) ?? [],
+      for_name: line.for_name ?? null,
+    }))
+  );
+  if ("error" in priced) {
+    return { ok: false, error: `${priced.error} Take it off the order first.` };
+  }
+  const repriced = {
+    lines: priced.lines.map((line) => ({
+      itemId: line.menu_item_id,
+      restaurantId: line.item.restaurant_id,
+      qty: line.qty,
+      unitPrice: line.unitPrice,
+    })),
+  };
 
   const food = repriced.lines.reduce(
     (total, line) => total + line.unitPrice * line.qty,
@@ -2549,8 +2670,10 @@ export async function changeOrderLines(
   });
 
   // The lines carry today's prices too, so the order reads as it is charged.
-  for (const line of after.lines) {
-    const match = repriced.lines.find((row) => row.itemId === line.menu_item_id);
+  // Matched by position: two lines of the same item with different choices
+  // are different prices.
+  for (const [index, line] of after.lines.entries()) {
+    const match = priced.lines[index];
     if (match && match.unitPrice !== line.unit_price_at_order) {
       await db()
         .from("order_items")

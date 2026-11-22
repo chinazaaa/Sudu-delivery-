@@ -17,6 +17,7 @@ import { photosFor } from "@/lib/parcel-photos";
 import StageTimeline from "@/components/StageTimeline";
 import GetTheApp from "@/components/GetTheApp";
 import ChangeOrder from "@/components/ChangeOrder";
+import { changeLinesFor } from "@/lib/change-data";
 import ShareDelivery from "@/components/ShareDelivery";
 import ShareLink from "@/components/ShareLink";
 import SplitCollect from "@/components/SplitCollect";
@@ -291,6 +292,13 @@ export default async function OrderPage({
                   ? "Collecting your food"
                   : "Your delivery is booked";
 
+  // What the change screen is built from: only worth reading while the
+  // order can still be changed.
+  const changeLines =
+    !paid && canStillMove && order.shares.length <= 1
+      ? await changeLinesFor(order, settings.ice_item_id ?? "").catch(() => [])
+      : [];
+
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-10">
       {(justPlaced || fromMyGroup) && (
@@ -491,19 +499,7 @@ export default async function OrderPage({
               something in it travels on ice, and it is not the customer's
               to take off. */}
           {canStillMove && order.shares.length <= 1 && (
-            <ChangeOrder
-              orderId={order.id}
-              lines={order.lines
-                .filter((line) => line.menu_item_id !== settings.ice_item_id)
-                .map((line) => ({
-                  id: line.id,
-                  name: line.name,
-                  restaurant: line.restaurant,
-                  qty: line.qty,
-                  unitPrice: line.unit_price_at_order,
-                  choices: line.choices.join(", "),
-                }))}
-            />
+            <ChangeOrder orderId={order.id} lines={changeLines} />
           )}
 
           {/* Before paying is exactly when somebody realises they want another
