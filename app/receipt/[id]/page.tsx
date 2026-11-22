@@ -182,7 +182,6 @@ export default async function ReceiptPage({
             <div className="space-y-1.5 border-t-[1.5px] border-line pt-2 text-[13.5px]">
               <Row said="Paid by">{got.paidBy}</Row>
               <Row said="Paid on">{lagosStamp(got.paidOn)}</Row>
-              {got.reference !== "" && <Row said="Reference">{got.reference}</Row>}
             </div>
           </dl>
         </section>
