@@ -151,7 +151,7 @@ export default function Order() {
           </Text>
         </View>
 
-        <Display size={46} colour={T.shell}>
+        <Display size={order.status === "pending" ? 32 : 46} colour={T.shell}>
           {headline}
         </Display>
         <Text style={{ fontFamily: F.body, fontSize: 14, color: T.onInk }}>{sub}</Text>
@@ -236,7 +236,6 @@ export default function Order() {
             </Text>
           </View>
 
-          <Line label="Amount" value={naira(order.total)} onCopy={() => copy(String(order.total), "amount")} copied={copied === "amount"} />
           <Line label="Bank" value={account.bank} />
           <Line label="Account name" value={account.name} />
           <Line
@@ -262,15 +261,10 @@ export default function Order() {
               alignItems: "center",
             }}
           >
-            <Ticket colour={T.brandDark}>Type this in the narration</Ticket>
+            <Ticket colour={T.brandDark}>Put this in the narration</Ticket>
             <Display size={38} colour={T.brandDark} style={{ marginTop: 2 }}>
               {order.narration}
             </Display>
-            <Text
-              style={{ fontFamily: F.body, fontSize: 12, color: T.muted, marginTop: 3 }}
-            >
-              Without it we cannot match your transfer to your order.
-            </Text>
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
@@ -281,7 +275,7 @@ export default function Order() {
           {order.accounts.length > 1 && (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
               <Text style={{ fontFamily: F.bodySemi, fontSize: 13, color: T.muted }}>
-                Or pay into:
+                Other bank:
               </Text>
               {order.accounts.map((one, index) => (
                 <Pressable
@@ -310,12 +304,6 @@ export default function Order() {
             </View>
           )}
 
-          <Text style={{ fontFamily: F.body, fontSize: 13, color: T.muted, lineHeight: 19 }}>
-            Put{" "}
-            <Text style={{ fontFamily: F.bodyBold, color: T.brandDark }}>{order.narration}</Text>{" "}
-            in the narration. That is how this transfer is matched to your order. Transfer
-            only, no cash on delivery.
-          </Text>
           </View>
         </View>
       )}
