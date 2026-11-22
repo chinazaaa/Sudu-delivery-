@@ -320,7 +320,7 @@ export default function Restaurant() {
                     }}
                   >
                     <Display size={24}>
-                      {item.groups.some((g) => g.options.some((o) => o.priceDelta > 0)) ? "from " : ""}
+                      {item.groups.some((g) => g.dearest === true || g.options.some((o) => o.priceDelta > 0)) ? "from " : ""}
                       {naira(item.price)}
                     </Display>
                     {item.available && (

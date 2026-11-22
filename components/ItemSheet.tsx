@@ -8,7 +8,7 @@ import Thumb from "./Thumb";
 import { addLine, addPerson, setActivePerson, usePeople } from "@/lib/cart";
 import { naira } from "@/lib/money";
 import type { ItemView } from "@/lib/view";
-import { halfShown, pickedPrice } from "@/lib/pricing";
+import { halfShown, pickedPrice, sizeShown } from "@/lib/pricing";
 
 /**
  * The choices sheet: size, flavour, extras, quantity, add. It slides up from
@@ -191,6 +191,11 @@ export default function ItemSheet({
                     {halfShown(group, option, item.groups, chosenIds) !== null ? (
                       <span className="text-sm font-semibold text-muted">
                         {naira(halfShown(group, option, item.groups, chosenIds) ?? 0)}
+                      </span>
+                    ) : sizeShown(group, option, item.groups, chosenIds, item.price) !== null ? (
+                      <span className="text-sm font-semibold text-muted">
+                        {sizeShown(group, option, item.groups, chosenIds, item.price)?.from ? "from " : ""}
+                        {naira(sizeShown(group, option, item.groups, chosenIds, item.price)?.price ?? 0)}
                       </span>
                     ) : (
                       option.priceDelta !== 0 && (

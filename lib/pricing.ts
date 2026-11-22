@@ -164,3 +164,56 @@ export function halfShown(
     adds
   );
 }
+
+/**
+ * What a size, or any other plain choice, makes a half-and-half cost.
+ *
+ * A size on a half and half adds nothing of its own: the price comes from
+ * the halves, at that size. So the size rows all read "+0" and looked like
+ * one price, and a customer asked whether that was a mistake. This says what
+ * the pizza would cost at each size instead, "from" until both halves are
+ * picked because the dearer half is what sets it.
+ *
+ * Null on anything that is not a half and half, which keeps its plus.
+ */
+export function sizeShown(
+  group: GroupLike,
+  option: OptionLike,
+  groups: GroupLike[],
+  chosenIds: string[],
+  base: number
+): { price: number; from: boolean } | null {
+  if (group.dearest === true) return null;
+  if (!groups.some((one) => one.dearest === true)) return null;
+
+  const ids = chosenIds
+    .filter((id) => !group.options.some((one) => one.id === id))
+    .concat(option.id);
+  const adds = chosenFrom(groups, ids).filter((one) => !one.dearest);
+
+  let from = false;
+  const stand: string[] = [];
+  for (const half of groups) {
+    if (half.dearest !== true || half.options.some((one) => ids.includes(one.id))) continue;
+    from = true;
+    const cheapest = half.options
+      .filter((one) => one.asItem)
+      .map((one) => ({
+        id: one.id,
+        price: halfPrice(
+          {
+            id: one.id,
+            name: one.name,
+            groupName: half.name,
+            priceDelta: one.priceDelta,
+            dearest: true,
+            asItem: one.asItem,
+          },
+          adds
+        ),
+      }))
+      .sort((a, b) => a.price - b.price)[0];
+    if (cheapest) stand.push(cheapest.id);
+  }
+  return { price: pickedPrice(base, groups, [...ids, ...stand]), from };
+}

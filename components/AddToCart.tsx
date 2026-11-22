@@ -14,7 +14,7 @@ import {
 import { useRouter } from "next/navigation";
 import { naira } from "@/lib/money";
 import type { ItemView } from "@/lib/view";
-import { halfShown, pickedPrice } from "@/lib/pricing";
+import { halfShown, pickedPrice, sizeShown } from "@/lib/pricing";
 
 /** The product page's buy box: variants, quantity, add to cart. */
 export default function AddToCart({
@@ -199,6 +199,11 @@ export default function AddToCart({
                   {halfShown(group, option, item.groups, chosenIds) !== null ? (
                     <span className={isPicked ? "text-white/70" : "text-muted"}>
                       {naira(halfShown(group, option, item.groups, chosenIds) ?? 0)}
+                    </span>
+                  ) : sizeShown(group, option, item.groups, chosenIds, item.price) !== null ? (
+                    <span className={isPicked ? "text-white/70" : "text-muted"}>
+                      {sizeShown(group, option, item.groups, chosenIds, item.price)?.from ? "from " : ""}
+                      {naira(sizeShown(group, option, item.groups, chosenIds, item.price)?.price ?? 0)}
                     </span>
                   ) : (
                     option.priceDelta !== 0 && (

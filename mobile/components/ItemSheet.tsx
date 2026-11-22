@@ -3,6 +3,7 @@ import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { naira, type Item } from "@/lib/api";
+import { halfShown, pickedPrice, sizeShown } from "@/lib/pricing";
 import { cart, type Line } from "@/lib/store";
 import { F, T } from "@/lib/theme";
 import { Display } from "@/components/ui";
@@ -39,13 +40,11 @@ export default function ItemSheet({
 
   const chosen = useMemo(() => Object.values(picked).flat(), [picked]);
 
-  const extra = useMemo(
-    () =>
-      item.groups
-        .flatMap((group) => group.options)
-        .filter((option) => chosen.includes(option.id))
-        .reduce((sum, option) => sum + option.priceDelta, 0),
-    [chosen, item.groups]
+  // What it costs with everything picked, worked out the way the till does:
+  // ordinary choices add, and the dearer of two halves is the price.
+  const unit = useMemo(
+    () => pickedPrice(item.price, item.groups, chosen),
+    [chosen, item.groups, item.price]
   );
 
   const missing = item.groups.filter(
@@ -81,7 +80,7 @@ export default function ItemSheet({
         name: item.name,
         restaurant,
         imageUrl: item.imageUrl,
-        unitPrice: item.price + extra,
+        unitPrice: unit,
         optionIds: chosen,
         choices: names,
         forName: editing?.forName ?? "",
@@ -163,8 +162,19 @@ export default function ItemSheet({
                     {on ? "● " : "○ "}
                     {option.name}
                   </Text>
-                  {option.priceDelta !== 0 && (
-                    <Text style={{ color: T.muted }}>+{naira(option.priceDelta)}</Text>
+                  {halfShown(group, option, item.groups, chosen) !== null ? (
+                    <Text style={{ color: T.muted }}>
+                      {naira(halfShown(group, option, item.groups, chosen) ?? 0)}
+                    </Text>
+                  ) : sizeShown(group, option, item.groups, chosen, item.price) !== null ? (
+                    <Text style={{ color: T.muted }}>
+                      {sizeShown(group, option, item.groups, chosen, item.price)?.from ? "from " : ""}
+                      {naira(sizeShown(group, option, item.groups, chosen, item.price)?.price ?? 0)}
+                    </Text>
+                  ) : (
+                    option.priceDelta !== 0 && (
+                      <Text style={{ color: T.muted }}>+{naira(option.priceDelta)}</Text>
+                    )
                   )}
                 </Pressable>
               );
@@ -207,7 +217,7 @@ export default function ItemSheet({
           <Text style={{ color: T.paper, fontFamily: F.bodyBold }}>
             {missing.length > 0
               ? `Choose ${missing[0].name.toLowerCase()}`
-              : `Add · ${naira((item.price + extra) * qty)}`}
+              : `Add · ${naira(unit * qty)}`}
           </Text>
         </Pressable>
       </View>

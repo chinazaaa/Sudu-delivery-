@@ -234,7 +234,15 @@ export type Item = {
     name: string;
     required: boolean;
     maxSelect: number;
-    options: { id: string; name: string; priceDelta: number; available?: boolean }[];
+    /** Halves of one thing: the dearer half is the price, not a sum. */
+    dearest?: boolean;
+    options: {
+      id: string;
+      name: string;
+      priceDelta: number;
+      available?: boolean;
+      asItem?: { base: number; delta: Record<string, number> } | null;
+    }[];
   }[];
 };
 
