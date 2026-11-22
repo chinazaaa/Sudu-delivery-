@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   changeMyOrder,
@@ -37,11 +37,14 @@ type View =
 export default function ChangeOrder({
   orderId,
   backHref,
+  total,
   lines,
 }: {
   orderId: string;
   /** Where the order page is, to go back to once it is saved. */
   backHref: string;
+  /** What the order comes to now, to show beside what it would come to. */
+  total: number;
   lines: ChangeableLine[];
 }) {
   const router = useRouter();
@@ -100,6 +103,41 @@ export default function ChangeOrder({
   const changed =
     lines.some((line) => qtyOf(line) !== line.qty) ||
     lines.some((line) => line.id in picked && !sameSet(picked[line.id], line.chosenIds));
+
+  // What it would come to, worked out on the server as they go, so the
+  // number beside the save button is the one they will actually be charged.
+  const [shown, setShown] = useState<ChangePreview | "loading" | null>(null);
+  const token = useRef(0);
+  const stagedKey = JSON.stringify([qty, picked]);
+  useEffect(() => {
+    token.current += 1;
+    const mine = token.current;
+    if (!changed) {
+      setShown(null);
+      return;
+    }
+    setShown("loading");
+    const timer = setTimeout(async () => {
+      const changedPicks: Record<string, string[]> = {};
+      for (const line of lines) {
+        if (line.id in picked && !sameSet(picked[line.id], line.chosenIds)) {
+          changedPicks[line.id] = picked[line.id];
+        }
+      }
+      try {
+        const answer = await previewMyOrderChange(
+          orderId,
+          Object.fromEntries(lines.map((line) => [line.id, qtyOf(line)])),
+          changedPicks
+        );
+        if (token.current === mine) setShown(answer);
+      } catch {
+        if (token.current === mine) setShown(null);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stagedKey]);
 
   if (lines.length === 0) return null;
 
@@ -372,6 +410,29 @@ export default function ChangeOrder({
       {/* Always there, so nobody has to hunt for how to save. Dim until
           something has changed. */}
       <div className="sticky bottom-24 z-10 space-y-1.5 rounded-2xl border-2 border-ink bg-paper p-3 shadow-card">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-sm font-semibold text-muted">
+            {changed ? "Was" : "Total"}{" "}
+            <span className={changed ? "line-through" : "font-bold text-ink"}>
+              {naira(total)}
+            </span>
+          </span>
+          {changed && (
+            <span className="text-right">
+              <span className="text-sm font-semibold text-muted">Now </span>
+              <span className="font-display text-2xl font-black">
+                {shown === null || shown === "loading"
+                  ? "…"
+                  : shown.ok
+                    ? naira(shown.to)
+                    : "—"}
+              </span>
+            </span>
+          )}
+        </div>
+        {changed && shown !== null && shown !== "loading" && !shown.ok && (
+          <p className="text-xs font-semibold text-brand-dark">{shown.error}</p>
+        )}
         <button
           type="button"
           onClick={ask}

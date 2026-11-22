@@ -54,7 +54,7 @@ export default async function ChangeOrderPage({
           </Link>
         </div>
       ) : (
-        <ChangeOrder orderId={order.id} backHref={back} lines={lines} />
+        <ChangeOrder orderId={order.id} backHref={back} total={order.total} lines={lines} />
       )}
     </div>
   );
