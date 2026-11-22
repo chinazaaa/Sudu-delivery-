@@ -21,6 +21,9 @@ export type ChangeLineData = {
   chosenIds: string[];
   /** What it offers: sizes, flavours, crusts. Empty for a plain item. */
   groups: OptionGroupView[];
+  /** The category it sits in, so a drink can be swapped for another drink
+   *  in one tap. */
+  category: string;
   /** What it could be swapped for: the other things in its category at the
    *  same kitchen, with what each one asks. */
   swaps: SwapTarget[];
@@ -77,13 +80,30 @@ export async function changeLinesFor(
         .eq("available", true)
         .order("sort_order")
     : { data: [] };
+  // A category with hundreds of things in it (the pharmacy, the skincare
+  // shelf) is a catalogue, not a menu: nobody swaps one cough syrup for one
+  // of two hundred from a phone, and sending them all down with the page
+  // would make it slow for everyone. Only menus short enough to choose from.
+  const MOST_TO_SWAP = 60;
+  const perCategory = new Map<string, number>();
+  for (const row of (siblingRows ?? []) as { category_id: string }[]) {
+    perCategory.set(row.category_id, (perCategory.get(row.category_id) ?? 0) + 1);
+  }
   const siblings = ((siblingRows ?? []) as (DealRow & {
     id: string;
     name: string;
     restaurant_id: string;
     category_id: string;
-  })[]).filter((row) => row.id !== iceItem);
+  })[]).filter(
+    (row) => row.id !== iceItem && (perCategory.get(row.category_id) ?? 0) <= MOST_TO_SWAP
+  );
   const siblingGroups = await optionGroupsFor(siblings.map((row) => row.id));
+  const { data: catRows } = categories.length
+    ? await db().from("menu_categories").select("id, name").in("id", categories)
+    : { data: [] };
+  const categoryName = new Map(
+    ((catRows ?? []) as { id: string; name: string }[]).map((row) => [row.id, row.name])
+  );
 
   const base = new Map(
     ((items ?? []) as (DealRow & { id: string })[]).map((row) => [row.id, sellingNow(row)])
@@ -105,6 +125,7 @@ export async function changeLinesFor(
     base: base.get(line.menu_item_id) ?? line.unit_price_at_order,
     chosenIds: chosenBy.get(line.id) ?? [],
     groups: groups.get(line.menu_item_id) ?? [],
+    category: categoryName.get(where.get(line.menu_item_id)?.category_id ?? "") ?? "",
     swaps: siblings
       .filter((row) => {
         const here = where.get(line.menu_item_id);

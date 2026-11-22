@@ -2339,16 +2339,13 @@ export async function moveOrder(
     }
 
     // Today's prices, today's availability, choices included.
-    const repriced = await repeatLines(one);
-    if (repriced.blocked.length > 0) {
-      const names = repriced.blocked.map((item) => `${item.name} is ${item.reason}`);
-      return { ok: false, error: `${names.join(", ")}. Take it off the order first.` };
+    const like = await pricedLike(one);
+    if (!like.ok) {
+      return { ok: false, error: `${like.error} Take it off the order first.` };
     }
-
-    const food = repriced.lines.reduce(
-      (total, line) => total + line.unitPrice * line.qty,
-      0
-    );
+    const repriced = { lines: like.lines };
+    // Halves and pairings included, as at checkout.
+    const food = like.food;
     /*
      * What rides along, kept out of the count here too.
      *
@@ -2399,8 +2396,10 @@ export async function moveOrder(
     const fee = car ? Math.max(onLadder, Number(one.fee ?? 0)) : onLadder;
 
     // The lines carry the new prices too, so the order reads as it is charged.
-    for (const line of one.lines) {
-      const match = repriced.lines.find((row) => row.itemId === line.menu_item_id);
+    // Matched by position, because two lines of one dish with different
+    // choices are different prices.
+    for (const [index, line] of one.lines.entries()) {
+      const match = repriced.lines[index];
       if (match && match.unitPrice !== line.unit_price_at_order) {
         await db()
           .from("order_items")
@@ -2424,6 +2423,56 @@ export async function moveOrder(
 }
 
 /**
+ * An existing order's lines priced by the same till as checkout.
+ *
+ * Halves, sizes and buy-one-get-one all included. Moving an order and
+ * changing one used to reach for a simpler sum, which priced a half and half
+ * at its bare menu figure and ignored a pairing, so the total moved by
+ * thousands for no reason anybody could see.
+ */
+async function pricedLike(
+  order: FullOrder
+): Promise<
+  | {
+      ok: true;
+      priced: PricedLine[];
+      lines: { itemId: string; restaurantId: string; qty: number; unitPrice: number }[];
+      food: number;
+    }
+  | { ok: false; error: string }
+> {
+  const { data: chosenRows } = await db()
+    .from("order_item_options")
+    .select("order_item_id, option_id")
+    .in("order_item_id", order.lines.map((line) => line.id));
+  const optionsOf = new Map<string, string[]>();
+  for (const row of (chosenRows ?? []) as { order_item_id: string; option_id: string | null }[]) {
+    if (!row.option_id) continue;
+    optionsOf.set(row.order_item_id, [...(optionsOf.get(row.order_item_id) ?? []), row.option_id]);
+  }
+  const priced = await priceLines(
+    order.lines.map((line) => ({
+      menu_item_id: line.menu_item_id,
+      qty: line.qty,
+      option_ids: optionsOf.get(line.id) ?? [],
+      for_name: line.for_name ?? null,
+    }))
+  );
+  if ("error" in priced) return { ok: false, error: priced.error };
+  return {
+    ok: true,
+    priced: priced.lines,
+    lines: priced.lines.map((line) => ({
+      itemId: line.menu_item_id,
+      restaurantId: line.item.restaurant_id,
+      qty: line.qty,
+      unitPrice: line.unitPrice,
+    })),
+    food: countFood(priced.lines),
+  };
+}
+
+/**
  * What this order's delivery would be on another trip, worked out the way
  * moving it would. Shown beside each option before anybody moves, so the
  * number they read is the one they are charged.
@@ -2435,16 +2484,9 @@ export async function feeForTrip(
   order: FullOrder,
   trip: { kind?: string | null; flash_fee?: number | null } & Partial<Batch>
 ): Promise<number> {
-  const repriced = await repeatLines(order);
-  const { fee } = await foodAndFee(
-    { ...order.batch, ...trip } as Batch,
-    repriced.lines.map((line) => ({
-      itemId: line.itemId,
-      restaurantId: line.restaurantId,
-      qty: line.qty,
-      unitPrice: line.unitPrice,
-    }))
-  );
+  const like = await pricedLike(order);
+  if (!like.ok) throw new Error(like.error);
+  const { fee } = await foodAndFee({ ...order.batch, ...trip } as Batch, like.lines);
   return String(trip.kind ?? "") === "same_day" ? Math.max(fee, Number(order.fee ?? 0)) : fee;
 }
 
@@ -2489,13 +2531,14 @@ export async function moveOrderToCar(
  */
 async function foodAndFee(
   batch: Batch,
-  lines: { itemId: string; restaurantId: string; qty: number; unitPrice: number }[]
+  lines: { itemId: string; restaurantId: string; qty: number; unitPrice: number }[],
+  /** The food already worked out, pairings taken off, where the caller has it. */
+  foodOverride?: number
 ): Promise<{ food: number; fee: number }> {
   const repriced = { lines };
-  const food = repriced.lines.reduce(
-    (total, line) => total + line.unitPrice * line.qty,
-    0
-  );
+  const food =
+    foodOverride ??
+    repriced.lines.reduce((total, line) => total + line.unitPrice * line.qty, 0);
 
   // What rides along in the cool box rather than taking a container of its
   // own, kept out of the count exactly as it is everywhere else.
@@ -2782,7 +2825,7 @@ export async function changeOrderLines(
     })),
   };
 
-  const { food, fee } = await foodAndFee(after.batch, repriced.lines);
+  const { food, fee } = await foodAndFee(after.batch, repriced.lines, countFood(priced.lines));
 
   // The lines carry today's prices too, so the order reads as it is charged.
   // Matched by position: two lines of the same item with different choices
@@ -2879,7 +2922,8 @@ export async function previewOrderChange(
       restaurantId: line.item.restaurant_id,
       qty: line.qty,
       unitPrice: line.unitPrice,
-    }))
+    })),
+    countFood(priced.lines)
   );
   return { ok: true, from: order.total, to: Math.max(0, food + fee - order.discount) };
 }

@@ -20,7 +20,11 @@ type View =
   | { at: "line"; id: string }
   | { at: "qty"; id: string }
   | { at: "opts"; id: string }
+  | { at: "group"; id: string; groupId: string }
   | { at: "swap"; id: string };
+
+/** Drinks are changed all the time and for nothing else: one tap. */
+const DRINKY = /drink|shake|soft|beverage|juice|coffee|\btea\b|chiller/i;
 
 /**
  * Changing an order rather than placing it again.
@@ -266,28 +270,36 @@ export default function ChangeOrder({
               How many
               <span className="ml-2 font-normal text-muted">{qtyOf(line)} now</span>
             </button>
-            {line.groups.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setView({ at: "opts", id: line.id })}
-                className="rounded-xl border-2 border-ink bg-white px-3.5 py-2.5 text-left font-bold"
-              >
-                {line.groups.map((group) => group.name.toLowerCase()).slice(0, 3).join(", ")}
-                <span className="block text-xs font-normal text-muted [overflow-wrap:anywhere]">
-                  {saying(line)}
-                </span>
-              </button>
-            )}
+            {line.groups.map((group) => {
+              const chosen = group.options
+                .filter((option) => idsOf(line).includes(option.id))
+                .map((option) => option.name);
+              return (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => setView({ at: "group", id: line.id, groupId: group.id })}
+                  className="flex items-baseline justify-between gap-3 rounded-xl border-2 border-ink bg-white px-3.5 py-2.5 text-left"
+                >
+                  <span className="font-bold">{group.name}</span>
+                  <span className="min-w-0 truncate text-sm text-muted">
+                    {chosen.length > 0 ? chosen.join(", ") : "None"}
+                  </span>
+                </button>
+              );
+            })}
             {line.swaps.length > 0 && (
               <button
                 type="button"
                 onClick={() => setView({ at: "swap", id: line.id })}
                 className="rounded-xl border-2 border-ink bg-white px-3.5 py-2.5 text-left font-bold"
               >
-                Swap it for something else
-                <span className="block text-xs font-normal text-muted">
-                  Like a whole pizza instead of half and half
-                </span>
+                {DRINKY.test(line.category) ? "Pick a different drink" : "Swap it for something else"}
+                {!DRINKY.test(line.category) && (
+                  <span className="block text-xs font-normal text-muted">
+                    Like a whole pizza instead of half and half
+                  </span>
+                )}
               </button>
             )}
             {swapped[line.id] && (
@@ -371,7 +383,10 @@ export default function ChangeOrder({
                   onClick={() => {
                     setSwapped((was) => ({ ...was, [line.id]: target }));
                     setPicked((was) => ({ ...was, [line.id]: ids }));
-                    setView({ at: "opts", id: line.id });
+                    // Nothing to ask about a plain drink: that was the one tap.
+                    setView(
+                      target.groups.length === 0 ? { at: "line", id: line.id } : { at: "opts", id: line.id }
+                    );
                   }}
                   className="flex items-baseline justify-between gap-3 rounded-xl border-2 border-ink bg-white px-3.5 py-3 text-left"
                 >
@@ -418,8 +433,11 @@ export default function ChangeOrder({
       );
     }
 
-    // Size, flavour, crust: whatever this item asks.
+    // Size, flavour, crust, a drink: whatever this item asks. One group when
+    // a row was tapped, all of them straight after a swap.
     const ids = idsOf(line);
+    const onlyGroup = view.at === "group" ? view.groupId : "";
+    const shownGroups = onlyGroup ? line.groups.filter((group) => group.id === onlyGroup) : line.groups;
     const toggle = (groupId: string, optionId: string, max: number) => {
       const group = line.groups.find((one) => one.id === groupId)!;
       const inGroup = group.options.map((option) => option.id);
@@ -436,6 +454,9 @@ export default function ChangeOrder({
         if (here.length >= max) return was;
         return { ...was, [line.id]: [...others, ...here, optionId] };
       });
+      // One answer is the whole question: go back to the item, which is what
+      // makes changing a drink one tap.
+      if (max <= 1 && view.at === "group") setView({ at: "line", id: line.id });
     };
 
     return (
@@ -444,7 +465,7 @@ export default function ChangeOrder({
           <p className="font-extrabold [overflow-wrap:anywhere]">{line.name}</p>
           {back({ at: "line", id: line.id })}
         </div>
-        {line.groups.map((group) => (
+        {shownGroups.map((group) => (
           <fieldset key={group.id} className="space-y-1.5">
             <legend className="mb-1 text-sm font-bold">{group.name}</legend>
             {group.options.map((option) => {
@@ -477,6 +498,15 @@ export default function ChangeOrder({
           </fieldset>
         ))}
         <p className="text-sm font-bold">Now {naira(priceOf(line))} each</p>
+        {onlyGroup !== "" && (
+          <button
+            type="button"
+            onClick={() => setView({ at: "line", id: line.id })}
+            className="btn-quiet w-full justify-center"
+          >
+            Done
+          </button>
+        )}
       </>
     );
   })();
