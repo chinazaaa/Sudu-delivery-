@@ -1771,6 +1771,34 @@ export async function overMenu(
   return out;
 }
 
+/**
+ * What these orders' food really costs against the menu, for orders that are
+ * not on a run yet and so have no receipts to read.
+ *
+ * Without it an order not yet on a run was reckoned at cost = menu price,
+ * which is the shop claiming it paid the counter every naira it took, so its
+ * profit read as the delivery fee and nothing else. The same arithmetic the
+ * run uses, with no typed receipts. Negative is a saving.
+ */
+export async function estimatedOverMenu(
+  orders: Pick<Order, "id" | "subtotal_food">[]
+): Promise<number> {
+  if (orders.length === 0) return 0;
+  const lines = await linesFor(orders.map((o) => o.id));
+  const [markups, atCounter, perChoice, sellsFor] = await Promise.all([
+    counterMarkups(),
+    counterCosts(lines.map((line) => line.menu_item_id)),
+    choiceCosts(lines.map((line) => line.menu_item_id)),
+    menuPrices(lines.map((line) => line.menu_item_id)),
+  ]);
+  const real = chargedByRestaurant([...lines], [], markups, atCounter, perChoice, sellsFor).reduce(
+    (total, place) => total + place.charged,
+    0
+  );
+  const menu = orders.reduce((total, o) => total + Number(o.subtotal_food ?? 0), 0);
+  return real - menu;
+}
+
 /** What one restaurant's share of a run came to, at the menu and in the end. */
 export type CounterCharge = {
   restaurant: string;

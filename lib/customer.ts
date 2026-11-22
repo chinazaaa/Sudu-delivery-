@@ -1,5 +1,5 @@
 import { db } from "./supabase";
-import { commissionFor, overMenu } from "./admin";
+import { commissionFor, estimatedOverMenu, overMenu } from "./admin";
 import { orderFeed, type FeedOrder } from "./admin-data";
 import { isGone, isPaid, NOT_ORDERS_SQL } from "./orders";
 import { errandsBy } from "./other-money";
@@ -290,7 +290,16 @@ export async function shareOfProfit(
   const ids = [...new Set(paid.map((order) => order.batch_id).filter(Boolean))] as string[];
   const commission = (await commissionFor(paid)).total;
   if (ids.length === 0) {
-    return { ...bare, commission, profit: bare.margin - commission };
+    // Not on a run, so no receipts: the counter's usual price, not the menu's.
+    const over = await estimatedOverMenu(
+      paid.map((o) => ({ id: o.id, subtotal_food: o.subtotal_food ?? 0 }))
+    ).catch(() => 0);
+    return {
+      ...bare,
+      overMenu: Math.round(over),
+      commission,
+      profit: Math.round(bare.margin - over - commission),
+    };
   }
 
   const [{ data: batchRows }, { data: mateRows }] = await Promise.all([
