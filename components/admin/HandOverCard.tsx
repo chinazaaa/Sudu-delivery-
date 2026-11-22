@@ -155,6 +155,7 @@ export default function HandOverCard({
           <ConfirmButton
             tone="admin"
             className="btn-admin-go min-h-[48px] w-full text-[15px] sm:min-h-[44px] sm:w-auto"
+            question="Mark this order as delivered?"
             confirm="Yes, handed over"
           >
             Mark delivered

@@ -222,6 +222,7 @@ export default function WaitingCard({
                 ? "min-h-[44px] flex-1 sm:min-h-[34px]"
                 : "btn-admin-go min-h-[48px] flex-[1.4] text-[15px] sm:min-h-[44px]"
             }
+            question={`Mark this order as paid?`}
             confirm={`Yes, ${naira(order.total)} received`}
           >
             Mark paid
@@ -248,6 +249,7 @@ export default function WaitingCard({
             <ConfirmButton
               tone="bad"
               className="btn-admin-sm min-h-[38px]"
+              question="Cancel this order?"
               confirm="Yes, cancel it"
             >
               Cancel
