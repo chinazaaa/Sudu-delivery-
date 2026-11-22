@@ -71,7 +71,10 @@ export default function OfferNudge({
   // stays dismissed and shipping the second app brings it back once.
   const store = [appId, androidPackage].filter((one) => one !== "").join("+");
 
-  const quiet = QUIET.some((start) => path === start || path.startsWith(start));
+  // Only on the home page. Everywhere else it sits over buttons somebody is
+  // trying to press: it covered the App Store button on the app page.
+  const quiet =
+    path !== "/" || QUIET.some((start) => path === start || path.startsWith(start));
 
   useEffect(() => {
     if (quiet) return;
