@@ -2414,6 +2414,50 @@ export async function moveOrder(
 }
 
 /**
+ * What an order's food and delivery come to for these lines, the way the
+ * till works them out. Used to save a change and to show what it will come
+ * to before it is saved, so the two cannot disagree.
+ */
+async function foodAndFee(
+  batch: Batch,
+  lines: { itemId: string; restaurantId: string; qty: number; unitPrice: number }[]
+): Promise<{ food: number; fee: number }> {
+  const repriced = { lines };
+  const food = repriced.lines.reduce(
+    (total, line) => total + line.unitPrice * line.qty,
+    0
+  );
+
+  // What rides along in the cool box rather than taking a container of its
+  // own, kept out of the count exactly as it is everywhere else.
+  const byBox = await stepFeeOfEach();
+  const ridingHere = repriced.lines.filter((line) => byBox[line.itemId]);
+  const ridingThere = ridingHere.reduce((count, line) => count + line.qty, 0);
+  const items = repriced.lines
+    .filter((line) => ridingThere === 0 || !byBox[line.itemId])
+    .reduce((count, line) => count + line.qty, 0);
+  let worstBox: StepFee | null = null;
+  for (const line of ridingHere) {
+    const one = byBox[line.itemId];
+    if (worstBox === null || one.firstFee > worstBox.firstFee) worstBox = one;
+  }
+
+  // Never urgent. The extra is for asking at an hour's notice, and this is
+  // somebody tidying up an order they already placed.
+  const fee = feeRidingAlong({
+    stepCount: ridingThere,
+    steps: worstBox,
+    otherFee: await feeOnTrip(
+      batch,
+      items,
+      repriced.lines.map((line) => line.restaurantId)
+    ),
+  });
+
+  return { food, fee };
+}
+
+/**
  * The customer changing what is in their own unpaid order.
  *
  * Somebody orders one pack of rice and then wants two. Ordering again is
@@ -2638,36 +2682,7 @@ export async function changeOrderLines(
     })),
   };
 
-  const food = repriced.lines.reduce(
-    (total, line) => total + line.unitPrice * line.qty,
-    0
-  );
-
-  // What rides along in the cool box rather than taking a container of its
-  // own, kept out of the count exactly as it is everywhere else.
-  const byBox = await stepFeeOfEach();
-  const ridingHere = repriced.lines.filter((line) => byBox[line.itemId]);
-  const ridingThere = ridingHere.reduce((count, line) => count + line.qty, 0);
-  const items = repriced.lines
-    .filter((line) => ridingThere === 0 || !byBox[line.itemId])
-    .reduce((count, line) => count + line.qty, 0);
-  let worstBox: StepFee | null = null;
-  for (const line of ridingHere) {
-    const one = byBox[line.itemId];
-    if (worstBox === null || one.firstFee > worstBox.firstFee) worstBox = one;
-  }
-
-  // Never urgent. The extra is for asking at an hour's notice, and this is
-  // somebody tidying up an order they already placed.
-  const fee = feeRidingAlong({
-    stepCount: ridingThere,
-    steps: worstBox,
-    otherFee: await feeOnTrip(
-      after.batch,
-      items,
-      repriced.lines.map((line) => line.restaurantId)
-    ),
-  });
+  const { food, fee } = await foodAndFee(after.batch, repriced.lines);
 
   // The lines carry today's prices too, so the order reads as it is charged.
   // Matched by position: two lines of the same item with different choices
@@ -2692,6 +2707,80 @@ export async function changeOrderLines(
     .eq("id", orderId);
 
   return { ok: true };
+}
+
+/**
+ * What a change would make the order come to, without making it.
+ *
+ * The customer is shown the old and the new total before they say yes, so
+ * this has to be the same sum the save does. Nothing is written.
+ */
+export async function previewOrderChange(
+  orderId: string,
+  wanted: WantedQty[],
+  picks: Record<string, string[]> = {}
+): Promise<{ ok: true; from: number; to: number } | { ok: false; error: string }> {
+  const order = await getOrder(orderId);
+  if (!order) return { ok: false, error: "That order no longer exists." };
+
+  const no = whyNotChangeable({
+    status: order.status,
+    shares: order.shares.length,
+    stillOpen: isOrderable(order.batch),
+  });
+  if (no !== "") return { ok: false, error: no };
+
+  const iceItem = (await safeSettings()).ice_item_id ?? "";
+  const theirs = order.lines.filter((line) => line.menu_item_id !== iceItem);
+  const asked = wanted.filter((one) => theirs.some((line) => line.id === one.lineId));
+  const now = theirs.map((line) => ({ id: line.id, qty: line.qty }));
+  if (emptiesIt(now, asked)) {
+    return { ok: false, error: "There has to be at least one thing on the order." };
+  }
+  const { keep, drop } = applyWanted(now, asked);
+
+  const { data: chosenRows } = await db()
+    .from("order_item_options")
+    .select("order_item_id, option_id")
+    .in("order_item_id", order.lines.map((line) => line.id));
+  const optionsOf = new Map<string, string[]>();
+  for (const row of (chosenRows ?? []) as { order_item_id: string; option_id: string | null }[]) {
+    if (!row.option_id) continue;
+    optionsOf.set(row.order_item_id, [...(optionsOf.get(row.order_item_id) ?? []), row.option_id]);
+  }
+
+  // The ice stays while anything that needs it is left, as in the save.
+  const onIce = await itemsNeedingIce();
+  const iceNeeded =
+    iceItem !== "" &&
+    keep.some((line) => {
+      const was = theirs.find((one) => one.id === line.id);
+      return was ? onIce.has(was.menu_item_id) : false;
+    });
+
+  const hypothetical = order.lines
+    .filter((line) => !drop.includes(line.id))
+    .filter((line) => line.menu_item_id !== iceItem || iceNeeded)
+    .map((line) => ({
+      menu_item_id: line.menu_item_id,
+      qty: keep.find((one) => one.id === line.id)?.qty ?? line.qty,
+      option_ids: picks[line.id] ?? optionsOf.get(line.id) ?? [],
+      for_name: line.for_name ?? null,
+    }));
+
+  const priced = await priceLines(hypothetical);
+  if ("error" in priced) return { ok: false, error: priced.error };
+
+  const { food, fee } = await foodAndFee(
+    order.batch,
+    priced.lines.map((line) => ({
+      itemId: line.menu_item_id,
+      restaurantId: line.item.restaurant_id,
+      qty: line.qty,
+      unitPrice: line.unitPrice,
+    }))
+  );
+  return { ok: true, from: order.total, to: Math.max(0, food + fee - order.discount) };
 }
 
 export type RepeatBlock = {

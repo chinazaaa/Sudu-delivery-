@@ -1367,28 +1367,12 @@ export default async function OrderPage({
         </section>
       )}
 
-      {paid ? (
-        <HelpUs
+      <HelpUs
         settings={settings}
         order={order}
         orderRef={shareRef(order, order.shares)}
         batchLabel={batchLabel}
       />
-      ) : (
-        <details className="card">
-          <summary className="cursor-pointer font-bold">
-            Want to change this order, or ask something?
-          </summary>
-          <div className="mt-3">
-            <HelpUs
-        settings={settings}
-        order={order}
-        orderRef={shareRef(order, order.shares)}
-        batchLabel={batchLabel}
-      />
-          </div>
-        </details>
-      )}
     </div>
   );
 }
@@ -1486,22 +1470,15 @@ function HelpUs({
   if (!link) return null;
 
   return (
-    <section className="card flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h2 className="font-bold">Want to change this order?</h2>
-        <p className="text-sm text-muted">
-          Message us rather than ordering again: more of something, less of
-          it, or taking it off. A question or something wrong with the order
-          comes here too, and a person answers.
-        </p>
-      </div>
+    <section className="card flex items-center justify-between gap-3">
+      <h2 className="font-bold">Need help with this order?</h2>
       <a
         href={link}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn-quiet px-4 py-2.5 text-sm"
+        className="btn-quiet shrink-0 px-4 py-2.5 text-sm"
       >
-        Message us on WhatsApp
+        Message us
       </a>
     </section>
   );

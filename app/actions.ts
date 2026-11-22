@@ -3,7 +3,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { changeOrderLines, getOrder, moveOrder, orderLinkId, placeOrder, previewCoupon, saveRating } from "@/lib/orders";
+import { changeOrderLines,
+  previewOrderChange, getOrder, moveOrder, orderLinkId, placeOrder, previewCoupon, saveRating } from "@/lib/orders";
 import { lastOrderForPhone, perkFor, type LinkPerk } from "@/lib/orders";
 import { accountNumber, normalisePhone } from "@/lib/phone";
 import { cameFromNow, linkCouponNow } from "@/lib/where-from";
@@ -765,6 +766,25 @@ async function whichDoor(): Promise<"web" | "desk"> {
 }
 
 export type ChangeState = { ok: boolean; error: string | null };
+
+export type ChangePreview =
+  | { ok: true; from: number; to: number }
+  | { ok: false; error: string };
+
+/** What a change would make the order come to, shown before it is saved. */
+export async function previewMyOrderChange(
+  orderId: string,
+  qtys: Record<string, number>,
+  picks: Record<string, string[]>
+): Promise<ChangePreview> {
+  const id = String(orderId ?? "").trim();
+  if (id === "") return { ok: false, error: "That order no longer exists." };
+  return previewOrderChange(
+    id,
+    Object.entries(qtys).map(([lineId, qty]) => ({ lineId, qty: Number(qty) })),
+    picks
+  );
+}
 
 /**
  * The customer changing their own unpaid order.

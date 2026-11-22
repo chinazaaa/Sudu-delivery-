@@ -2,7 +2,12 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { changeMyOrder, type ChangeState } from "@/app/actions";
+import {
+  changeMyOrder,
+  previewMyOrderChange,
+  type ChangePreview,
+  type ChangeState,
+} from "@/app/actions";
 import { naira } from "@/lib/money";
 import { halfShown, pickedPrice, sizeShown } from "@/lib/pricing";
 import type { ChangeLineData } from "@/lib/change-data";
@@ -51,6 +56,9 @@ export default function ChangeOrder({
     return { at: "kitchen", name: names[0] };
   });
 
+  // The sum shown before they say yes: what it is now and what it will be.
+  const [asking, setAsking] = useState<ChangePreview | "loading" | null>(null);
+
   // Saved: back to the order, which now shows the new total.
   useEffect(() => {
     if (state.ok) router.push(backHref);
@@ -66,6 +74,27 @@ export default function ChangeOrder({
   const idsOf = (line: ChangeableLine) => picked[line.id] ?? line.chosenIds;
   const sameSet = (a: string[], b: string[]) =>
     a.length === b.length && a.every((id) => b.includes(id));
+
+  const ask = async () => {
+    setAsking("loading");
+    const changedPicks: Record<string, string[]> = {};
+    for (const line of lines) {
+      if (line.id in picked && !sameSet(picked[line.id], line.chosenIds)) {
+        changedPicks[line.id] = picked[line.id];
+      }
+    }
+    try {
+      setAsking(
+        await previewMyOrderChange(
+          orderId,
+          Object.fromEntries(lines.map((line) => [line.id, qtyOf(line)])),
+          changedPicks
+        )
+      );
+    } catch {
+      setAsking({ ok: false, error: "Could not work that out. Try again." });
+    }
+  };
 
   const live = lines.filter((line) => qtyOf(line) > 0);
   const changed =
@@ -344,16 +373,63 @@ export default function ChangeOrder({
           something has changed. */}
       <div className="sticky bottom-24 z-10 space-y-1.5 rounded-2xl border-2 border-ink bg-paper p-3 shadow-card">
         <button
-          type="submit"
+          type="button"
+          onClick={ask}
           disabled={!changed || pending}
           className="btn-primary w-full disabled:opacity-40"
         >
-          {pending ? "Saving…" : changed ? "Save the change" : "Change something to save"}
+          {pending ? "Saving…" : changed ? "Save the change" : "Make a change to save"}
         </button>
         <p className="text-center text-xs text-muted">
           Delivery is worked out again, so the total can move. Nothing is charged until you pay.
         </p>
       </div>
+
+      {asking !== null && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
+          <div className="w-full max-w-sm space-y-4 rounded-2xl bg-paper p-5 shadow-card">
+            {asking === "loading" ? (
+              <p className="font-bold">Working out the new total…</p>
+            ) : asking.ok ? (
+              <>
+                <h2 className="text-lg font-extrabold">Save this change?</h2>
+                <p className="text-base">
+                  Your total goes from{" "}
+                  <span className="font-bold">{naira(asking.from)}</span> to{" "}
+                  <span className="font-bold">{naira(asking.to)}</span>.
+                </p>
+                <div className="grid gap-2">
+                  <button
+                    type="submit"
+                    onClick={() => setAsking(null)}
+                    className="btn-primary w-full"
+                  >
+                    Yes, save it
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAsking(null)}
+                    className="btn-quiet w-full justify-center"
+                  >
+                    Not yet
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="font-bold">{asking.error}</p>
+                <button
+                  type="button"
+                  onClick={() => setAsking(null)}
+                  className="btn-quiet w-full justify-center"
+                >
+                  Back
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </form>
   );
 }
