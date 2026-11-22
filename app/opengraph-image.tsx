@@ -67,7 +67,7 @@ export default function OpengraphImage() {
           </div>
           <div style={{ fontSize: 34, color: "rgba(255,255,255,0.7)" }}>
             KFC, Domino&apos;s, Chicken Republic and more from Sangotedo. One
-            payment, one run.
+            payment, one delivery.
           </div>
         </div>
 

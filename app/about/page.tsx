@@ -205,7 +205,7 @@ export default async function AboutPage() {
       <PageHead
         ticket="About Sudu · 速度 means fast"
         title="Bridging the gap between outside and PAU"
-        lead="PAU is a long way from the restaurants, shops and markets students actually want. Sudu goes out, gets it, and brings it back to your hostel block, in one run, for one fee."
+        lead="PAU is a long way from the restaurants, shops and markets students actually want. Sudu goes out, gets it, and brings it back to your hostel block, in one delivery, for one fee."
         tone="ink"
       />
 

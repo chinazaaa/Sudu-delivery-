@@ -49,7 +49,7 @@ export async function GET(): Promise<Response> {
     "",
     "> Batched delivery to Pan-Atlantic University (PAU), Lagos. Food from the",
     "> restaurants around Sangotedo, Novare, Lekki and Ikoyi, the local market,",
-    "> skincare, and errands, brought to a student's hostel on scheduled runs.",
+    "> skincare, and errands, brought to a student's hostel on scheduled deliveries.",
     "",
     `Website: ${SITE}`,
     "Serving: Pan-Atlantic University, Km 52 Lekki-Epe Expressway, Lagos, Nigeria",

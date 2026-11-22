@@ -111,7 +111,7 @@ export default async function SupportPage() {
 
       <Section title="I want to change or cancel an order">
         <p>
-          Before the run closes, message us and we will change it. After it
+          Before the delivery closes, message us and we will change it. After it
           closes the food has been bought, so it cannot be cancelled, though we
           would still rather hear from you than not.
         </p>

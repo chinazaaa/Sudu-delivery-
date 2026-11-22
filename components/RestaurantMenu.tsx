@@ -379,7 +379,7 @@ export default function RestaurantMenu({
                   <span aria-hidden>→</span>
                 </Link>
                 <Link href="/group" className="text-center font-semibold">
-                  Invite friends to this run
+                  Invite friends to this delivery
                 </Link>
               </>
             )}

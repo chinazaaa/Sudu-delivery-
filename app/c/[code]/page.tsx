@@ -99,7 +99,7 @@ export default async function CheckoutLinkPage({
         <Link href="/" className="font-semibold text-brand">
           Order anything off the menu
         </Link>
-        , on this run or another.
+        , on this delivery or another.
       </p>
 
       <HelpLine number={settings.whatsapp_number} about="a link I was sent" />

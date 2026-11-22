@@ -180,7 +180,7 @@ export default async function SendAGiftPage() {
               .
             </Reason>
             <Reason title="Dinner, on a day that matters">
-              Their favourite kitchen, on the run closest to the time you want
+              Their favourite kitchen, on the delivery closest to the time you want
               it there. Several kitchens in one order if you cannot choose.
             </Reason>
             <Reason title="Something not on the menu at all">

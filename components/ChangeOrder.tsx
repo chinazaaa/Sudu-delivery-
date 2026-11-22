@@ -10,7 +10,7 @@ import {
 } from "@/app/actions";
 import { naira } from "@/lib/money";
 import { halfShown, pickedPrice, sizeShown } from "@/lib/pricing";
-import type { ChangeLineData } from "@/lib/change-data";
+import type { ChangeLineData, SwapTarget } from "@/lib/change-data";
 
 export type ChangeableLine = ChangeLineData;
 
@@ -19,7 +19,8 @@ type View =
   | { at: "kitchen"; name: string }
   | { at: "line"; id: string }
   | { at: "qty"; id: string }
-  | { at: "opts"; id: string };
+  | { at: "opts"; id: string }
+  | { at: "swap"; id: string };
 
 /**
  * Changing an order rather than placing it again.
@@ -73,27 +74,45 @@ export default function ChangeOrder({
   // Only lines whose choices have been touched are in here.
   const [picked, setPicked] = useState<Record<string, string[]>>({});
 
+  // Lines swapped for something else of the same kind, by line id.
+  const [swapped, setSwapped] = useState<Record<string, SwapTarget>>({});
+
   const qtyOf = (line: ChangeableLine) => qty[line.id] ?? line.qty;
   const idsOf = (line: ChangeableLine) => picked[line.id] ?? line.chosenIds;
+  // The line as it will be: a swapped one takes the new item's name, price
+  // and questions, so everything below reads it the same way.
+  const eff = (line: ChangeableLine): ChangeableLine => {
+    const to = swapped[line.id];
+    return to ? { ...line, name: to.name, base: to.base, groups: to.groups } : line;
+  };
+
+  // What goes to the server: every quantity, the choices of lines that
+  // changed, and which lines were swapped for what.
+  const payload = () => {
+    const picks: Record<string, string[]> = {};
+    const swaps: Record<string, string> = {};
+    for (const line of lines) {
+      if (swapped[line.id]) {
+        swaps[line.id] = swapped[line.id].id;
+        picks[line.id] = picked[line.id] ?? [];
+      } else if (line.id in picked && !sameSet(picked[line.id], line.chosenIds)) {
+        picks[line.id] = picked[line.id];
+      }
+    }
+    return {
+      qtys: Object.fromEntries(lines.map((line) => [line.id, qtyOf(line)])),
+      picks,
+      swaps,
+    };
+  };
   const sameSet = (a: string[], b: string[]) =>
     a.length === b.length && a.every((id) => b.includes(id));
 
   const ask = async () => {
     setAsking("loading");
-    const changedPicks: Record<string, string[]> = {};
-    for (const line of lines) {
-      if (line.id in picked && !sameSet(picked[line.id], line.chosenIds)) {
-        changedPicks[line.id] = picked[line.id];
-      }
-    }
+    const { qtys, picks, swaps } = payload();
     try {
-      setAsking(
-        await previewMyOrderChange(
-          orderId,
-          Object.fromEntries(lines.map((line) => [line.id, qtyOf(line)])),
-          changedPicks
-        )
-      );
+      setAsking(await previewMyOrderChange(orderId, qtys, picks, swaps));
     } catch {
       setAsking({ ok: false, error: "Could not work that out. Try again." });
     }
@@ -102,13 +121,14 @@ export default function ChangeOrder({
   const live = lines.filter((line) => qtyOf(line) > 0);
   const changed =
     lines.some((line) => qtyOf(line) !== line.qty) ||
+    lines.some((line) => line.id in swapped) ||
     lines.some((line) => line.id in picked && !sameSet(picked[line.id], line.chosenIds));
 
   // What it would come to, worked out on the server as they go, so the
   // number beside the save button is the one they will actually be charged.
   const [shown, setShown] = useState<ChangePreview | "loading" | null>(null);
   const token = useRef(0);
-  const stagedKey = JSON.stringify([qty, picked]);
+  const stagedKey = JSON.stringify([qty, picked, Object.fromEntries(Object.entries(swapped).map(([k, v]) => [k, v.id]))]);
   useEffect(() => {
     token.current += 1;
     const mine = token.current;
@@ -118,18 +138,9 @@ export default function ChangeOrder({
     }
     setShown("loading");
     const timer = setTimeout(async () => {
-      const changedPicks: Record<string, string[]> = {};
-      for (const line of lines) {
-        if (line.id in picked && !sameSet(picked[line.id], line.chosenIds)) {
-          changedPicks[line.id] = picked[line.id];
-        }
-      }
+      const { qtys, picks, swaps } = payload();
       try {
-        const answer = await previewMyOrderChange(
-          orderId,
-          Object.fromEntries(lines.map((line) => [line.id, qtyOf(line)])),
-          changedPicks
-        );
+        const answer = await previewMyOrderChange(orderId, qtys, picks, swaps);
         if (token.current === mine) setShown(answer);
       } catch {
         if (token.current === mine) setShown(null);
@@ -142,7 +153,10 @@ export default function ChangeOrder({
   if (lines.length === 0) return null;
 
   const kitchens = [...new Set(lines.map((line) => line.restaurant))];
-  const find = (id: string) => lines.find((line) => line.id === id);
+  const find = (id: string) => {
+    const base = lines.find((line) => line.id === id);
+    return base ? eff(base) : undefined;
+  };
   const onlyOne = kitchens.length === 1 && lines.length === 1;
 
   const back = (to: View) => (
@@ -196,7 +210,7 @@ export default function ChangeOrder({
     }
 
     if (view.at === "kitchen") {
-      const here = live.filter((line) => line.restaurant === view.name);
+      const here = live.map(eff).filter((line) => line.restaurant === view.name);
       return (
         <>
           <div className="flex items-baseline justify-between gap-2">
@@ -265,6 +279,38 @@ export default function ChangeOrder({
                 </span>
               </button>
             )}
+            {line.swaps.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setView({ at: "swap", id: line.id })}
+                className="rounded-xl border-2 border-ink bg-white px-3.5 py-3 text-left font-bold"
+              >
+                Swap it for something else
+                <span className="block text-xs font-normal text-muted">
+                  Like a whole pizza instead of half and half
+                </span>
+              </button>
+            )}
+            {swapped[line.id] && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSwapped((was) => {
+                    const next = { ...was };
+                    delete next[line.id];
+                    return next;
+                  });
+                  setPicked((was) => {
+                    const next = { ...was };
+                    delete next[line.id];
+                    return next;
+                  });
+                }}
+                className="rounded-xl border-2 border-black/15 bg-white px-3.5 py-3 text-left text-sm font-bold text-muted"
+              >
+                Undo the swap
+              </button>
+            )}
             {/* Only while there is something else on the order: an order
                 with nothing on it is a cancellation, and says so. */}
             {live.length > 1 && (
@@ -285,6 +331,58 @@ export default function ChangeOrder({
                 Take it off
               </button>
             )}
+          </div>
+        </>
+      );
+    }
+
+    if (view.at === "swap") {
+      // Carry over what still makes sense: the same size and crust where
+      // the new thing has them, and the first available answer where it
+      // asks something the old one did not.
+      const wasIds = idsOf(line);
+      const wasNames = line.groups
+        .flatMap((group) => group.options)
+        .filter((option) => wasIds.includes(option.id))
+        .map((option) => option.name.trim().toLowerCase());
+      const carry = (target: SwapTarget): string[] =>
+        target.groups.flatMap((group) => {
+          if (group.dearest) return [];
+          const match = group.options.find(
+            (option) => option.available && wasNames.includes(option.name.trim().toLowerCase())
+          );
+          if (match) return [match.id];
+          const first = group.options.find((option) => option.available);
+          return group.required && first ? [first.id] : [];
+        });
+      const original = lines.find((one) => one.id === line.id)!;
+      return (
+        <>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="font-extrabold [overflow-wrap:anywhere]">Swap {line.name} for</p>
+            {back({ at: "line", id: line.id })}
+          </div>
+          <div className="grid gap-2">
+            {original.swaps.map((target) => {
+              const ids = carry(target);
+              return (
+                <button
+                  key={target.id}
+                  type="button"
+                  onClick={() => {
+                    setSwapped((was) => ({ ...was, [line.id]: target }));
+                    setPicked((was) => ({ ...was, [line.id]: ids }));
+                    setView({ at: "opts", id: line.id });
+                  }}
+                  className="flex items-baseline justify-between gap-3 rounded-xl border-2 border-ink bg-white px-3.5 py-3 text-left"
+                >
+                  <span className="font-extrabold [overflow-wrap:anywhere]">{target.name}</span>
+                  <span className="shrink-0 font-mono text-sm font-bold">
+                    {naira(pickedPrice(target.base, target.groups, ids))}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </>
       );
@@ -390,16 +488,12 @@ export default function ChangeOrder({
       {lines.map((line) => (
         <input key={line.id} type="hidden" name={`qty_${line.id}`} value={qtyOf(line)} />
       ))}
-      {lines
-        .filter((line) => line.id in picked && !sameSet(picked[line.id], line.chosenIds))
-        .map((line) => (
-          <input
-            key={`o-${line.id}`}
-            type="hidden"
-            name={`opts_${line.id}`}
-            value={picked[line.id].join(",")}
-          />
-        ))}
+      {Object.entries(payload().picks).map(([lineId, ids]) => (
+        <input key={`o-${lineId}`} type="hidden" name={`opts_${lineId}`} value={ids.join(",")} />
+      ))}
+      {Object.entries(payload().swaps).map(([lineId, itemId]) => (
+        <input key={`s-${lineId}`} type="hidden" name={`swap_${lineId}`} value={itemId} />
+      ))}
 
       <div className="card space-y-4">{body}</div>
 

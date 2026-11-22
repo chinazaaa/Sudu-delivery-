@@ -1335,7 +1335,7 @@ export default async function OrderPage({
           <p className="text-sm text-muted">
             Back in your cart at today&apos;s prices, with your details already
             filled in. You pick the{" "}
-            {isSkincareBatch(order.batch) ? "drop" : "run"} at checkout.
+            {isSkincareBatch(order.batch) ? "drop" : "delivery"} at checkout.
           </p>
           <RepeatOrder
             lines={repeat.lines}

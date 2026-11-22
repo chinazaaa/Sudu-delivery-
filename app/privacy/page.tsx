@@ -131,7 +131,7 @@ export default async function PrivacyPage() {
             number or your block: we walk in and buy it like anybody else.
           </li>
           <li>
-            Whoever is doing the run sees the name and block on the bag, because
+            Whoever is doing the delivery sees the name and block on the bag, because
             that is how it reaches you.
           </li>
           <li>

@@ -146,7 +146,7 @@ export default async function GroupPage({
                 <h2 className="font-bold">This closed before anybody gave details</h2>
                 <p className="text-sm text-muted">
                   No food was ordered and nobody has been charged. Yours is still
-                  here though, and the run has not gone: give your details below and
+                  here though, and the delivery has not gone: give your details below and
                   it travels on the same one.
                 </p>
               </section>

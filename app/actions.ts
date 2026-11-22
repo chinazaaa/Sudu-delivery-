@@ -775,14 +775,16 @@ export type ChangePreview =
 export async function previewMyOrderChange(
   orderId: string,
   qtys: Record<string, number>,
-  picks: Record<string, string[]>
+  picks: Record<string, string[]>,
+  swaps: Record<string, string> = {}
 ): Promise<ChangePreview> {
   const id = String(orderId ?? "").trim();
   if (id === "") return { ok: false, error: "That order no longer exists." };
   return previewOrderChange(
     id,
     Object.entries(qtys).map(([lineId, qty]) => ({ lineId, qty: Number(qty) })),
-    picks
+    picks,
+    swaps
   );
 }
 
@@ -819,7 +821,14 @@ export async function changeMyOrder(
       .filter((one) => one !== "");
   }
 
-  const result = await changeOrderLines(id, wanted, picks);
+  const swaps: Record<string, string> = {};
+  for (const [key, value] of form.entries()) {
+    if (!key.startsWith("swap_")) continue;
+    const to = String(value).trim();
+    if (to !== "") swaps[key.slice(5)] = to;
+  }
+
+  const result = await changeOrderLines(id, wanted, picks, swaps);
   if (!result.ok) return { ok: false, error: result.error };
 
   revalidatePath("/o", "layout");

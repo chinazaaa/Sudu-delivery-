@@ -21,6 +21,16 @@ export type ChangeLineData = {
   chosenIds: string[];
   /** What it offers: sizes, flavours, crusts. Empty for a plain item. */
   groups: OptionGroupView[];
+  /** What it could be swapped for: the other things in its category at the
+   *  same kitchen, with what each one asks. */
+  swaps: SwapTarget[];
+};
+
+export type SwapTarget = {
+  id: string;
+  name: string;
+  base: number;
+  groups: OptionGroupView[];
 };
 
 /**
@@ -46,6 +56,35 @@ export async function changeLinesFor(
     optionGroupsFor(itemIds),
   ]);
 
+  // Swap targets: same kitchen, same category, on sale today.
+  const { data: mine } = await db()
+    .from("menu_items")
+    .select("id, restaurant_id, category_id")
+    .in("id", itemIds);
+  const where = new Map(
+    ((mine ?? []) as { id: string; restaurant_id: string; category_id: string | null }[]).map(
+      (row) => [row.id, row]
+    )
+  );
+  const categories = [
+    ...new Set([...where.values()].map((row) => row.category_id).filter((id): id is string => !!id)),
+  ];
+  const { data: siblingRows } = categories.length
+    ? await db()
+        .from("menu_items")
+        .select("id, name, restaurant_id, category_id, price_food, deal_price, deal_until, available")
+        .in("category_id", categories)
+        .eq("available", true)
+        .order("sort_order")
+    : { data: [] };
+  const siblings = ((siblingRows ?? []) as (DealRow & {
+    id: string;
+    name: string;
+    restaurant_id: string;
+    category_id: string;
+  })[]).filter((row) => row.id !== iceItem);
+  const siblingGroups = await optionGroupsFor(siblings.map((row) => row.id));
+
   const base = new Map(
     ((items ?? []) as (DealRow & { id: string })[]).map((row) => [row.id, sellingNow(row)])
   );
@@ -66,5 +105,21 @@ export async function changeLinesFor(
     base: base.get(line.menu_item_id) ?? line.unit_price_at_order,
     chosenIds: chosenBy.get(line.id) ?? [],
     groups: groups.get(line.menu_item_id) ?? [],
+    swaps: siblings
+      .filter((row) => {
+        const here = where.get(line.menu_item_id);
+        return (
+          here !== undefined &&
+          row.id !== line.menu_item_id &&
+          row.restaurant_id === here.restaurant_id &&
+          row.category_id === here.category_id
+        );
+      })
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        base: sellingNow(row),
+        groups: siblingGroups.get(row.id) ?? [],
+      })),
   }));
 }

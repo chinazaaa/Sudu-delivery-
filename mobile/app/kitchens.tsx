@@ -198,7 +198,7 @@ export default function Kitchens() {
           <Text
             style={{ fontFamily: F.body, fontSize: 13, color: T.muted, marginTop: 2, lineHeight: 18 }}
           >
-            Tell us and we will try to get it on the next run.
+            Tell us and we will try to get it on the next delivery.
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={T.muted} />

@@ -2481,7 +2481,9 @@ export async function changeOrderLines(
   wanted: WantedQty[],
   /** New choices for a line, by line id: size, flavour, crust. Only the
    *  lines whose choices should be replaced. */
-  picks: Record<string, string[]> = {}
+  picks: Record<string, string[]> = {},
+  /** A line swapped for another item of the same kind, by line id. */
+  swaps: Record<string, string> = {}
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const order = await getOrder(orderId);
   if (!order) return { ok: false, error: "That order no longer exists." };
@@ -2521,11 +2523,21 @@ export async function changeOrderLines(
   }
   const sameSet = (x: string[], y: string[]) =>
     x.length === y.length && x.every((id) => y.includes(id));
-  const pickedLines = Object.keys(picks).filter(
+  const swappedLines = Object.keys(swaps).filter(
     (lineId) =>
       theirs.some((line) => line.id === lineId) &&
-      !sameSet(picks[lineId] ?? [], chosenNow.get(lineId) ?? [])
+      swaps[lineId] !== theirs.find((line) => line.id === lineId)!.menu_item_id
   );
+  const pickedLines = [
+    ...new Set([
+      ...swappedLines,
+      ...Object.keys(picks).filter(
+        (lineId) =>
+          theirs.some((line) => line.id === lineId) &&
+          !sameSet(picks[lineId] ?? [], chosenNow.get(lineId) ?? [])
+      ),
+    ]),
+  ];
 
   if (!somethingChanged(now, asked) && pickedLines.length === 0) return { ok: true };
   if (emptiesIt(now, asked)) {
@@ -2545,11 +2557,27 @@ export async function changeOrderLines(
     if (drop.includes(lineId)) continue;
     const line = theirs.find((one) => one.id === lineId)!;
     const ids = [...new Set(picks[lineId] ?? [])];
+    const itemNow = swappedLines.includes(lineId) ? swaps[lineId] : line.menu_item_id;
+
+    // A swap is for something else from the same kitchen, on sale today.
+    if (itemNow !== line.menu_item_id) {
+      const { data: both } = await db()
+        .from("menu_items")
+        .select("id, name, restaurant_id, available")
+        .in("id", [itemNow, line.menu_item_id]);
+      const rows = (both ?? []) as { id: string; name: string; restaurant_id: string; available: boolean }[];
+      const was = rows.find((row) => row.id === line.menu_item_id);
+      const to = rows.find((row) => row.id === itemNow);
+      if (!to || !was || to.restaurant_id !== was.restaurant_id || itemNow === iceItem) {
+        return { ok: false, error: `That cannot replace ${line.name} on this order.` };
+      }
+      if (!to.available) return { ok: false, error: `${to.name} is unavailable today.` };
+    }
 
     const { data: groupRows } = await db()
       .from("item_option_groups")
       .select("id, name, required, max_select")
-      .eq("menu_item_id", line.menu_item_id);
+      .eq("menu_item_id", itemNow);
     const groups = (groupRows ?? []) as {
       id: string;
       name: string;
@@ -2594,6 +2622,9 @@ export async function changeOrderLines(
       }
     }
 
+    if (itemNow !== line.menu_item_id) {
+      await db().from("order_items").update({ menu_item_id: itemNow }).eq("id", lineId);
+    }
     await db().from("order_item_options").delete().eq("order_item_id", lineId);
     if (ids.length > 0) {
       await db()
@@ -2718,7 +2749,8 @@ export async function changeOrderLines(
 export async function previewOrderChange(
   orderId: string,
   wanted: WantedQty[],
-  picks: Record<string, string[]> = {}
+  picks: Record<string, string[]> = {},
+  swaps: Record<string, string> = {}
 ): Promise<{ ok: true; from: number; to: number } | { ok: false; error: string }> {
   const order = await getOrder(orderId);
   if (!order) return { ok: false, error: "That order no longer exists." };
@@ -2762,7 +2794,7 @@ export async function previewOrderChange(
     .filter((line) => !drop.includes(line.id))
     .filter((line) => line.menu_item_id !== iceItem || iceNeeded)
     .map((line) => ({
-      menu_item_id: line.menu_item_id,
+      menu_item_id: swaps[line.id] ?? line.menu_item_id,
       qty: keep.find((one) => one.id === line.id)?.qty ?? line.qty,
       option_ids: picks[line.id] ?? optionsOf.get(line.id) ?? [],
       for_name: line.for_name ?? null,

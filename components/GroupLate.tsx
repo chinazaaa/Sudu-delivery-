@@ -70,7 +70,7 @@ export default function GroupLate({
           ) : (
             <>
               The group closed before anybody gave their details, so nothing was
-              ordered. Give yours now and your food goes on the same run, at the
+              ordered. Give yours now and your food goes on the same delivery, at the
               usual delivery fee for what you have chosen. You will see the total
               before you pay anything.
             </>

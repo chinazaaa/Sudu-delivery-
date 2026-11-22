@@ -301,7 +301,7 @@ export default function ProductsScreen() {
                 ? "Nothing matches that."
                 : `${total} dish${total === 1 ? "" : "es"}${
                     kitchens > 1 ? ` · ${kitchens} kitchens` : ""
-                  } · all on the next run`}
+                  } · all on the next delivery`}
           </Text>
         </View>
       </View>
