@@ -510,7 +510,7 @@ export default async function OrderPage({
                 />
               ) : null
             }
-            send={!split ? <ShareLink label="Send this to whoever is paying" /> : null}
+            send={!split ? <ShareLink label="WhatsApp" compact /> : null}
           />
         </section>
       )}

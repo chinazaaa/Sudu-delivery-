@@ -11,7 +11,13 @@ import SendLink from "./SendLink";
  * else: whoever is paying is in WhatsApp, and on a laptop the sheet does not
  * exist at all.
  */
-export default function ShareLink({ label }: { label: string }) {
+export default function ShareLink({
+  label,
+  compact = false,
+}: {
+  label: string;
+  compact?: boolean;
+}) {
   // The address is only knowable in the browser, and only after mount, so the
   // server and the first render agree on nothing being there yet.
   const [url, setUrl] = useState("");
@@ -31,6 +37,7 @@ export default function ShareLink({ label }: { label: string }) {
       link={url}
       label={label}
       tone="quiet"
+      compact={compact}
     />
   );
 }

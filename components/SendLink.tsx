@@ -24,6 +24,7 @@ export default function SendLink({
   link,
   label = "Send on WhatsApp",
   tone = "primary",
+  compact = false,
 }: {
   /** The whole message, ending in the link. */
   message: string;
@@ -34,6 +35,8 @@ export default function SendLink({
   link?: string;
   label?: string;
   tone?: "primary" | "quiet";
+  /** Both buttons on one row, small, for a spot where room is short. */
+  compact?: boolean;
 }) {
   const [copied, setCopied] = useState<"no" | "yes" | "failed">("no");
 
@@ -48,6 +51,36 @@ export default function SendLink({
       setCopied("failed");
     }
   };
+
+  if (compact) {
+    return (
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(message)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-primary px-3 py-2.5 text-center text-sm"
+          >
+            {label}
+          </a>
+          <button type="button" onClick={copy} className="btn-quiet px-3 py-2.5 text-sm">
+            {copied === "yes" ? "Copied" : "Copy link"}
+          </button>
+        </div>
+        {copied === "failed" && (
+          <textarea
+            readOnly
+            rows={3}
+            value={link ?? message}
+            onFocus={(event) => event.currentTarget.select()}
+            aria-label="The link to copy"
+            className="field text-xs"
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
