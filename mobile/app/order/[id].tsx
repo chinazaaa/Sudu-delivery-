@@ -250,9 +250,9 @@ export default function Order() {
           {order.accounts.length > 1 && (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
               <Text style={{ fontFamily: F.bodySemi, fontSize: 13, color: T.muted }}>
-                Other bank:
+                Pay into
               </Text>
-              {order.accounts.map((one, index) => (
+              {order.accounts.map((one, index) => index === chosen ? null : (
                 <Pressable
                   key={one.number}
                   onPress={() => setChosen(index)}
@@ -261,18 +261,18 @@ export default function Order() {
                     paddingVertical: 6,
                     borderRadius: 999,
                     borderWidth: 2,
-                    borderColor: index === chosen ? T.ink : T.line,
-                    backgroundColor: index === chosen ? T.ink : T.paper,
+                    borderColor: T.line,
+                    backgroundColor: T.paper,
                   }}
                 >
                   <Text
                     style={{
-                      color: index === chosen ? T.paper : T.ink,
+                      color: T.ink,
                       fontFamily: F.bodySemi,
                       fontSize: 13,
                     }}
                   >
-                    {one.bank}
+                    {one.bank} instead
                   </Text>
                 </Pressable>
               ))}

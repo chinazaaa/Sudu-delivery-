@@ -43,24 +43,23 @@ export default function PayTo({
         </div>
       </dl>
 
+      {/* Only the bank that is not showing, on one line. Tapping it swaps
+          the card, and then the other one is offered. */}
       {accounts.length > 1 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs font-semibold text-muted">Other bank:</span>
-          {accounts.map((option, index) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setChosen(index)}
-              aria-pressed={index === chosen}
-              className={`rounded-full px-3 py-1 text-xs font-bold transition ${
-                index === chosen
-                  ? "bg-ink text-white"
-                  : "bg-black/[0.06] text-ink/70 hover:bg-black/10"
-              }`}
-            >
-              {option.bank_name}
-            </button>
-          ))}
+          <span className="text-xs font-semibold text-muted">Pay into</span>
+          {accounts.map((option, index) =>
+            index === chosen ? null : (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setChosen(index)}
+                className="rounded-full bg-black/[0.06] px-3 py-1 text-xs font-bold text-ink/80 hover:bg-black/10"
+              >
+                {option.bank_name} instead
+              </button>
+            )
+          )}
         </div>
       )}
     </div>
