@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import Wordmark from "@/components/Wordmark";
 import PrintThis from "@/components/PrintThis";
+import ReceiptSheet from "@/components/ReceiptSheet";
 import { receiptFor, type ReceiptLine } from "@/lib/receipt";
 import { naira } from "@/lib/money";
 import { lagosStamp } from "@/lib/time";
@@ -79,7 +80,8 @@ export default async function ReceiptPage({
           The first version was a hair taller than A4 and pushed its own
           footer onto a second page, which is how a receipt becomes two
           pages of mostly nothing. */}
-      <article className="receipt card p-6 print:border-0 print:p-0 print:shadow-none sm:p-8">
+      <ReceiptSheet>
+      <article className="receipt receipt-a4 card p-8 print:border-0 print:p-0 print:shadow-none">
         {/* Who it is from, and what it is. */}
         {/* Two columns that stay two columns. Allowed to wrap, a phone put
             the whole right-hand block on its own line below the blurb,
@@ -207,6 +209,7 @@ export default async function ReceiptPage({
           </p>
         </footer>
       </article>
+      </ReceiptSheet>
     </div>
   );
 }

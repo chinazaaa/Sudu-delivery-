@@ -363,7 +363,25 @@ body {
  * Volt "PAID" sticker and Ink rules drop out is a grey document that could
  * have come from anywhere.
  */
+/* The receipt is a sheet of A4 proportions on screen: 560 by 792. */
+.receipt-holder {
+  overflow: hidden;
+}
+.receipt-paper {
+  margin: 0 auto;
+}
+.receipt-a4 {
+  min-height: 792px;
+}
+
 @media print {
+  .receipt-paper {
+    width: auto !important;
+    zoom: 1 !important;
+  }
+  .receipt-a4 {
+    min-height: 0;
+  }
   /*
    * Narrower than it was, because the receipt lost this argument twice.
    *
