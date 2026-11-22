@@ -33,30 +33,14 @@ export default function PayTo({
         <Row label="Account number" value={account.account_number} strong />
       </dl>
 
-      {/* Out of the list and onto its own panel. As one row among four it read
-          the same as the bank name, and people were sending transfers without
-          it, which leaves a payment nobody can match to an order. */}
-      <div className="rounded-2xl border-2 border-brand/40 bg-brand-tint px-3 py-3 text-center">
-        <p className="text-xs font-extrabold uppercase tracking-wide text-brand-dark">
-          Put this in the narration
-        </p>
-        <p className="mt-0.5 text-4xl font-extrabold tracking-wider text-brand-dark">
-          {narration}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <CopyText
-          value={account.account_number}
-          label="Copy account"
-          className="w-full px-3 py-2.5 text-sm"
-        />
-        <CopyText
-          value={narration}
-          label="Copy narration"
-          className="w-full px-3 py-2.5 text-sm"
-        />
-      </div>
+      {/* The narration is not asked for any more: bank alerts do not carry
+          it and payments are matched without it. One small button, because
+          the account number is the thing somebody has to move. */}
+      <CopyText
+        value={account.account_number}
+        label="Copy account"
+        className="w-full px-3 py-2 text-sm"
+      />
 
       {accounts.length > 1 && (
         <div className="flex flex-wrap items-center gap-1.5">

@@ -247,30 +247,8 @@ export default function Order() {
 
           <View style={{ padding: 14, gap: 8 }}>
 
-          {/* Out of the list and onto its own panel, exactly as on the website.
-              As one row among four it read the same as the bank name, and
-              transfers were arriving without it. */}
-          <View
-            style={{
-              borderWidth: 2,
-              borderColor: T.brand,
-              backgroundColor: T.tint,
-              borderRadius: 14,
-              paddingVertical: 12,
-              paddingHorizontal: 12,
-              alignItems: "center",
-            }}
-          >
-            <Ticket colour={T.brandDark}>Put this in the narration</Ticket>
-            <Display size={38} colour={T.brandDark} style={{ marginTop: 2 }}>
-              {order.narration}
-            </Display>
-          </View>
-
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <Tap onPress={() => copy(account.number, "account")} label={copied === "account" ? "Copied" : "Copy account"} />
-            <Tap onPress={() => copy(order.narration, "narration")} label={copied === "narration" ? "Copied" : "Copy narration"} />
-          </View>
+          {/* The narration is not asked for any more: bank alerts do not carry it. */}
+          <Tap onPress={() => copy(account.number, "account")} label={copied === "account" ? "Copied" : "Copy account"} />
 
           {order.accounts.length > 1 && (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
