@@ -383,11 +383,16 @@ export default async function OrderPage({
             {headline}
           </h1>
           <p className="text-[16px] leading-relaxed text-rail-text sm:text-[17px]">
+            {order.customer_name} ·{" "}
             {isParcel
               ? order.batch.delivery_window_text
               : `${runLabel} · ${order.batch.delivery_window_text}`}
-            {paid ? ` · ${naira(order.total)}` : ""}
           </p>
+          {order.hostel && (
+            <p className="text-[16px] leading-relaxed text-rail-text sm:text-[17px]">
+              Drop-off: <span className="font-bold text-shell">{order.hostel}</span>
+            </p>
+          )}
 
           {/* A box on a day of its own. Said here because it is the answer to
               the only question they have: when. */}
@@ -415,46 +420,6 @@ export default async function OrderPage({
             </p>
           )}
 
-          <dl className="grid grid-cols-2 gap-3 border-t-2 border-dashed border-white/25 pt-3.5 text-sm sm:grid-cols-3">
-            <div className="flex flex-col gap-0.5">
-              <dt className="ticket text-[#b9b0a5]">Drop-off</dt>
-              <dd className="font-bold text-shell">{order.hostel}</dd>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <dt className="ticket text-[#b9b0a5]">For</dt>
-              <dd className="font-bold text-shell">{order.customer_name}</dd>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              {/* The label and the answer have to be about the same thing.
-                  Once ordering had shut, the label turned into "Going out"
-                  while the answer stayed "Closed", which was the answer to
-                  the question the label had just stopped asking: a run on
-                  the road told whoever ordered from it "Going out: Closed",
-                  which says nothing and sounds like bad news.
-
-                  It only ever goes past tense and keeps its own answer. When
-                  this run stopped taking orders is a real thing to know, and
-                  where the food has got to is the list underneath. */}
-              <dt className="ticket text-[#b9b0a5]">
-                {isParcel || order.batch.kind === "same_day"
-                  ? "Going out"
-                  : expired
-                    ? "Orders closed"
-                    : "Orders close"}
-              </dt>
-              <dd className="font-bold text-shell">
-                {isParcel
-                  ? order.batch.deliver_at
-                    ? runDateLabel(order.batch.run_date)
-                    : "Day not agreed yet"
-                  : order.batch.kind === "same_day"
-                    ? order.batch.delivery_window_text
-                    : `${clockLabel(order.batch.cut_off_at)}, ${dayLabel(
-                        order.batch.cut_off_at
-                      )}`}
-              </dd>
-            </div>
-          </dl>
         </div>
       </header>
 
