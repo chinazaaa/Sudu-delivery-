@@ -793,6 +793,10 @@ export default async function OrderPage({
 
       {/* One card for the whole order: who has what, where it goes, and what
           it costs. These used to be three cards repeating each other. */}
+      {/* One row while it is unpaid. The page used to run the whole order,
+          the fee explanation and a help box down a long scroll before
+          anybody had paid; now it is there when asked for. */}
+      {paid ? (
       <section className="card space-y-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-bold">
@@ -1024,6 +1028,247 @@ export default async function OrderPage({
           </Link>
         )}
       </section>
+      ) : (
+        <details className="card">
+          <summary className="flex cursor-pointer items-center justify-between gap-3 font-bold">
+            <span>View your order</span>
+            <span className="font-display text-lg">{naira(order.total)}</span>
+          </summary>
+          <div className="mt-3">
+      <section className="card space-y-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-bold">
+            {drops.length > 1 ? "Who has what" : "Your order"}
+          </h2>
+          {drops.length > 1 && (
+            <span className="text-sm text-muted">
+              {order.group?.collect_mode === "each"
+                ? "Delivered to each person"
+                : `All delivered to ${order.group?.leader_name ?? order.customer_name}`}
+            </span>
+          )}
+        </div>
+
+        {isParcel ? (
+          // What is being carried and where, which is the whole of a parcel.
+          // The list below is of things bought, and a parcel buys nothing.
+          <dl className="space-y-1 text-sm">
+            <Row label="What" value={order.parcel_item ?? ""} />
+            <Row
+              label={parcelToPau ? "Collect from" : "Collect at"}
+              value={order.parcel_shop ?? ""}
+            />
+            <Row label="At" value={order.parcel_from ?? ""} />
+            <Row label="Take to" value={order.parcel_to ?? ""} />
+            {order.parcel_kg ? (
+              <Row label="Weight" value={`Up to ${order.parcel_kg}kg`} />
+            ) : null}
+            {order.deliver_to_name && (
+              <Row
+                label="Handed to"
+                value={`${order.deliver_to_name}${
+                  order.deliver_to_phone ? ` · ${formatPhone(order.deliver_to_phone)}` : ""
+                }`}
+              />
+            )}
+          </dl>
+        ) : drops.length > 1 ? (
+          <ul className="space-y-3">
+            {drops.map((drop) => (
+              <li key={drop.key} className="rounded-2xl border border-black/10 p-3">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h3 className="font-bold">
+                    {drop.name}
+                    {split && (
+                      <span className="ml-2 text-xs font-normal text-muted">
+                        {shareRef(
+                          order.shares.find((share) => share.id === drop.key) ?? order,
+                          order.shares
+                        )}
+                        {drop.key === order.id && " · this link"}
+                      </span>
+                    )}
+                  </h3>
+                  <span className="text-right text-sm font-semibold">
+                    {naira(drop.food + drop.delivery)}
+                    <span className="block text-xs font-normal text-muted">
+                      {naira(drop.food)} + {naira(drop.delivery)} delivery
+                    </span>
+                  </span>
+                </div>
+
+                <ul className="mt-1 space-y-0.5 text-sm text-ink/75">
+                  {drop.lines.map((line) => (
+                    <li key={line.id}>
+                      {line.qty}× {line.name}
+                      {line.choices.length > 0 && (
+                        <span className="text-muted"> · {line.choices.join(", ")}</span>
+                      )}
+                      <span className="text-muted"> · {line.restaurant}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-muted">{drop.hostel || order.hostel}</span>
+                  {drop.phone && (
+                    <>
+                      <a href={`tel:${drop.phone}`} className="font-semibold text-brand">
+                        {formatPhone(drop.phone)}
+                      </a>
+                      {whatsappLink(drop.phone, `Hi ${drop.name}, your Sudu order is here.`) && (
+                        <a
+                          href={
+                            whatsappLink(
+                              drop.phone,
+                              `Hi ${drop.name}, your Sudu order is here.`
+                            )!
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-brand"
+                        >
+                          WhatsApp
+                        </a>
+                      )}
+                    </>
+                  )}
+                  {drop.status && (
+                    <span
+                      className={`ml-auto rounded-full px-2.5 py-1 text-xs font-bold ${
+                        drop.status === "pending"
+                          ? "bg-brand-tint text-brand-dark"
+                          : "bg-mint/10 text-mint"
+                      }`}
+                    >
+                      {drop.status === "pending" ? "Unpaid" : drop.status}
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {order.lines.map((line) => (
+              <li key={line.id} className="flex justify-between gap-3">
+                <span>
+                  {line.qty}× {line.name}
+                  {line.choices.length > 0 && (
+                    <span className="text-muted"> · {line.choices.join(", ")}</span>
+                  )}
+                  <span className="text-muted"> · {line.restaurant}</span>
+                </span>
+                <span className="shrink-0 font-medium">
+                  {naira(line.qty * line.unit_price_at_order)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {order.customer_note && (
+          <p className="rounded-xl bg-shell px-3 py-2 text-sm">
+            <span className="font-semibold">You asked: </span>
+            {order.customer_note}
+          </p>
+        )}
+
+        <dl className="space-y-1 border-t border-black/10 pt-3 text-sm">
+          {/* Nothing is bought on a parcel, so a "Food ₦0" line is a line
+              about something that never happened. */}
+          {!isParcel && (
+            <Row
+              label={isSkincareBatch(order.batch) ? "Skincare" : "Food"}
+              value={naira(order.subtotal_food)}
+            />
+          )}
+          <Row
+            label={
+              isParcel
+                ? "Carrying it"
+                : `Delivery (${fees.items} item${fees.items === 1 ? "" : "s"})`
+            }
+            value={naira(order.fee)}
+          />
+          {order.discount > 0 && (
+            <Row
+              label={order.coupon_code ? `Code ${order.coupon_code}` : "Discount"}
+              value={`−${naira(order.discount)}`}
+            />
+          )}
+          <Row label="Total" value={naira(order.total)} strong />
+        </dl>
+
+        {/* Under the total, where the money is. One line, no arithmetic:
+            the lines above already show where each part came from. */}
+        {saved > 0 && (
+          <p className="soft border-mint bg-mint-tint px-3 py-2 text-sm font-bold text-mint">
+            You saved {naira(saved)} on this order.
+          </p>
+        )}
+
+        {/* The whole ladder, for anyone wondering why four items cost more
+            than three. Only when the ladder is what they were charged. */}
+        {byLadder && (
+          <FeeBands
+            itemCount={fees.items}
+            flashFee={order.batch.flash_fee}
+            bands={bands}
+          />
+        )}
+
+        {/* The arithmetic, in a line. Delivery is the thing people query. */}
+        <p className="text-xs text-muted">
+          {isParcel ? (
+            <>
+              One trip, yours alone, priced by where it goes and how heavy it
+              is. Nothing is bought on your behalf, so this is the whole of
+              it.
+            </>
+          ) : byLadder ? (
+            <>
+              {order.batch.flash_fee !== null && (
+                <>
+                  Delivery is down tonight.{" "}
+                  {order.batch.flash_fee_reason || "Enjoy it."}{" "}
+                </>
+              )}
+              {fees.items} item{fees.items === 1 ? "" : "s"} travel together, which is the{" "}
+              {naira(band.fee)} band ({bandLabel}).
+              {drops.length > 1 &&
+                ` That is shared out by what each person ordered, not split down the middle.`}
+            </>
+          ) : shared ? (
+            <>
+              One delivery for the whole group, split evenly between everybody in
+              it. That is why this is not the usual {naira(band.fee)} for{" "}
+              {fees.items} item{fees.items === 1 ? "" : "s"}.
+            </>
+          ) : (
+            <>
+              {order.coupon_code
+                ? `${order.coupon_code} priced this delivery, so the usual ladder does not apply.`
+                : "An offer priced this delivery, so the usual ladder does not apply."}
+            </>
+          )}
+        </p>
+
+        {/* The way back to the car. Closing sends everybody to their own
+            total, which is what they came for, but the split is still worth
+            being able to look at. */}
+        {shared && order.group_id && (
+          <Link
+            href={`/g/${order.group_id}?split=1`}
+            className="text-sm font-semibold text-brand"
+          >
+            See the whole car and what each of you owes
+          </Link>
+        )}
+      </section>
+          </div>
+        </details>
+      )}
 
       {/*
         Money the shop is holding that is not its own.
@@ -1128,12 +1373,28 @@ export default async function OrderPage({
         </section>
       )}
 
-      <HelpUs
+      {paid ? (
+        <HelpUs
         settings={settings}
         order={order}
         orderRef={shareRef(order, order.shares)}
         batchLabel={batchLabel}
       />
+      ) : (
+        <details className="card">
+          <summary className="cursor-pointer font-bold">
+            Want to change this order, or ask something?
+          </summary>
+          <div className="mt-3">
+            <HelpUs
+        settings={settings}
+        order={order}
+        orderRef={shareRef(order, order.shares)}
+        batchLabel={batchLabel}
+      />
+          </div>
+        </details>
+      )}
     </div>
   );
 }
