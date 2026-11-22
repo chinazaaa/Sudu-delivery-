@@ -521,7 +521,7 @@ export default function OccasionScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>{one.window}</Text>
                       <Text style={{ color: T.muted, fontSize: 13 }}>
-                        {one.onARun ? "On the run" : "A car of its own"}
+                        {one.onARun ? "On the next delivery" : "A car of its own"}
                       </Text>
                     </View>
                     <Text style={{ fontFamily: F.bodyBold, color: T.ink }}>

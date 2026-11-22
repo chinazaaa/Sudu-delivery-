@@ -475,7 +475,7 @@ export default function Home() {
         {/* Drawn as soon as there is a menu to draw it from, even while the
             arrival line is still unknown.
 
-            The copy kept on the phone is up to a day old, and a run whose cut
+            The copy kept on the phone is up to a day old, and a delivery whose cut
             off has passed is stripped out of it, so a cached menu routinely
             has no live run and this card was simply absent. Then the real
             menu landed and it appeared, shoving everything below it down the
@@ -511,7 +511,7 @@ export default function Home() {
                   in does not move the page under somebody's thumb. */}
 
               {/* The deadline, between the promise and the alternative,
-                  exactly where the website puts it. Only a run has a queue
+                  exactly where the website puts it. Only a delivery has a queue
                   to make: a car of its own is three hours from whenever it
                   is asked for, so there is nothing to be late for. */}
               {decided?.onARun && (
@@ -549,7 +549,7 @@ export default function Home() {
         {/*
           What people come looking for, as a row that scrolls sideways.
 
-          The board puts this between the run and the kitchens, and the app
+          The board puts this between the delivery and the kitchens, and the app
           had nothing in its place: somebody who wants chicken had to know
           which of thirteen kitchens sells it. The words are the shop's own
           kinds, the same nine the website offers and in the same order.
@@ -812,7 +812,7 @@ function statusLine(order: OrderView): string {
   if (order.stage === "delivered") return "Delivered. Enjoy.";
   if (order.stage === "on_the_way") return "On the way to you";
   if (order.stage === "collected") return "Food collected, heading over";
-  if (order.stage === "ordering") return "Paid. Waiting for the run to close";
+  if (order.stage === "ordering") return "Paid. Waiting for ordering to close";
   return "Paid. We are at the restaurants";
 }
 

@@ -2965,16 +2965,16 @@ test("a closure on now counts down, and one ahead names its days", () => {
   // the only part anybody standing in it wants.
   assert.equal(
     closureSaid(off, "2026-10-20"),
-    "No runs 26 to 30 October · Mid-semester break"
+    "No deliveries 26 to 30 October · Mid-semester break"
   );
   assert.equal(
     closureSaid(off, "2026-10-27"),
-    "No runs until 30 October · Mid-semester break"
+    "No deliveries until 30 October · Mid-semester break"
   );
   // Unnamed is the days and nothing invented.
   assert.equal(
     closureSaid({ ...off, name: "  " }, "2026-10-20"),
-    "No runs 26 to 30 October"
+    "No deliveries 26 to 30 October"
   );
 });
 
@@ -5475,7 +5475,7 @@ test("the shop brief says only what is true tonight", () => {
     cutOff: "4.30 pm",
     open: true,
   });
-  assert.match(open, /next run is tonight between 6pm and 7\.30pm/);
+  assert.match(open, /next delivery is tonight between 6pm and 7\.30pm/);
   assert.match(open, /shuts at 4\.30 pm/);
   assert.match(open, /Chicken Republic, KFC/);
   // It is told in as many words that it does not price or confirm.
@@ -5492,7 +5492,7 @@ test("the shop brief says only what is true tonight", () => {
     open: false,
   });
   assert.match(shut, /Nothing is open/);
-  assert.doesNotMatch(shut, /next run is/);
+  assert.doesNotMatch(shut, /next delivery is/);
 });
 
 test("the reading model is the small one, and moving up is a setting", () => {

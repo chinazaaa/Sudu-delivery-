@@ -122,7 +122,7 @@ export default async function PromoterPage() {
             What you have earned
           </h1>
           <p className="hint">
-            Your code and PIN show every run your orders landed in, and what each
+            Your code and PIN show every delivery your orders landed in, and what each
             one is worth.
           </p>
           <PromoterLogin />
@@ -313,12 +313,12 @@ export default async function PromoterPage() {
         {earnings.runs.length === 0 ? (
           <p className="card mt-3.5 text-sm text-muted">
             Nothing yet. Every order a customer pays for counts for you, so this
-            fills up as the next run does.
+            fills up as the next delivery does.
           </p>
         ) : (
           <section className="card mt-3.5">
             <div className="flex items-baseline justify-between gap-3">
-              <h2 className={PANEL}>Run by run</h2>
+              <h2 className={PANEL}>Delivery by delivery</h2>
               <span className="hint">
                 {counted} order{counted === 1 ? "" : "s"} counted
               </span>
@@ -506,7 +506,7 @@ export default async function PromoterPage() {
           <section className="card mt-3.5 border-volt-line bg-brand-tint">
             <h3 className={PANEL}>Ordered but not paid for</h3>
             <p className="hint mt-1">
-              These are in runs still taking money. Each one is {naira(earnings.rate)}{" "}
+              These are in deliveries still taking money. Each one is {naira(earnings.rate)}{" "}
               to you the moment it is paid. A nudge is usually all it takes: people
               put an order in and forget.
             </p>
@@ -569,7 +569,7 @@ export default async function PromoterPage() {
                     `Hi ${cart.name || "there"}, you had ${cart.items} item${
                       cart.items === 1 ? "" : "s"
                     } in your Sudu cart, ${naira(cart.value)}, and did not finish. ` +
-                      "Want me to help you get it on the next run?"
+                      "Want me to help you get it on the next delivery?"
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -605,7 +605,7 @@ export default async function PromoterPage() {
         )}
 
         <p className="hint mt-4 text-center">
-          Questions about a run?{" "}
+          Questions about a delivery?{" "}
           <Link href="/" className="font-semibold text-brand-dark underline">
             The shop is here
           </Link>

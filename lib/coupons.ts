@@ -445,7 +445,7 @@ export async function checkCoupon(args: {
     .eq("coupon_code", coupon.code);
 
   if ((runs ?? []).length > 0 && !runs!.some((row) => row.batch_id === args.batchId)) {
-    return { ok: false, error: "That code is not for this run." };
+    return { ok: false, error: "That code is not for this delivery." };
   }
 
   // A code tied to a kitchen is a deal with that kitchen, so the whole cart
@@ -632,7 +632,7 @@ export async function listCoupons(): Promise<CouponWithRuns[]> {
       .filter((row) => row.coupon_code === coupon.code)
       .map((row) => ({
         batchId: row.batch_id as string,
-        label: labels.get(row.batch_id as string) ?? "A past run",
+        label: labels.get(row.batch_id as string) ?? "A past delivery",
       })),
     sections: sectionTies
       .filter((row) => row.coupon_code === coupon.code)

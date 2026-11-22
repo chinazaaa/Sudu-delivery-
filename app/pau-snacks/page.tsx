@@ -25,7 +25,7 @@ const TITLE = "Snacks delivered to PAU, Ibeju-Lekki";
 const BLURB =
   "Small chops, doughnuts, ice cream, wings, pizza and drinks brought to " +
   "your hostel at Pan-Atlantic University. One car, and a delivery fee you " +
-  "between everybody on the run.";
+  "between everybody on the delivery.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -69,7 +69,7 @@ export default async function PauSnacksPage() {
       a: cheapest
         ? `The snacks cost what they cost, and delivery starts at ${naira(
             cheapest.fee
-          )} for the car rather than a fee each. Order on the same run as ` +
+          )} for the car rather than a fee each. Order on the same delivery as ` +
           "your friends in a shared delivery and that one fee splits between " +
           "all of you."
         : "The snacks cost what they cost, and delivery is one fee for the " +
@@ -96,11 +96,11 @@ export default async function PauSnacksPage() {
       q: "What time do snacks arrive?",
       a:
         lastHour > 0
-          ? `Runs go through the day, and the last one lands by ${
+          ? `Deliveries go through the day, and the last one lands by ${
               lastHour > 12 ? lastHour - 12 : lastHour
-            }${lastHour >= 12 ? "pm" : "am"}. You pick which run you want to be ` +
+            }${lastHour >= 12 ? "pm" : "am"}. You pick which delivery you want to be ` +
             "on when you order, so you know before you pay."
-          : "You pick which run you want to be on when you order, so you know " +
+          : "You pick which delivery you want to be on when you order, so you know " +
             "when it lands before you pay.",
     },
     {

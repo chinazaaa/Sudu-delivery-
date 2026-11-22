@@ -105,7 +105,7 @@ export const OUT_SAID =
  * deal with extra steps.
  */
 export const RUN_INSTEAD_SAID =
-  "A run is going today, so this goes on that: it gets there the same evening and costs less than a car of its own.";
+  "A delivery is going today, so this goes on that: it gets there the same evening and costs less than a car of its own.";
 
 /**
  * How long before the run a car has to land to be worth driving.

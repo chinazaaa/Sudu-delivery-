@@ -97,7 +97,7 @@ export const TEMPLATE_FIELD: Record<TemplateKind, keyof Settings> = {
 /** The wording used until the admin writes their own. */
 export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
   confirmed:
-    "Hi {name}, your payment for order {ref} is confirmed. You are on the {batch} run.\n\n" +
+    "Hi {name}, your payment for order {ref} is confirmed. Your {batch} delivery is booked.\n\n" +
     "We deliver to {hostel}, {window}.\n" +
     "Your order: {link}\n{pin_line}",
   payment:
@@ -147,7 +147,7 @@ export const TEMPLATE_DEFAULT: Record<TemplateKind, string> = {
   landed:
     "Hi {name}, {for}'s {thing} has been delivered.\n\nThe order: {link}",
   late:
-    "Hi {name}, the {batch} run is running a little behind.\n\n" +
+    "Hi {name}, the {batch} delivery is running a little behind.\n\n" +
     "Your {thing} is coming. I will message again when it is with you.",
   review:
     "Hi {name}, hope {ordered} was good. If you have a second, say how it was " +
@@ -215,7 +215,7 @@ export const TEMPLATE_TOKENS: { token: string; means: string }[] = [
     token: "{items}",
     means: "every line of the order, one per line, with what each comes to",
   },
-  { token: "{window}", means: "when the run lands" },
+  { token: "{window}", means: "when the delivery lands" },
   { token: "{link}", means: "their order page" },
   { token: "{site}", means: "the site address" },
   { token: "{pin}", means: "their four-digit PIN" },
@@ -238,7 +238,7 @@ export const TEMPLATE_TOKENS: { token: string; means: string }[] = [
  */
 export const NUDGE_DEFAULT =
   "Hi {name}, your Sudu order for {batch} is in but not paid for yet. " +
-  "Pay before the cut off and it goes on the run.\n\n" +
+  "Pay before the cut off and it goes on the delivery.\n\n" +
   "Your order ({total}): {link}";
 
 /** What a nudge can say. Fewer than a whole message needs. */

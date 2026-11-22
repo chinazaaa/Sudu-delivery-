@@ -28,7 +28,7 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://sudu.store";
 const TITLE = "Pharmacy delivery to PAU, Ibeju-Lekki";
 const BLURB =
   "Paracetamol and the everyday things from a pharmacy near Sangotedo, " +
-  "brought to your hostel at Pan-Atlantic University on the next run. Tell " +
+  "brought to your hostel at Pan-Atlantic University on the next delivery. Tell " +
   "us what you need and we go and get it.";
 
 export const metadata: Metadata = {
@@ -50,10 +50,10 @@ export default async function PauPharmacyPage() {
     {
       q: "Can you deliver medicine to Pan-Atlantic University?",
       a:
-        "Yes. Tell us what you need and we buy it at a pharmacy on the run " +
+        "Yes. Tell us what you need and we buy it at a pharmacy on the delivery " +
         "and bring it to your block at PAU. Paracetamol is on the shelf " +
         "already; anything else we go and get, which costs nothing extra " +
-        "beyond the ordinary delivery fee for that run.",
+        "beyond the ordinary delivery fee for that delivery.",
     },
     {
       q: "I am a parent and my child is ill at PAU. What can you do?",
@@ -82,7 +82,7 @@ export default async function PauPharmacyPage() {
     {
       q: "How fast is it?",
       a:
-        "It travels on the next run like everything else, so it depends on " +
+        "It travels on the next delivery like everything else, so it depends on " +
         "when you ask. If it cannot wait for that, say so and we will tell " +
         "you what a car of its own would cost rather than leave you " +
         "guessing.",
@@ -91,7 +91,7 @@ export default async function PauPharmacyPage() {
       q: "What does it cost?",
       a:
         "What the pharmacy charges, plus the ordinary delivery fee for the " +
-        "run it comes on, which is shared between everybody on that run. We " +
+        "delivery it comes on, which is shared between everybody on that delivery. We " +
         "tell you the price before you pay anything.",
     },
   ];
@@ -161,7 +161,7 @@ export default async function PauPharmacyPage() {
         <Section title="How it works">
           <p>
             Say what you need and roughly what you expect to pay. We buy it at
-            a pharmacy on the run, tell you what it came to before you pay
+            a pharmacy on the delivery, tell you what it came to before you pay
             anything, and hand it to you at your own block.
           </p>
           <p>

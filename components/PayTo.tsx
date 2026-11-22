@@ -30,17 +30,18 @@ export default function PayTo({
       <dl className="space-y-2 rounded-2xl bg-shell p-3 text-sm">
         <Row label="Bank" value={account.bank_name} />
         <Row label="Account name" value={account.account_name || "Not set"} />
-        <Row label="Account number" value={account.account_number} strong />
+        <div className="flex items-center justify-between gap-3 font-semibold">
+          <dt className="text-muted">Account number</dt>
+          <dd className="flex items-center gap-2 text-right">
+            {account.account_number}
+            <CopyText
+              value={account.account_number}
+              label="Copy"
+              look="rounded-full bg-ink px-3 py-1 text-xs font-bold text-white"
+            />
+          </dd>
+        </div>
       </dl>
-
-      {/* The narration is not asked for any more: bank alerts do not carry
-          it and payments are matched without it. One small button, because
-          the account number is the thing somebody has to move. */}
-      <CopyText
-        value={account.account_number}
-        label="Copy account"
-        className="w-full px-3 py-2 text-sm"
-      />
 
       {accounts.length > 1 && (
         <div className="flex flex-wrap items-center gap-1.5">

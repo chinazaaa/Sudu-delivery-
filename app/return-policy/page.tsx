@@ -55,7 +55,7 @@ export default async function ReturnPolicyPage() {
           "Skincare, and anything that is not food",
           "Medicine and anything from a pharmacy",
           "How the money comes back",
-          "If a run does not happen",
+          "If a delivery does not happen",
           "Telling us",
         ]}
     >
@@ -73,19 +73,19 @@ export default async function ReturnPolicyPage() {
 
       <Clause n={2} title="Cancelling before we have shopped">
         <p>
-          While the run is still open and nothing has been bought, you can
+          While the delivery is still open and nothing has been bought, you can
           cancel and get <span className="font-semibold">everything</span>{" "}
           back, the delivery fee included. Message us and we will do it.
         </p>
         <p>
-          Once the run has gone shopping, your food has been bought with our
+          Once the delivery has gone shopping, your food has been bought with our
           money and it cannot go back on the shelf, so it cannot be cancelled.
           Tell us anyway and we will do what we can: if a restaurant will take
           something back, we pass that on.
         </p>
         <p>
           A skincare or pharmacy order sits on a weekly car, so its moment is
-          that morning&apos;s cut off rather than a run going out. Before the
+          that morning&apos;s cut off rather than a delivery going out. Before the
           cut off, cancel and everything comes back. After it the shopping for
           that car has been done.
         </p>
@@ -198,10 +198,10 @@ export default async function ReturnPolicyPage() {
         </p>
       </Clause>
 
-      <Clause n={8} title="If a run does not happen">
+      <Clause n={8} title="If a delivery does not happen">
         <p>
           Weather, a road, a car, or a restaurant that is shut when we get
-          there. If a run cannot go, we tell you and we refund everything you
+          there. If a delivery cannot go, we tell you and we refund everything you
           paid for it, the delivery fee included, without being asked.
         </p>
       </Clause>

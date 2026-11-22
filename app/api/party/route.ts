@@ -46,7 +46,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     if (body.deliverAt) {
       if ((await safeSettings()).same_day_on !== "on") {
-        return NextResponse.json({ error: "Pick a run instead." }, { status: 400 });
+        return NextResponse.json({ error: "Pick a delivery instead." }, { status: 400 });
       }
       const slot = deliverySlots(new Date(), await hoursByDay()).find(
         (one) => one.at === body.deliverAt
@@ -70,13 +70,13 @@ export async function POST(request: Request): Promise<NextResponse> {
     } else {
       batch = await getBatch(String(body.batchId ?? ""));
       if (!batch || !isOrderable(batch)) {
-        return NextResponse.json({ error: "That run has closed." }, { status: 400 });
+        return NextResponse.json({ error: "That delivery has closed." }, { status: 400 });
       }
     }
 
     if (!batch) {
       return NextResponse.json(
-        { error: "Could not get a car for that time. Try another time, or a run." },
+        { error: "Could not get a car for that time. Try another time, or a delivery." },
         { status: 500 }
       );
     }

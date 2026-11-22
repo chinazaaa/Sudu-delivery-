@@ -133,7 +133,7 @@ export function shopBrief(shop: ShopNow): string {
     "Your only job is to say what a message contained. You never price anything, never say whether something is in stock, and never confirm an order. The shop's own code does all of that straight afterwards, and it is always right where you disagree.",
     "",
     shop.open
-      ? `The next run is ${shop.nextRun}. Ordering for it shuts at ${shop.cutOff}.`
+      ? `The next delivery is ${shop.nextRun}. Ordering for it shuts at ${shop.cutOff}.`
       : "Nothing is open for ordering right now.",
     "",
     /*
@@ -145,11 +145,11 @@ export function shopBrief(shop: ShopNow): string {
      * with no Monday run is asking a question with an answer, and "the
      * next run is Wednesday" is not it.
      */
-    "People pick the day they want their food, not a run. Any day can be had: where a run is going that day it travels on the run, and where none is it goes on a car of its own, which costs more. Never say which, and never say what either costs. If somebody asks about a day, say the checkout will show them that day and leave the figures to the shop.",
+    "People pick the day they want their food, not a delivery. Any day can be had: where a delivery is going that day it travels on the delivery, and where none is it goes on a car of its own, which costs more. Never say which, and never say what either costs. If somebody asks about a day, say the checkout will show them that day and leave the figures to the shop.",
   ];
 
   if (shop.counters.length > 0) {
-    lines.push("", `Counters on this run: ${shop.counters.join(", ")}.`);
+    lines.push("", `Counters on this delivery: ${shop.counters.join(", ")}.`);
   }
   if (shop.hostels.length > 0) {
     lines.push(`Blocks: ${shop.hostels.join(", ")}.`);

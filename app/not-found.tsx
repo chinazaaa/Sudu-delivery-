@@ -21,7 +21,7 @@ export default function NotFound() {
       <PageHead
         ticket="404 · Nothing at this address"
         title="This page has gone"
-        lead="The link may be old, or the run it pointed at may have been and gone. Everything on the menu is still where it was."
+        lead="The link may be old, or the delivery it pointed at may have been and gone. Everything on the menu is still where it was."
         tone="ink"
       />
 
@@ -30,7 +30,7 @@ export default function NotFound() {
 
         <div className="grid gap-3 sm:grid-cols-3">
           {[
-            ["/products", "The menu", "Every kitchen, mixed into one run."],
+            ["/products", "The menu", "Every kitchen, mixed into one delivery."],
             ["/orders", "My orders", "Where the one you placed has got to."],
             [
               "/custom-order",

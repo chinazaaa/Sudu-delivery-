@@ -87,7 +87,7 @@ export default async function OrdersPage({
               </>
             ) : (
               <>
-                Your runs,
+                Your deliveries,
                 <br />
                 one PIN
               </>
@@ -459,7 +459,7 @@ function Chip({
   const [said, look] =
     order.status === "pending"
       ? gone(order)
-        ? (["Run closed", "bg-volt text-ink"] as const)
+        ? (["Closed", "bg-volt text-ink"] as const)
         : (["Awaiting payment", "bg-volt text-ink"] as const)
       : order.status === "cancelled"
         ? (["Cancelled", "bg-[#4a423b] text-shell"] as const)

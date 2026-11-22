@@ -516,7 +516,7 @@ export default function CartView({
         >
           {waiting.count === 1
             ? `You have one ${waiting.what} item waiting. It is its own order on its own day, so it does not travel with food, and it is still here when you come back for some.`
-            : `You have ${waiting.count} ${waiting.what} items waiting. They are their own order on their own run, so they do not travel with food, and they are still here when you come back for some.`}
+            : `You have ${waiting.count} ${waiting.what} items waiting. They are their own order on their own delivery, so they do not travel with food, and they are still here when you come back for some.`}
         </Empty>
       );
     }
@@ -1063,9 +1063,9 @@ export default function CartView({
           Where the food is, said as a day rather than as a word of ours.
 
           This used to read "The Place and Yin Yang Express are in Ajah, so
-          they come on a run rather than today", which is the shop
+          they come on a delivery rather than today", which is the shop
           explaining its own timetable to somebody who only wants to know
-          when their food turns up. A run is our word. "We are not going to
+          when their food turns up. A delivery is our word. "We are not going to
           Ajah today, we are tomorrow" is the same fact in theirs, and the
           day is a day they can plan around.
 
@@ -1107,7 +1107,7 @@ export default function CartView({
       )}
 
       {/* Shut on the day this cart is quoting for.
-          The checkout says it properly, with the runs that do work. Here it
+          The checkout says it properly, with the deliveries that do work. Here it
           is a warning, because the cart is the screen where somebody still
           has their hand on the thing they would take out. */}
       {shutLines.length > 0 && (
@@ -1403,7 +1403,7 @@ export default function CartView({
           like more work than the app's, which goes meter, food, what it
           comes to, and only then asks about friends.
 
-          Neither is buried. Somebody who wants to share a run looks for it
+          Neither is buried. Somebody who wants to share a delivery looks for it
           once they know what they are sharing, which is exactly here.
        */}
       {/* Before anything else, because it costs nothing to send and it is what

@@ -226,7 +226,7 @@ async function checkSameDay(
   wanted: string
 ): Promise<{ slot: Slot; pricing: Awaited<ReturnType<typeof sameDayPricing>> } | { error: string }> {
   if (((await safeSettings()).same_day_on || "") !== "on") {
-    return { error: "Same day delivery is not running today. Pick a run instead." };
+    return { error: "Same day delivery is not running today. Pick a delivery instead." };
   }
 
 
@@ -244,7 +244,7 @@ async function checkSameDay(
     return {
       // No hour named: the day can be extended in admin and this would then
       // be arguing with the dropdown beside it.
-      error: "That time has gone. Pick another time, or put it on a run.",
+      error: "That time has gone. Pick another time, or put it on a delivery.",
     };
   }
 
@@ -410,7 +410,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       ok: false,
       error:
         `${far?.name ?? "That restaurant"} is too far for a car of its own. ` +
-        "It goes on a run, so pick one and everything travels together.",
+        "It goes on a delivery, so pick one and everything travels together.",
     };
   }
 
@@ -432,7 +432,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       error:
         `We do not drive to ${shut?.name ?? "there"} on a ` +
         `${DAY_NAMES[weekdayOf(sameDay.slot.date)]}. ` +
-        "Pick a run, or another day.",
+        "Pick a delivery, or another day.",
     };
   }
 
@@ -507,7 +507,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     return {
       ok: false,
       error:
-        `That run is not going to ${missed?.name ?? "that area"}. ` +
+        `That delivery is not going to ${missed?.name ?? "that area"}. ` +
         "Pick one that does, or take those things out.",
     };
   }
@@ -549,7 +549,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     return {
       ok: false,
       error:
-        "That run is not stopping at every restaurant in this cart. " +
+        "That delivery is not stopping at every restaurant in this cart. " +
         "Pick one that is, or take those things out.",
     };
   }
@@ -568,8 +568,8 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       return {
         ok: false,
         error:
-          "That run has already been to one of these counters, so it cannot " +
-          "pick this up. Put it on the next run, or ask for a car of its own.",
+          "That delivery has already been to one of these counters, so it cannot " +
+          "pick this up. Put it on the next delivery, or ask for a car of its own.",
       };
     }
   }
@@ -590,7 +590,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
     return {
       ok: false,
       error:
-        "That run has already left, so this food could not be ordered onto it. " +
+        "That delivery has already left, so this food could not be ordered onto it. " +
         "Put it on the next one.",
     };
   }
@@ -1058,7 +1058,7 @@ export async function quote(args: {
       return {
         error:
           `${far?.name ?? "That kitchen"} is too far for a car of its own. ` +
-          "It goes on a run, so pick one and everything travels together.",
+          "It goes on a delivery, so pick one and everything travels together.",
       };
     }
     fee = sameDayFee(
@@ -2093,7 +2093,7 @@ export async function previewCoupon(args: {
   if (car && "error" in car) return { ok: false, error: car.error };
 
   const batch = car ? null : await getBatch(args.batchId);
-  if (!car && !batch) return { ok: false, error: "Pick a run first." };
+  if (!car && !batch) return { ok: false, error: "Pick a delivery first." };
 
   const priced = await priceLines(args.lines);
   if ("error" in priced) return { ok: false, error: priced.error };
@@ -2271,17 +2271,17 @@ export async function moveOrder(
     return {
       ok: false,
       error:
-        "That run has closed and the food has been bought, so this one cannot move. " +
+        "That delivery has closed and the food has been bought, so this one cannot move. " +
         "Message us and we will sort it out.",
     };
   }
 
   const batch = await getBatch(batchId);
-  if (!batch) return { ok: false, error: "That run no longer exists." };
+  if (!batch) return { ok: false, error: "That delivery no longer exists." };
   // A closed run is closed to customers. Admin putting somebody on one is
   // the whole point of moving an order by hand: the car it was on has gone.
   if (!asAdmin && !isOrderable(batch)) {
-    return { ok: false, error: "That run is not taking orders. Pick another." };
+    return { ok: false, error: "That delivery is not taking orders. Pick another." };
   }
 
   const capacity = await checkCapacity(batch);

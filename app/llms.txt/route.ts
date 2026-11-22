@@ -64,11 +64,11 @@ export async function GET(): Promise<Response> {
     "",
     "## How it works",
     "",
-    "1. Orders are placed on the website for a run that is open.",
-    "2. Each run has a cut-off. After it the car goes out and buys the food.",
-    "3. The food is delivered to the hostel inside the run's delivery window.",
+    "1. Orders are placed on the website for a delivery that is open.",
+    "2. Each delivery has a cut-off. After it the car goes out and buys the food.",
+    "3. The food is delivered to the hostel inside the delivery window.",
     "",
-    "Payment is by bank transfer or card link, before the run goes out. An",
+    "Payment is by bank transfer or card link, before the delivery goes out. An",
     "order is only bought once it is paid.",
     "",
   ];
@@ -108,7 +108,7 @@ export async function GET(): Promise<Response> {
     "- The local market: pepper, vegetables, fruit, rice, grains and protein.",
     "- Anything not on the menu, asked for and quoted by hand.",
     ...(skincare
-      ? [`- Skincare, on its own run. Next drop: ${dropLabel(nextDrop(settings).date)}.`]
+      ? [`- Skincare, on its own delivery. Next drop: ${dropLabel(nextDrop(settings).date)}.`]
       : []),
     /*
      * With what each one costs.
@@ -165,7 +165,7 @@ export async function GET(): Promise<Response> {
     "Several people can share one delivery. One person can pay for everybody,",
     "or each person pays their own share and the fee is split evenly between",
     "whoever is in that shared delivery when it closes. Ordering separately",
-    "onto the same run does not split anything: each order pays its own fee.",
+    "onto the same delivery does not split anything: each order pays its own fee.",
     "",
     "## Pages",
     "",

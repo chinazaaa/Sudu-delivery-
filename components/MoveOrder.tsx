@@ -15,7 +15,7 @@ export default function MoveOrder({
   runs,
   paid = false,
   collapsed = false,
-  openLabel = "Change to another run",
+  openLabel = "Change to another delivery",
 }: {
   orderId: string;
   total: number;
@@ -37,8 +37,8 @@ export default function MoveOrder({
       <p className="rounded-xl bg-mint/10 px-3 py-2.5 text-sm font-semibold text-mint">
         Moved to {state.movedTo}.{" "}
         {paid
-          ? "Nothing more to do: your food comes on that run."
-          : "Pay for it below and you are on that run."}
+          ? "Nothing more to do: your food comes on that delivery."
+          : "Pay for it below and it is booked."}
       </p>
     );
   }
@@ -110,7 +110,7 @@ export default function MoveOrder({
       <p className="text-xs text-muted">
         {paid
           ? `Same food, same order number, same ${naira(total)}. Nothing is charged again.`
-          : `Same food, same order number. It is repriced against today's menu and that run's delivery, so the total can change from ${naira(total)}.`}
+          : `Same food, same order number. It is repriced against today's menu and that delivery's fee, so the total can change from ${naira(total)}.`}
       </p>
     </form>
   );

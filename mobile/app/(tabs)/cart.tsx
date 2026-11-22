@@ -186,7 +186,7 @@ export default function Cart() {
             lineHeight: 22,
           }}
         >
-          Pick a few things and they gather here, ready for the next run.
+          Pick a few things and they gather here, ready for the next delivery.
         </Text>
         <Button onPress={() => router.replace("/")} style={{ marginTop: 18 }}>
           Browse the menu
@@ -339,7 +339,7 @@ export default function Cart() {
   const room = cap === null ? null : cap - items;
   const hint =
     fee === null
-      ? "The fee lands with the next run."
+      ? "The fee lands with the next delivery."
       : room === null
         ? offered
           ? offered.note || "Delivery is on offer for this cart."
@@ -740,7 +740,7 @@ export default function Cart() {
               style={{ flex: 1, fontFamily: F.body, fontSize: 14, color: T.ink, lineHeight: 20 }}
             >
               <Text style={{ fontFamily: F.bodyBold }}>Ordering with friends? </Text>
-              Share this run and split the {naira(alone)}.
+              Share this delivery and split the {naira(alone)}.
             </Text>
             <Ionicons name="chevron-forward" size={18} color={T.ink} />
           </Pressable>

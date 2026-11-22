@@ -234,8 +234,7 @@ export default async function OrderPage({
     welcomeSaid().catch(() => ""),
   ]);
 
-  // A run that is not going out says so before anything else. Cancelled, it
-  // used to read "Paid and on the run", which is the one thing it is not.
+  // A delivery that is not going out says so before anything else.
   const cancelledRun = order.batch.status === "cancelled";
   // Cancelled or refunded: there is nothing to pay, nothing to move, nothing
   // to rate and nothing on its way. Every test below that used to ask only
@@ -250,10 +249,10 @@ export default async function OrderPage({
       : cancelledRun
         ? isParcel
           ? "This trip is not going out"
-          : "This run is not going out"
+          : "This delivery is not going out"
       : paid
         ? order.batch.stage === "ordering"
-          ? "Paid and on the run"
+          ? "Paid and booked in"
           : STAGE_LABEL[order.batch.stage]
         : order.status === "refunded"
           ? "Refunded"
@@ -272,7 +271,7 @@ export default async function OrderPage({
         : cancelledRun
           ? isParcel
             ? "This trip is not going out"
-            : "This run is not going out"
+            : "This delivery is not going out"
           // Handed out is a fact about the run, not about this order. An
           // order pulled off a run that then went without it is not
           // delivered, and saying so to somebody whose money came back is
@@ -282,15 +281,15 @@ export default async function OrderPage({
             ? "Delivered. Enjoy."
           : !paid
             ? expired
-              ? "This run has gone"
-              : "Pay to lock in your run"
+              ? "This delivery has gone"
+              : "Pay to lock in your delivery"
             : order.batch.stage === "at_drop"
               ? "At your block now"
               : order.batch.stage === "on_the_road"
                 ? "On the way to PAU"
                 : order.batch.stage === "at_counter"
                   ? "Collecting your food"
-                  : "You are on the run";
+                  : "Your delivery is booked";
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-10">
@@ -336,7 +335,7 @@ export default async function OrderPage({
       {!over && order.batch.stage !== "handed_out" && <LiveOrder />}
 
       {/* The board's order head: the state of it in words as big as the
-          page allows, on Ink with the speed stripes, and the run itself on
+          page allows, on Ink with the speed stripes, and the delivery itself on
           a ticket under it.
 
           It was a gradient card leading with the total. The total is the
@@ -433,7 +432,7 @@ export default async function OrderPage({
       )}
 
       {/* Payment sits straight under the status while it is unpaid. It used
-          to come after the run ticket, a screen down, and somebody who does
+          to come after the delivery ticket, a screen down, and somebody who does
           not scroll concluded there were no payment details at all. */}
       {/* Paying comes first while it is unpaid, and drops away once it is not. */}
       {!paid && !waitingOnGroup && !over && !expired && (
@@ -514,7 +513,7 @@ export default async function OrderPage({
               orderId={order.id}
               total={order.total}
               collapsed
-              openLabel="Want it on another run instead?"
+              openLabel="Want it on another delivery instead?"
               runs={others.map((run) => ({
                 id: run.id,
                 label: `${dayWord(run.run_date)} · ${SLOT_LABEL[run.slot]}`,
@@ -557,9 +556,9 @@ export default async function OrderPage({
       {!paid && !waitingOnGroup && !over && expired && (
         <section className="card space-y-3 border-brand/30 bg-brand-tint">
           <div>
-            <h2 className="font-bold">This run has gone. Do not pay it.</h2>
+            <h2 className="font-bold">This delivery has gone. Do not pay it.</h2>
             <p className="mt-1 text-sm text-ink/75">
-              Nothing was charged. Move it to another run and it is yours again.
+              Nothing was charged. Move it to another delivery and it is yours again.
             </p>
           </div>
           <MoveOrder
@@ -592,7 +591,7 @@ export default async function OrderPage({
                 share.customer_phone,
                 `Hi ${name}, here is your part of the Sudu order ` +
                   `${shareRef(share, order.shares)}: ${naira(share.total)}. ` +
-                  `Pay here and you are on the run: ${url}`
+                  `Pay here and you are in: ${url}`
               ),
             };
           })}
@@ -704,7 +703,7 @@ export default async function OrderPage({
 
       {/* The car is the thing worth sharing: one delivery fee covers whatever
           is in it, so every friend who joins makes it cheaper for all of them.
-          Only while the run is still taking orders.
+          Only while the delivery is still taking orders.
 
           And only before paying. Once the fee is charged it does not change,
           and a friend joining afterwards pays only what their food adds, so

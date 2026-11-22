@@ -87,7 +87,7 @@ export default async function CustomOrderPage({
       q: "How much does it cost?",
       a:
         "What the thing itself costs, plus the ordinary delivery fee for " +
-        "the run it travels on. We tell you the price before you pay " +
+        "the delivery it travels on. We tell you the price before you pay " +
         "anything, so nobody is committed to a figure they have not seen.",
     },
     {

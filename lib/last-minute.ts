@@ -132,5 +132,5 @@ export function anythingLeft(stillToGoText: string): boolean {
 
 /** Said to whoever is looking at one, so the hurry is the point of it. */
 export function payWithinSaid(minutes = PAY_WITHIN_MINUTES): string {
-  return `Pay within ${minutes} minutes or it comes off the run`;
+  return `Pay within ${minutes} minutes or it comes off the delivery`;
 }

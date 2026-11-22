@@ -48,7 +48,7 @@ export async function generateMetadata({
     description:
       `Order ${name} from Sangotedo to Pan-Atlantic University. ` +
       `${count} thing${count === 1 ? "" : "s"} on the menu, one delivery ` +
-      `between everybody on the run.`,
+      `between everybody on the delivery.`,
     alternates: { canonical: `/r/${place.restaurant.href}` },
     openGraph: {
       title: `${name} delivery to PAU`,
@@ -372,7 +372,7 @@ export default async function RestaurantPage({
         Order {place.restaurant.name} through Sudu and have it delivered to
         your Pan-Atlantic University hostel. {sections}{" "}
         You can add things from other restaurants to the same order, and the
-        one delivery is shared between everybody on the run.
+        one delivery is shared between everybody on the delivery.
       </p>
     </div>
   );

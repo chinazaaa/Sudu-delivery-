@@ -180,8 +180,8 @@ export function closureSaid(closure: Closure, today = lagosToday()): string {
   const when = rangeLabel(closure.starts_on, closure.ends_on, today);
   const named = closure.name.trim();
   const days = isOn(closure, today)
-    ? `No runs until ${rangeLabel(closure.ends_on, closure.ends_on, today)}`
-    : `No runs ${when}`;
+    ? `No deliveries until ${rangeLabel(closure.ends_on, closure.ends_on, today)}`
+    : `No deliveries ${when}`;
   return named === "" ? days : `${days} · ${named}`;
 }
 

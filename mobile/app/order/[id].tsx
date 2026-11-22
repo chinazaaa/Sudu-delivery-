@@ -94,7 +94,7 @@ export default function Order() {
               : ["Paid", T.brand]
           : order.payable
             ? ["Awaiting payment", T.volt]
-            : ["Run gone", T.muted];
+            : ["Delivery gone", T.muted];
   const headline = done
     ? "Delivered. Enjoy."
     : order.status === "refunded"
@@ -104,12 +104,12 @@ export default function Order() {
         : !paid
           ? order.payable
             ? `Pay ${naira(order.total)}`
-            : "This run has gone"
+            : "This delivery has gone"
           : order.stage === "on_the_road"
             ? "On the way to PAU"
             : order.stage === "at_drop"
               ? "At your block now"
-              : "You are on the run";
+              : "Your delivery is booked";
   // A parcel has no slot anybody chose and, until the day is agreed, no day
   // either: the run label over it was a promise nobody had made.
   const sub = isParcel
@@ -175,7 +175,7 @@ export default function Order() {
         >
           <Display size={26}>Do not pay this one</Display>
           <Text style={{ fontFamily: F.body, fontSize: 14, color: T.ink, lineHeight: 20 }}>
-            Nothing was charged. This run has been bought for already, so put your
+            Nothing was charged. This delivery has been bought for already, so put your
             food on another one and it is yours again, priced on today's menu.
           </Text>
 
@@ -246,9 +246,6 @@ export default function Order() {
           />
 
           <View style={{ padding: 14, gap: 8 }}>
-
-          {/* The narration is not asked for any more: bank alerts do not carry it. */}
-          <Tap onPress={() => copy(account.number, "account")} label={copied === "account" ? "Copied" : "Copy account"} />
 
           {order.accounts.length > 1 && (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" }}>

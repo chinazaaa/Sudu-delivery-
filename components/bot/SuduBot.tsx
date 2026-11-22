@@ -1784,7 +1784,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           const car = start?.carFrom ?? 0;
           bot(
             floor > 0
-              ? `Delivery starts at <b>${naira(floor)}</b> on a shared run and goes ` +
+              ? `Delivery starts at <b>${naira(floor)}</b> on a shared delivery and goes ` +
                   "up with how much is in the car, so a bigger order pays a little more."
               : "Delivery depends on how much is in the car.",
             520
@@ -3506,7 +3506,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
       }
 
       const confirm = (
-        hint = "Nothing is charged until you transfer. Change something covers the food, the block and the run."
+        hint = "Nothing is charged until you transfer. Change something covers the food, the block and the delivery."
       ) => {
         setAsk({
           of: "buttons",
@@ -3594,7 +3594,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
                             batchId: mine.run?.id ?? "",
                             /* A code is worth what it is worth on the
                                delivery actually being charged, and on a
-                               car of its own there is no run to read. */
+                               car of its own there is no delivery to read. */
                             deliverAt: mine.car?.at ?? "",
                             phone: mine.phone,
                             lines: mine.lines.map((line) => ({
@@ -4087,7 +4087,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
             /* A car of its own instead of a run. The checkout makes the
                car when it takes the order, so this is the moment it has
                to be told, and an order that said nothing was turned away
-               for having no run on it. */
+               for having no delivery on it. */
             deliverAt: mine.car?.at ?? "",
             name: mine.name,
             phone: mine.phone,
@@ -4746,7 +4746,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
           },
         },
       ],
-      hint: "If there is no run that day, a car can go out just for it.",
+      hint: "If there is no delivery that day, a car can go out just for it.",
     });
   }, [bot, handOver, me]);
 
@@ -4786,7 +4786,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
         /* Nothing can reach them on the day. Said straight, with the
            nearest run offered rather than nothing at all. */
         bot(
-          "There is no run that day, and no car I can send either. " +
+          "There is no delivery that day, and no car I can send either. " +
             "The nearest I can do is below.",
           520
         );
@@ -4827,8 +4827,8 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     const to = held.current.hostel !== "" ? ` to <b>${held.current.hostel}</b>` : "";
     bot(
       wanted !== "" && first.runDate === wanted
-        ? `There is a run${to} that very day, <b>${first.said}</b>.`
-        : `Our next run${to} is <b>${first.said}</b>.`,
+        ? `There is a delivery${to} that very day, <b>${first.said}</b>.`
+        : `Our next delivery${to} is <b>${first.said}</b>.`,
       480
     );
     say(
@@ -4856,7 +4856,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
     // "do you need it sooner" and then answering "no, you cannot" is a
     // question that should not have been put.
     /* The same two hours askSooner uses. Offering the button on an hour's
-       difference walked somebody into a screen that then told them the run
+       difference walked somebody into a screen that then told them the delivery
        they already had was the soonest, which is a question that should not
        have been put. */
     const by = new Date(first.startsAt).getTime();
@@ -5517,7 +5517,7 @@ export default function SuduBot({ whatsapp = "" }: { whatsapp?: string }) {
      * has already decided they want the food.
      */
     /* Open rather than narrow, because not everybody who opens this is
-       buying: some are asking what time the run is, or whether the shop
+       buying: some are asking what time the delivery is, or whether the shop
        has something. "What are you after" is a question only an order
        answers, and the ones with a question then have to work out that
        they are allowed to ask it. */

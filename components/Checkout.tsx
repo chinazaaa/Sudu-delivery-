@@ -1677,8 +1677,8 @@ export default function Checkout({
         {/*
             How it comes, on a day where there are two answers.
 
-            The day list holds one entry per day, and where a run is going
-            that day the run is the entry: the car would be dearer, and the
+            The day list holds one entry per day, and where a delivery is going
+            that day the delivery is the entry: the car would be dearer, and the
             reasoning went that it would be no sooner either. That second
             half is simply not true. Tonight's run is between five and
             seven; a car of its own can be at the block at one o'clock, and
@@ -1706,11 +1706,11 @@ export default function Checkout({
 
               The words are the customer's, not the shop's. "Skip the
               wait" and "Standard" are what the choice is from where they
-              are sitting; a run and a car of its own are how we arrange
+              are sitting; a delivery and a car of its own are how we arrange
               it, which is ours to know and no use to them.
 
               A sooner box only exists where it is properly sooner: see
-              worthACar in lib/pick-a-day. A car at three against a run at
+              worthACar in lib/pick-a-day. A car at three against a delivery at
               three buys nothing and is not offered, so there is never a
               box here that is only dearer.
            */
@@ -1853,7 +1853,7 @@ export default function Checkout({
         {selected &&
           (selected.lastMinute === true ? (
             /*
-              The closed run that has not been shopped yet.
+              The closed delivery that has not been shopped yet.
               
               It cannot say "orders close at half past four" when that was
               an hour ago, and the thing worth saying is the hurry: she is
@@ -2054,8 +2054,8 @@ export default function Checkout({
             Only where there is something to do about it.
 
             This used to explain the shop's own words back at the customer:
-            "The Place is in Ajah, and we only go there on a run." Nobody
-            ordering lunch knows or cares what a run is, and on Ajah it was
+            "The Place is in Ajah, and we only go there on a delivery." Nobody
+            ordering lunch knows or cares what a delivery is, and on Ajah it was
             not even true, because nothing runs there and the car is the
             only way it ever goes. It also sat over a picker reading today
             between four and seven, so it was explaining a delay that was
@@ -2145,7 +2145,7 @@ export default function Checkout({
 
 
       {/*
-          Sharing a run is asked on the cart, and only there.
+          Sharing a delivery is asked on the cart, and only there.
 
           It was asked here as well, in the middle of somebody filling in
           their name and their block. Nobody gathers friends after they
@@ -2796,7 +2796,7 @@ export default function Checkout({
         <div className="flex justify-between text-muted">
           <span>
             {sameDay
-              ? // The day is said underneath, the same as it is for a run.
+              ? // The day is said underneath, the same as it is for a delivery.
                 // Saying it here as well printed "Delivery between 4pm and
                 // 7pm tomorrow" with "Between 4pm and 7pm tomorrow" directly
                 // under it.
@@ -2921,7 +2921,7 @@ export default function Checkout({
         )}
         {/* The same question, and a sharper one, for a car of its own: this
             is the dearest way to get food here, and the number is meaningless
-            until you can see both the rung it landed on and the run it could
+            until you can see both the rung it landed on and the delivery it could
             have been on instead. The way out is a tap, inside the answer. */}
         {!shared && !promotion && sameDay && byValue.length === 0 && (
           <FeeBands

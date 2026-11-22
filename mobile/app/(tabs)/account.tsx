@@ -337,7 +337,7 @@ export default function Account() {
         <Line
           icon="people-outline"
           label="Group orders"
-          note="Start or join a run"
+          note="Start or join a delivery"
           onPress={() => router.push("/group")}
         />
         <Line
@@ -436,7 +436,7 @@ export default function Account() {
                 Your block
               </Text>
               {/* Picked rather than typed wherever the shop has a list: a
-                  misspelt block is a run sheet nobody can sort. */}
+                  misspelt block is a delivery sheet nobody can sort. */}
               {(shop?.hostels ?? []).length === 0 ? (
                 <TextInput
                   value={block}

@@ -213,7 +213,7 @@ export default function Orders() {
         </View>
       )}
 
-      {past.length > 0 && <Ticket style={{ marginTop: 2 }}>Past runs</Ticket>}
+      {past.length > 0 && <Ticket style={{ marginTop: 2 }}>Past deliveries</Ticket>}
 
       {past.map((row, at) => (
         <View
@@ -313,7 +313,7 @@ function Live({ row, onPress }: { row: Row; onPress: () => void }) {
     row.status === "pending"
       ? row.payable
         ? "Not paid yet"
-        : "Run gone"
+        : "Delivery gone"
       : here < 0
         ? "Ordering open"
         : row.stage === "at_counter"
@@ -399,7 +399,7 @@ function Chip({ row }: { row: Row }) {
       : row.status === "cancelled"
         ? ["Cancelled", T.muted]
         : row.status === "pending"
-          ? [row.payable ? "Not paid" : "Run gone", T.brand]
+          ? [row.payable ? "Not paid" : "Delivery gone", T.brand]
           : ["Delivered", T.mint];
 
   return (

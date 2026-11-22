@@ -134,10 +134,10 @@ export default async function DeliveryToPauPage() {
           ? `, including ${places.slice(0, 6).map((one) => one.name).join(", ")}.`
           : ".") +
         (areaNames.length > 0
-          ? ` ${areaNames.join(" and ")} as well, on the runs that go that way` +
+          ? ` ${areaNames.join(" and ")} as well, on the deliveries that go that way` +
             (farthest > 0 ? `, which adds ${naira(farthest)} to the fee.` : ".")
           : "") +
-        " Everything on a run is collected and brought onto campus together.",
+        " Everything on a delivery is collected and brought onto campus together.",
     },
     ...(skincare
       ? [
@@ -157,7 +157,7 @@ export default async function DeliveryToPauPage() {
         "Bank transfer or card. For a transfer you get the account details at " +
         "checkout and send the exact total. For card, say so at checkout and " +
         "we send you a payment link on WhatsApp. Either way the order is " +
-        "confirmed once it is paid, and goes on the run you picked.",
+        "confirmed once it is paid, and goes on the delivery you picked.",
     },
     {
       q: "Can I send or receive a parcel at PAU?",
@@ -266,7 +266,7 @@ export default async function DeliveryToPauPage() {
       <Section title="Why PAU students use Sudu">
         <dl className="space-y-3">
           <Reason title="Several restaurants, one delivery">
-            Order from more than one kitchen on the same run instead of
+            Order from more than one kitchen on the same delivery instead of
             arranging a delivery from each of them.
           </Reason>
           <Reason title="Delivered to your PAU hostel">
@@ -296,7 +296,7 @@ export default async function DeliveryToPauPage() {
       <Section title="How it works">
         <ol className="list-inside list-decimal space-y-1">
           <li>Put what you want in the cart, from as many restaurants as you like.</li>
-          <li>Pick the run you want to be on, and say which hostel you are in.</li>
+          <li>Pick the delivery you want to be on, and say which hostel you are in.</li>
           <li>Pay by bank transfer. The details are on the checkout page.</li>
           <li>
             The food is collected, brought onto campus together and handed to
@@ -331,7 +331,7 @@ export default async function DeliveryToPauPage() {
         ) : (
           <p>
             One fee for the order, not a fee each, split between everybody
-            ordering on the same run.
+            ordering on the same delivery.
           </p>
         )}
       </Section>
@@ -357,13 +357,13 @@ export default async function DeliveryToPauPage() {
       )}
 
       {areaNames.length > 0 && (
-        <Section title={`${areaNames.join(" and ")} runs`}>
+        <Section title={`${areaNames.join(" and ")} deliveries`}>
           <p>
-            Not every run goes the same way. Most are Sangotedo and Novare, and
+            Not every delivery goes the same way. Most are Sangotedo and Novare, and
             some go out to {areaNames.join(" and ")}, which is a longer drive
             and a bigger fee
             {farthest > 0 ? `, ${naira(farthest)} on top of the ladder above` : ""}.
-            The checkout only offers you a run that can actually fetch what is
+            The checkout only offers you a delivery that can actually fetch what is
             in your cart, so you cannot end up waiting on a delivery that was never
             going that way.
           </p>
@@ -374,7 +374,7 @@ export default async function DeliveryToPauPage() {
         <Section title="Skincare to PAU">
           <p>
             {skincarePromise(settings)} It is a separate shelf with its own
-            basket and its own car, so it does not ride on the food run.
+            basket and its own car, so it does not ride on the food delivery.
             {skincareDay ? ` Order any day and it comes ${skincareDay}.` : ""}
           </p>
           <p>

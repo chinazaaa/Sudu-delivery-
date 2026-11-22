@@ -417,7 +417,7 @@ export default function Checkout() {
     ? `${slotWindow(picked)} ${slotDayWord(picked)}`
     : run
       ? `${run.deliveryWindow.charAt(0).toLowerCase()}${run.deliveryWindow.slice(1)} ${run.label.split(" · ")[0]}`
-      : (going?.said ?? "on the next run");
+      : (going?.said ?? "on the next delivery");
 
   // A picked time makes its own trip, so nothing is shared and there is no
   // earlier order on it to take off. A run is priced on everything travelling
@@ -622,7 +622,7 @@ export default function Checkout() {
       {/* Decided, not asked. A dropdown here made somebody know the fee
           ladder, the cut off and the three hours it takes to fetch food and
           drive it over before they could buy lunch, and the commonest answer
-          to it was the dear one twenty minutes before a run went to the same
+          to it was the dear one twenty minutes before a delivery went to the same
           block. */}
       <Step number="01" title="When" />
       <View

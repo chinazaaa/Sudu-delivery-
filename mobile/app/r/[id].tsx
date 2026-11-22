@@ -186,7 +186,7 @@ export default function Restaurant() {
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
             {where !== "" && <HeroChip icon="location-outline">{where}</HeroChip>}
             {arriving !== "" && (
-              <HeroChip icon="time-outline">Next run {arriving}</HeroChip>
+              <HeroChip icon="time-outline">Next delivery {arriving}</HeroChip>
             )}
           </View>
           <View

@@ -48,7 +48,7 @@ export function whyNotChangeable(order: {
     return "This is part of a shared delivery, so message us and we will change it.";
   }
   if (!order.stillOpen) {
-    return "This run has closed, so message us and we will see what we can do.";
+    return "This delivery has closed, so message us and we will see what we can do.";
   }
   return "";
 }

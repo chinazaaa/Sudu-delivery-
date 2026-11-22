@@ -87,16 +87,16 @@ export default async function TermsPage() {
         <p>
           Sudu is a delivery and errand service for Pan-Atlantic University. We
           do not cook. We buy what you asked for from a restaurant, a market or
-          a shop and carry it to your block on a run shared with everybody else
+          a shop and carry it to your block on a delivery shared with everybody else
           who ordered for the same car.
         </p>
         <p>
-          Most runs go to Sangotedo and Novare Mall.
+          Most deliveries go to Sangotedo and Novare Mall.
           {beyond !== "" ? (
             <>
               {" "}
               Some go further out, to {beyond}, which is a longer drive and a
-              bigger fee. The checkout only offers you a run that can actually
+              bigger fee. The checkout only offers you a delivery that can actually
               fetch what is in your cart, so you cannot end up waiting on a car
               that was never going that way.
             </>
@@ -142,7 +142,7 @@ export default async function TermsPage() {
           before you order and explains how it was worked out.
         </p>
         <p>
-          A run has a cut off. Order before it and you are on that car. After
+          A delivery has a cut off. Order before it and you are on that car. After
           it you are on the next one, or you can ask for a car of its own,
           which costs more because it is a trip for one person.
         </p>
@@ -179,7 +179,7 @@ export default async function TermsPage() {
           <li>Collecting what you actually ordered.</li>
           <li>Everything on your list being in the bag when it reaches you.</li>
           <li>Carrying it carefully, upright and closed.</li>
-          <li>Bringing it to the block you gave us, on the run you paid for.</li>
+          <li>Bringing it to the block you gave us, on the delivery you paid for.</li>
           <li>Telling you where it has got to, and telling you when it is late.</li>
         </ul>
       </Clause>
@@ -258,7 +258,7 @@ export default async function TermsPage() {
           restaurant yourself before you order.
         </p>
         <p>
-          If food from a run makes you ill, see a doctor first and tell us
+          If food from a delivery makes you ill, see a doctor first and tell us
           after. We are a delivery service and we cannot tell you whether you
           need one. Then tell us the same day, on the WhatsApp number on your
           order, and tell us which item it was: every order keeps the kitchen
@@ -327,7 +327,7 @@ export default async function TermsPage() {
           fee included. Message us and we will do it.
         </p>
         <p>
-          Once the run has gone shopping your food has been bought with our
+          Once the delivery has gone shopping your food has been bought with our
           money and it cannot go back on the shelf, so it cannot be cancelled.
           If you tell us in time we will do what we can, and if a restaurant
           will take something back we pass that on.
@@ -340,7 +340,7 @@ export default async function TermsPage() {
         </p>
         <p>
           If you do not come down and your phone is not answered, the driver
-          waits as long as the rest of the run allows and then carries your bag
+          waits as long as the rest of the delivery allows and then carries your bag
           on to the next block. It is still yours: come and collect it from us.
           What we cannot do is keep food warm, hold a car up while everybody
           else on it waits, or leave a bag outside a room.
@@ -402,7 +402,7 @@ export default async function TermsPage() {
         <p>
           A restaurant closing unexpectedly, a campus lock down, a fuel queue,
           a flood, a strike, a network outage that stops payments: where one of
-          these stops a run, we tell you and we refund anything you paid for
+          these stops a delivery, we tell you and we refund anything you paid for
           food that was never bought, and the delivery fee with it.
         </p>
       </Clause>

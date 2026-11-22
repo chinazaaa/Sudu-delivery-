@@ -287,7 +287,7 @@ export default function Group() {
             </Text>
             {(
               [
-                ["Start it", "You pick the run and open the basket."],
+                ["Start it", "You pick the delivery and open the basket."],
                 ["Share the link", "Drop it in your block chat. No app needed to join."],
                 ["Everyone adds theirs", "They pay for their own food as they add it."],
                 ["One fee, split", "The delivery fee divides by however many joined."],
@@ -367,12 +367,12 @@ export default function Group() {
                 The two ways, as two cards, the way the website asks it.
 
                 This was a sentence saying what the group would go on, a
-                paragraph explaining that a run rides a car already going
+                paragraph explaining that a delivery rides a car already going
                 so it costs less, the estimate in full, and a tinted box
                 offering the other way with a tap. Four blocks of type for
                 one question.
 
-                Nobody is choosing between a run and a car: they are
+                Nobody is choosing between a delivery and a car: they are
                 choosing between cheaper and later and dearer and sooner.
                 One word and a time says that, and the one that is picked
                 is the one the group goes on.
