@@ -505,7 +505,18 @@ export default async function CartsPage({
                     <span className="font-semibold text-brand-dark">From the chat · </span>
                   )}
                   {agoLabel(cart.updated_at)}
-                  {cart.hostel && ` · ${cart.hostel}`} · {cart.items} item
+                  {cart.hostel && ` · ${cart.hostel}`}
+                  {/* Which kitchen it is from, so there is no opening the
+                      cart to find out whose food somebody left. */}
+                  {(() => {
+                    const shops = [
+                      ...new Set(basketOf(cart).map((line) => line.shop).filter((name) => name !== "")),
+                    ];
+                    return shops.length > 0 ? (
+                      <span className="font-semibold text-ink"> · {shops.join(" + ")}</span>
+                    ) : null;
+                  })()}{" "}
+                  · {cart.items} item
                   {cart.items === 1 ? "" : "s"} · {cart.summary}
                 </p>
 
