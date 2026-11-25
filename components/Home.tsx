@@ -396,6 +396,39 @@ export default function Home({
                     </li>
                   ))}
                 </ul>
+                {/* The rest of what is on offer, said on this screen. The full
+                    tiles are further down and nobody scrolls to find out
+                    whether there is more, so the names sit right under the
+                    four, in a row that runs off the edge: the cut-off chip
+                    is what says it carries on. */}
+                {(featured.length > 0 || more.length > 0) && (
+                  <div className="flex items-center gap-2">
+                    <span className="shrink-0 text-sm font-extrabold text-muted">Also</span>
+                    <ul className="flex min-w-0 gap-2 overflow-x-auto whitespace-nowrap pb-1">
+                      {featured.map((one) => (
+                        <li key={one.href} className="shrink-0">
+                          <Link
+                            href={one.href}
+                            className="inline-block rounded-full border-2 border-ink bg-white px-3.5 py-1.5 text-sm font-bold"
+                          >
+                            {one.aisle}
+                          </Link>
+                        </li>
+                      ))}
+                      {more.map((one) => (
+                        <li key={one.aisle} className="shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setBuilding({ label: one.aisle, aisle: one.aisle })}
+                            className="inline-block rounded-full border-2 border-ink bg-white px-3.5 py-1.5 text-sm font-bold"
+                          >
+                            {one.aisle}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
