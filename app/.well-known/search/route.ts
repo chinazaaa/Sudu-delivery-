@@ -42,44 +42,50 @@ const SERVICES: { title: string; url: string; summary: string; words: string }[]
     url: `${SITE}/pickup`,
     summary:
       "We pick up your food, laundry or printing from a place on campus and bring it to you. A flat fee, every day.",
-    words: "pickup pick up campus student center cafeteria laundry printing collect",
+    words: "pickup pick up collect campus student center cafeteria laundry printing fetch bring my food from cafeteria bring to hostel",
   },
   {
     title: "Market delivery",
     url: `${SITE}/market`,
     summary: "The local market: pepper, vegetables, fruit, rice, grains and protein, delivered.",
-    words: "market groceries foodstuff vegetables pepper rice fruit provisions",
+    words: "market groceries grocery foodstuff vegetables tomatoes pepper onions rice beans garri yam fruit fruits meat fish chicken eggs protein provisions mile 12 buy food items",
   },
   {
     title: "Pharmacy, fetched to your hostel",
     url: `${SITE}/pau-pharmacy`,
     summary: "Over-the-counter medicine fetched from a pharmacy and brought to the hostel. No prescription medicine.",
-    words: "pharmacy medicine drugs tablets pain cold vitamins",
+    words: "pharmacy chemist medicine drugs tablets capsules paracetamol panadol ibuprofen painkiller pain relief headache fever cold flu cough syrup catarrh malaria antimalarial coartem lonart amatem rehydration ors diarrhoea stomach ulcer allergy antihistamine chlorpheniramine first aid plaster bandage antiseptic dettol vitamins vitamin c zinc supplement sanitary pad",
+  },
+  {
+    title: "Pharmacy shelf: over the counter",
+    url: `${SITE}/pharmacy`,
+    summary: "Over-the-counter medicine and first aid, ordered from a shelf. No prescription medicine.",
+    words: "pharmacy shelf over the counter otc paracetamol panadol cough cold flu pain malaria first aid vitamins",
   },
   {
     title: "Skincare",
     url: `${SITE}/skincare`,
     summary: "Skincare on its own delivery drop.",
-    words: "skincare skin cream serum cleanser moisturiser beauty",
+    words: "skincare skin care cream serum cleanser face wash moisturiser moisturizer sunscreen spf toner niacinamide vitamin c acne pimples dark spots shea butter lotion body lip balm cerave neutrogena beauty",
   },
   {
     title: "Parcels to and from PAU",
     url: `${SITE}/parcel`,
     summary:
       "Send a parcel to a named student at their block, or collect one from the campus. Priced by weight, photographed at both ends.",
-    words: "parcel package courier send deliver document gift luggage",
+    words: "parcel package courier dispatch send ship shipping deliver delivery document documents envelope box luggage bag items collect from campus",
   },
   {
     title: "Something we do not stock",
     url: `${SITE}/custom-order`,
     summary: "Tell us what you want and we buy it and bring it, with the price agreed first.",
-    words: "custom order anything buy get errand shop request",
+    words: "custom order anything buy get errand shop request pick up for me find item supermarket shopping stationery charger",
   },
   {
     title: "Snacks at PAU",
     url: `${SITE}/pau-snacks`,
     summary: "Snacks, drinks and small chops brought to your block.",
-    words: "snacks drinks small chops chips biscuits",
+    words: "snacks snack drinks drink small chops chips biscuits cookies shawarma pastry meat pie sausage roll soda juice water",
   },
   {
     title: "Sending a gift to someone at PAU",
@@ -95,6 +101,22 @@ const SERVICES: { title: string; url: string; summary: string; words: string }[]
   },
 ];
 
+// What people type for the errands, beyond what the pages say about themselves.
+const EXTRA: Record<string, string> = {
+  "pau-project-printing":
+    "print printing printer photocopy photocopying copy xerox scan typing typesetting binding bind spiral comb coil hardcover hard cover softcover thesis dissertation project final year lamination laminate passport photo id card flyer poster banner brochure business card handout slides past questions assignment A4 A3 colour color black white",
+  "pau-tailoring":
+    "tailor tailoring sew sewing alter alteration alterations hem hemming fix zip zipper button mend repair clothes cloth trousers dress shirt uniform fitting seamstress native",
+  "pau-hair-and-barbing":
+    "hair hairdresser hairstylist braids braiding cornrows weave wig install barber barbing haircut cut fade trim nails manicure pedicure makeup make up lashes salon",
+  "pau-phone-and-laptop-repair":
+    "repair fix phone laptop screen cracked screen replacement battery charging port keyboard software virus slow windows formatting water damage technician",
+  "pau-buy-a-laptop":
+    "laptop buy macbook hp dell lenovo thinkpad phone iphone samsung tecno infinix tablet second hand used new gadget computer",
+  "pau-laundry":
+    "laundry wash washing dry cleaning dry clean iron ironing press folding clothes duvet bedsheet bedsheets pick up delivery",
+};
+
 const clean = (text: string) => text.toLowerCase().replace(/[^a-z0-9'& -]/g, " ");
 
 function services(words: string[]): Result[] {
@@ -106,7 +128,7 @@ function services(words: string[]): Result[] {
       title: one.title,
       url: `${SITE}/${one.slug}`,
       summary: one.lead,
-      words: [one.ticket, ...one.pills, ...one.chips].join(" "),
+      words: [one.ticket, ...one.pills, ...one.chips, EXTRA[one.slug] ?? ""].join(" "),
     })),
   ];
 
@@ -132,7 +154,18 @@ function services(words: string[]): Result[] {
 }
 
 async function dishes(words: string[]): Promise<Result[]> {
-  const likes = words.map((word) => `name.ilike.%${word}%`).join(",");
+  // A shelf's name counts too: "vitamins" or "cough" finds what is on that
+  // shelf even when no product is called that.
+  const { data: shelves } = await db()
+    .from("menu_categories")
+    .select("id")
+    .or(words.map((word) => `name.ilike.%${word}%`).join(","))
+    .limit(20);
+  const shelfIds = (shelves ?? []).map((row: { id: string }) => row.id);
+  const likes = [
+    ...words.map((word) => `name.ilike.%${word}%`),
+    ...(shelfIds.length > 0 ? [`category_id.in.(${shelfIds.join(",")})`] : []),
+  ].join(",");
   const { data } = await db()
     .from("menu_items")
     .select("name, price_food, description, restaurants!inner(name, slug, active)")
