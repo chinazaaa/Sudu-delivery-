@@ -6,6 +6,15 @@ const PRIVATE = [
   "/admin/",
   "/promoter",
   "/o/",
+  // A receipt carries a name, a phone number and a block, and a group's page
+  // carries everybody's: neither belongs in any index, and Cloudflare's
+  // search indexes whatever a crawler is allowed to read.
+  "/receipt/",
+  "/orders",
+  "/g/",
+  "/join/",
+  // Sample screens, not part of the shop.
+  "/demo",
   "/checkout",
   "/cart",
   // A promoter's own link is not a page, it is a doorway that sets a cookie
