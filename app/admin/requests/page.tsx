@@ -8,6 +8,7 @@ import {
   convertPickup,
   deleteRequest,
   linkRequestToOrder,
+  makeRequestOrder,
   markRequest,
   settleRequest,
   shelveRequest,
@@ -15,6 +16,8 @@ import {
 } from "./actions";
 import ActionButton from "@/components/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import RequestOrder from "@/components/admin/RequestOrder";
+import { lagosToday } from "@/lib/time";
 import SaveButton from "@/components/SaveButton";
 import Link from "next/link";
 import { db } from "@/lib/supabase";
@@ -154,6 +157,27 @@ export default async function RequestsPage({
       one.order_no,
     ])
   );
+
+  // Where a custom order could go: every delivery from today on that has not
+  // been cancelled or finished.
+  const { data: goingRows } = await db()
+    .from("batches")
+    .select("id, run_date, delivery_window_text, status")
+    .gte("run_date", lagosToday())
+    .in("status", ["open", "closed"])
+    .order("run_date")
+    .limit(14);
+  const goingTo = (
+    (goingRows ?? []) as { id: string; run_date: string; delivery_window_text: string; status: string }[]
+  ).map((one) => ({
+    value: `run:${one.id}`,
+    label: `${new Date(`${one.run_date}T12:00:00Z`).toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    })}, ${one.delivery_window_text}${one.status === "closed" ? " (closed)" : ""}`,
+  }));
 
   return (
     <div>
@@ -498,6 +522,26 @@ export default async function RequestsPage({
                 </form>
               )}
 
+              {/* Anything else we bought for somebody: a line for the thing,
+                  a line for the gift bag, the delivery, and which delivery
+                  it rides on. It becomes an order like any other. */}
+              {!ask.wanted.startsWith("Campus pickup") &&
+                !ask.order_id &&
+                !ask.money_id &&
+                goingTo.length > 0 && (
+                  <div className="border-t border-black/5 pt-3">
+                    <div>
+                      <RequestOrder
+                        id={ask.id}
+                        wanted={ask.wanted}
+                        going={goingTo}
+                        fee={4000}
+                        action={makeRequestOrder}
+                      />
+                    </div>
+                  </div>
+                )}
+
               {/* A test or a mistake: gone for good, after one more tap. */}
               {!ask.money_id && !ask.order_id && (
                 <form action={deleteRequest} className="border-t border-black/5 pt-3">
@@ -833,15 +877,26 @@ export default async function RequestsPage({
                       </select>
                     </div>
                     <div className="w-28">
+                      <label className="label" htmlFor={`shelf-cost-${ask.id}`}>
+                        It costs us
+                      </label>
+                      <input
+                        id={`shelf-cost-${ask.id}`}
+                        name="cost"
+                        inputMode="numeric"
+                        placeholder="13000"
+                        className="field py-2 text-sm"
+                      />
+                    </div>
+                    <div className="w-28">
                       <label className="label" htmlFor={`shelf-price-${ask.id}`}>
-                        For
+                        Sells for
                       </label>
                       <input
                         id={`shelf-price-${ask.id}`}
                         name="quoted"
                         inputMode="numeric"
-                        defaultValue={ask.quoted ?? ""}
-                        placeholder="0"
+                        placeholder="cost + 15%"
                         className="field py-2 text-sm"
                       />
                     </div>
@@ -850,7 +905,8 @@ export default async function RequestsPage({
                     </ActionButton>
                       <p className="w-full text-xs text-muted">
                         Only when the same thing keeps being asked for. Their
-                        words become the name and this becomes the price: no
+                        words become the name. Put what it costs and it sells
+                        for that plus 15%, or type a price. No
                         picture, no description, and an Edit button beside it
                         so you can finish it off.
                       </p>

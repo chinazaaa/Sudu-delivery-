@@ -182,7 +182,12 @@ export async function shelveRequest(form: FormData): Promise<void> {
   // What you typed into "Priced at" wins, because it is the figure you
   // settled on; what they said they would pay is only ever a starting point.
   const typed = Number(String(form.get("quoted") ?? "").replace(/[^\d]/g, ""));
-  const price = typed > 0 ? typed : Number(request.quoted ?? 0);
+  // Put what it costs and it sells for that plus 15%, up to the next 50.
+  // The quote on the ask is what ONE customer paid, with her delivery and
+  // her gift bag inside it, and is not what the thing sells for.
+  const cost = Number(String(form.get("cost") ?? "").replace(/[^\d]/g, ""));
+  const marked = cost > 0 ? Math.ceil((cost * 1.15) / 50) * 50 : 0;
+  const price = typed > 0 ? typed : marked;
 
   // Their words are a sentence, not a product name. The first line of it,
   // cut to something that fits on a card, and you rename it in a moment.
@@ -198,6 +203,7 @@ export async function shelveRequest(form: FormData): Promise<void> {
       restaurant_id: restaurantId,
       name,
       price_food: price,
+      ...(cost > 0 ? { price_cost: cost, cost_confirmed: true } : {}),
       // On sale only once it has a price. Without one the menu page already
       // refuses to put it on sale, and a ₦0 thing on a live shelf is worse
       // than one waiting quietly to be finished.
@@ -429,4 +435,142 @@ export async function unlinkRequestOrder(form: FormData): Promise<void> {
   await db().from("custom_requests").update({ order_id: null }).eq("id", id);
 
   revalidatePath("/admin/requests");
+}
+
+/**
+ * A custom ask, made into a real order from lines typed in: the thing, the
+ * gift bag, whatever else went in. Each line is a product of its own on the
+ * custom counter, kept off the shop, with what it cost so the profit is
+ * true. The order lands on the delivery picked, goes on the run list, has a
+ * number and a receipt, and is marked paid if she has paid.
+ */
+export async function makeRequestOrder(form: FormData): Promise<void> {
+  if (!(await isSignedIn())) throw new Error("Not signed in.");
+  const id = String(form.get("id") ?? "");
+  const { data } = await db()
+    .from("custom_requests")
+    .select("id, wanted, name, phone, hostel, note, order_id, money_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return;
+  const ask = data as {
+    wanted: string;
+    name: string;
+    phone: string;
+    hostel: string;
+    note: string;
+    order_id: string | null;
+    money_id: string | null;
+  };
+  if (ask.order_id) redirect(`/admin/orders/${ask.order_id}`);
+  if (ask.money_id) throw new Error("That one is already counted as other money.");
+
+  const phone = normalisePhone(ask.phone);
+  if (!phone) throw new Error("That number does not look right. Fix it on the request first.");
+
+  const digits = (text: unknown) => Number(String(text ?? "").replace(/[^\d]/g, "")) || 0;
+  let drafts: { name: string; price: string; cost: string }[] = [];
+  try {
+    drafts = JSON.parse(String(form.get("lines") ?? "[]"));
+  } catch {
+    drafts = [];
+  }
+  const lines = drafts
+    .map((one) => ({
+      name: String(one.name ?? "").trim().slice(0, 120),
+      price: digits(one.price),
+      cost: digits(one.cost),
+    }))
+    .filter((one) => one.name !== "" && one.price > 0);
+  if (lines.length === 0) throw new Error("Put at least one line with a price on it.");
+
+  const fee = digits(form.get("fee"));
+  if (fee < 4000) throw new Error("Delivery is never less than 4,000.");
+  const batchId = String(form.get("going") ?? "").replace(/^run:/, "");
+  if (!batchId) throw new Error("Pick which delivery it goes on.");
+  const paid = form.get("paid") === "on";
+
+  const food = lines.reduce((sum, one) => sum + one.price, 0);
+  const total = food + fee;
+
+  const { data: shop } = await db()
+    .from("restaurants")
+    .select("id")
+    .eq("kind", "custom")
+    .limit(1)
+    .maybeSingle();
+  const shopId = (shop as { id?: string } | null)?.id;
+  if (!shopId) throw new Error("There is no custom counter to put the lines on.");
+
+  await ensureCustomer({ phone, name: ask.name, hostel: ask.hostel });
+
+  const { data: order, error } = await db()
+    .from("orders")
+    .insert({
+      batch_id: batchId,
+      customer_phone: phone,
+      customer_name: ask.name,
+      hostel: ask.hostel,
+      subtotal_food: food,
+      fee,
+      discount: 0,
+      total,
+      customer_note: `${ask.wanted}${ask.note ? ` · ${ask.note}` : ""}`.slice(0, 500),
+      payment_method: "transfer",
+      status: paid ? "paid" : "pending",
+      source: "desk",
+      ...(paid ? { paid_at: new Date().toISOString(), paid_amount: total } : {}),
+    })
+    .select("id")
+    .single();
+  if (error || !order) throw new Error(`Could not make the order: ${error?.message ?? "nothing came back"}`);
+  const orderId = (order as { id: string }).id;
+
+  const { data: items, error: itemError } = await db()
+    .from("menu_items")
+    .insert(
+      lines.map((one) => ({
+        restaurant_id: shopId,
+        name: one.name,
+        price_food: one.price,
+        price_cost: one.cost > 0 ? one.cost : null,
+        cost_confirmed: one.cost > 0,
+        available: false,
+        sort_order: 100,
+      }))
+    )
+    .select("id");
+  if (itemError || !items || items.length !== lines.length) {
+    await db().from("orders").delete().eq("id", orderId);
+    throw new Error("Could not save the lines. Nothing was made.");
+  }
+  const { error: lineError } = await db()
+    .from("order_items")
+    .insert(
+      lines.map((one, at) => ({
+        order_id: orderId,
+        menu_item_id: (items[at] as { id: string }).id,
+        qty: 1,
+        unit_price_at_order: one.price,
+      }))
+    );
+  if (lineError) {
+    await db().from("orders").delete().eq("id", orderId);
+    throw new Error("Could not save the lines. Nothing was made.");
+  }
+
+  await db()
+    .from("custom_requests")
+    .update({
+      status: "converted",
+      order_id: orderId,
+      quoted: total,
+      answered_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  revalidatePath("/admin/requests");
+  revalidatePath("/admin/orders");
+  revalidatePath("/admin");
+  redirect(`/admin/orders/${orderId}`);
 }
