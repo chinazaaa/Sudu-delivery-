@@ -163,10 +163,10 @@ export default async function RequestsPage({
   const { data: goingRows } = await db()
     .from("batches")
     .select("id, run_date, delivery_window_text, status")
-    .gte("run_date", lagosToday())
-    .in("status", ["open", "closed"])
-    .order("run_date")
-    .limit(14);
+    .gte("run_date", new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10))
+    .neq("status", "cancelled")
+    .order("run_date", { ascending: false })
+    .limit(24);
   const goingTo = (
     (goingRows ?? []) as { id: string; run_date: string; delivery_window_text: string; status: string }[]
   ).map((one) => ({
@@ -176,7 +176,7 @@ export default async function RequestsPage({
       day: "numeric",
       month: "short",
       timeZone: "UTC",
-    })}, ${one.delivery_window_text}${one.status === "closed" ? " (closed)" : ""}`,
+    })}, ${one.delivery_window_text}${one.status === "closed" ? " (closed)" : one.status === "delivered" ? " (delivered)" : ""}`,
   }));
 
   return (

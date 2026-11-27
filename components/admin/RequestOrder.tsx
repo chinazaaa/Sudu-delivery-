@@ -37,6 +37,7 @@ export default function RequestOrder({
   const [fee, setFee] = useState(String(defaultFee));
   const [where, setWhere] = useState(going[0]?.value ?? "");
   const [paid, setPaid] = useState(true);
+  const [delivered, setDelivered] = useState(false);
   const form = useRef<HTMLFormElement>(null);
 
   const start = () => {
@@ -72,6 +73,7 @@ export default function RequestOrder({
       <input type="hidden" name="fee" value={feeNumber} />
       <input type="hidden" name="going" value={where} />
       <input type="hidden" name="paid" value={paid ? "on" : ""} />
+      <input type="hidden" name="delivered" value={delivered ? "on" : ""} />
 
       <button type="button" onClick={start} className="btn-primary w-full px-3 py-3 text-sm">
         Make it an order
@@ -232,6 +234,10 @@ export default function RequestOrder({
                   <input type="checkbox" checked={paid} onChange={(event) => setPaid(event.target.checked)} />
                   She has paid
                 </label>
+                <label className="flex items-center gap-2 text-base">
+                  <input type="checkbox" checked={delivered} onChange={(event) => setDelivered(event.target.checked)} />
+                  Already delivered
+                </label>
                 <button type="button" className="btn-primary w-full py-3" onClick={() => setStep("review")}>
                   Next
                 </button>
@@ -261,7 +267,7 @@ export default function RequestOrder({
                   </li>
                 </ul>
                 <p className="text-sm text-muted">
-                  Made on the items: {naira(food - cost)}. {paid ? "Marked paid." : "Not paid yet."}
+                  Made on the items: {naira(food - cost)}. {paid ? "Marked paid." : "Not paid yet."} {delivered ? "Marked delivered." : ""}
                 </p>
                 <button type="submit" className="btn-primary w-full py-3">
                   Make the order

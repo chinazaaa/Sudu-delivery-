@@ -488,7 +488,9 @@ export async function makeRequestOrder(form: FormData): Promise<void> {
   if (fee < 4000) throw new Error("Delivery is never less than 4,000.");
   const batchId = String(form.get("going") ?? "").replace(/^run:/, "");
   if (!batchId) throw new Error("Pick which delivery it goes on.");
-  const paid = form.get("paid") === "on";
+  const delivered = form.get("delivered") === "on";
+  // Delivered means it was paid for: nothing goes out unpaid.
+  const paid = form.get("paid") === "on" || delivered;
 
   const food = lines.reduce((sum, one) => sum + one.price, 0);
   const total = food + fee;
@@ -517,9 +519,10 @@ export async function makeRequestOrder(form: FormData): Promise<void> {
       total,
       customer_note: `${ask.wanted}${ask.note ? ` · ${ask.note}` : ""}`.slice(0, 500),
       payment_method: "transfer",
-      status: paid ? "paid" : "pending",
+      status: delivered ? "delivered" : paid ? "paid" : "pending",
       source: "desk",
       ...(paid ? { paid_at: new Date().toISOString(), paid_amount: total } : {}),
+      ...(delivered ? { done_at: new Date().toISOString() } : {}),
     })
     .select("id")
     .single();
