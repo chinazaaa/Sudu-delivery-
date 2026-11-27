@@ -1,7 +1,7 @@
 import PageHeader from "@/components/admin/PageHeader";
 import { requestList, fromTheChat, isAQuestion } from "@/lib/requests";
 import { faqFromRequest } from "../faq/actions";
-import { safeSettings, whatsappLink } from "@/lib/settings";
+import { hoursByDay, safeSettings, whatsappLink } from "@/lib/settings";
 import { naira } from "@/lib/money";
 import {
   addRequest,
@@ -17,6 +17,7 @@ import {
 import ActionButton from "@/components/ActionButton";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import RequestOrder from "@/components/admin/RequestOrder";
+import { deliverySlots } from "@/lib/same-day";
 import { lagosToday } from "@/lib/time";
 import SaveButton from "@/components/SaveButton";
 import Link from "next/link";
@@ -165,11 +166,18 @@ export default async function RequestsPage({
     .select("id, run_date, delivery_window_text, status, kind")
     .gte("run_date", new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10))
     .neq("status", "cancelled")
-    .order("run_date", { ascending: false })
-    .limit(24);
-  const goingTo = (
+    .order("run_date")
+    .limit(40);
+  const today = lagosToday();
+  const goingSorted = (
     (goingRows ?? []) as { id: string; run_date: string; delivery_window_text: string; status: string; kind: string }[]
-  ).map((one) => ({
+  );
+  // The coming ones first, so the first choice is the next delivery; the days
+  // just gone follow, newest first, for an order that has already been taken.
+  const goingTo = [
+    ...goingSorted.filter((one) => one.run_date >= today),
+    ...goingSorted.filter((one) => one.run_date < today).reverse(),
+  ].map((one) => ({
     value: `run:${one.id}`,
     label: `${new Date(`${one.run_date}T12:00:00Z`).toLocaleDateString("en-GB", {
       weekday: "short",
@@ -920,4 +928,14 @@ export default async function RequestsPage({
       </ul>
     </div>
   );
+  // A car of its own, made when it is picked: the same windows the shop
+  // offers, so Monday and Tuesday have somewhere to go too.
+  if (settings.same_day_on === "on") {
+    const slots = await hoursByDay()
+      .then((hours) => deliverySlots(new Date(), hours))
+      .catch(() => []);
+    for (const slot of slots) {
+      goingTo.push({ value: slot.at, label: `A car of its own \u00b7 ${slot.label}` });
+    }
+  }
 }

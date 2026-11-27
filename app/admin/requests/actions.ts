@@ -10,6 +10,8 @@ import { createPickupOrder } from "@/lib/pickup-order";
 import { normalisePhone } from "@/lib/phone";
 import { redirect } from "next/navigation";
 import { safeSettings } from "@/lib/settings";
+import { createSameDayBatch } from "@/lib/batches";
+import { windowPhrase } from "@/lib/same-day";
 import { ASK_BUCKET } from "@/lib/uploads";
 
 /**
@@ -486,8 +488,18 @@ export async function makeRequestOrder(form: FormData): Promise<void> {
 
   const fee = digits(form.get("fee"));
   if (fee < 4000) throw new Error("Delivery is never less than 4,000.");
-  const batchId = String(form.get("going") ?? "").replace(/^run:/, "");
-  if (!batchId) throw new Error("Pick which delivery it goes on.");
+  const going = String(form.get("going") ?? "");
+  if (!going) throw new Error("Pick which delivery it goes on.");
+  let batchId = going.startsWith("run:") ? going.slice(4) : "";
+  if (batchId === "") {
+    // A car of its own, made now the way the order page makes one.
+    const car = await createSameDayBatch({
+      deliverAt: going,
+      label: windowPhrase(going).replace(/^./, (one) => one.toUpperCase()),
+    });
+    if (!car) throw new Error("Could not make that car.");
+    batchId = car.id;
+  }
   const delivered = form.get("delivered") === "on";
   // Delivered means it was paid for: nothing goes out unpaid.
   const paid = form.get("paid") === "on" || delivered;

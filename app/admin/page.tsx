@@ -342,6 +342,22 @@ export default async function AdminHome() {
     joinable ? { id: joinable.id, cutOffAt: joinable.cut_off_at } : null
   );
 
+  // The last scheduled run that is open. Within ten days of it running out,
+  // the dashboard says to open the next month.
+  const { data: lastRow } = await db()
+    .from("batches")
+    .select("run_date")
+    .eq("kind", "run")
+    .neq("status", "cancelled")
+    .order("run_date", { ascending: false })
+    .limit(1);
+  const last = (lastRow ?? [])[0] as { run_date: string } | undefined;
+  const lastRun =
+    last &&
+    new Date(`${last.run_date}T12:00:00Z`).getTime() - Date.now() < 10 * 86_400_000
+      ? last.run_date
+      : null;
+
   const jobs = needsDoing({
     left: {
       value: left.reduce((total, cart) => total + cart.value, 0),
@@ -658,6 +674,20 @@ export default async function AdminHome() {
             }
           />
         </div>
+      )}
+
+      {/* Runs are opened a month at a time. When the last one open is close,
+          say so on the first screen, with the way to the button. */}
+      {lastRun && (
+        <Link
+          href="/admin/schedule"
+          className="card mb-3 flex items-center justify-between gap-3 border-brand p-3.5 text-sm font-bold sm:mb-[18px]"
+        >
+          <span>
+            Runs are only open until {runDateLabel(lastRun)}. Open next month
+          </span>
+          <span aria-hidden>→</span>
+        </Link>
       )}
 
       <div className="grid items-start gap-3 sm:gap-[18px] lg:grid-cols-[1.35fr_1fr]">
