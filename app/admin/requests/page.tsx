@@ -162,13 +162,13 @@ export default async function RequestsPage({
   // been cancelled or finished.
   const { data: goingRows } = await db()
     .from("batches")
-    .select("id, run_date, delivery_window_text, status")
+    .select("id, run_date, delivery_window_text, status, kind")
     .gte("run_date", new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10))
     .neq("status", "cancelled")
     .order("run_date", { ascending: false })
     .limit(24);
   const goingTo = (
-    (goingRows ?? []) as { id: string; run_date: string; delivery_window_text: string; status: string }[]
+    (goingRows ?? []) as { id: string; run_date: string; delivery_window_text: string; status: string; kind: string }[]
   ).map((one) => ({
     value: `run:${one.id}`,
     label: `${new Date(`${one.run_date}T12:00:00Z`).toLocaleDateString("en-GB", {
@@ -176,7 +176,7 @@ export default async function RequestsPage({
       day: "numeric",
       month: "short",
       timeZone: "UTC",
-    })}, ${one.delivery_window_text}${one.status === "closed" ? " (closed)" : one.status === "delivered" ? " (delivered)" : ""}`,
+    })}, ${one.kind === "same_day" ? "Car, " : ""}${one.delivery_window_text}${one.status === "closed" ? " (closed)" : one.status === "delivered" ? " (delivered)" : ""}`,
   }));
 
   return (
