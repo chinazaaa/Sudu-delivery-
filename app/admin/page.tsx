@@ -316,9 +316,9 @@ export default async function AdminHome() {
   const waitingSaid =
     waiting.length === 0
       ? ""
-      : `${naira(waitingBefore)} on ${waiting.length} run${
-          waiting.length === 1 ? "" : "s"
-        } waiting on costs`;
+      : waiting.length === 1
+        ? `${naira(waitingBefore)} on ${runDateLabel(waiting[0].run_date)} waiting on costs`
+        : `${naira(waitingBefore)} on ${waiting.length} runs waiting on costs`;
   const unpaidValue = unpaid.reduce((total, order) => total + order.total, 0);
 
   // How long the run being worked has left, for the one job on the list that
@@ -446,7 +446,9 @@ export default async function AdminHome() {
   // in it, which is worth saying rather than leaving blank.
   const needSaid =
     jobs.length === 0
-      ? "nothing needs doing"
+      ? waiting.length > 0
+        ? `${waiting.length} run${waiting.length === 1 ? "" : "s"} to settle`
+        : "nothing needs doing"
       : jobs.length === 1
         ? "1 thing needs doing"
         : `${jobs.length} things need doing`;
@@ -677,6 +679,10 @@ export default async function AdminHome() {
                   thing{jobs.length === 1 ? "" : "s"}
                 </span>
               </span>
+            ) : waiting.length > 0 ? (
+              <span className="tag bg-volt text-ink">
+                {waiting.length} to settle
+              </span>
             ) : (
               <span className="tag bg-mint-tint text-mint">All clear</span>
             )
@@ -691,6 +697,31 @@ export default async function AdminHome() {
             job.
           </p>
           {rows}
+          {/* A past run whose books were never finished: named, with its day,
+              and one tap to open it. The dashboard used to say "1 run waiting
+              on costs" and leave somebody scrolling back through the weeks to
+              find which. */}
+          {[...waiting]
+            .sort((a, b) => a.run_date.localeCompare(b.run_date))
+            .slice(0, 5)
+            .map((batch) => (
+              <div
+                key={`books-${batch.id}`}
+                className="flex items-center gap-2.5 border-t-[1.5px] border-rule px-1 py-[11px] sm:gap-3 sm:py-3"
+              >
+                <span aria-hidden className="size-2 shrink-0 rounded-full bg-volt sm:size-2.5" />
+                <Link href={`/admin/batch/${batch.id}`} className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold sm:text-[15px]">
+                    Finish the books · {runDateLabel(batch.run_date)} · {SLOT_LABEL[batch.slot]}
+                  </span>
+                  <span className="hint block">
+                    {naira(batch.profit)} is a guess until the car cost is in. Add it, or press
+                    Settle if it cost nothing.
+                  </span>
+                </Link>
+                <span aria-hidden className="shrink-0 text-[17px] text-muted">›</span>
+              </div>
+            ))}
         </Panel>
 
         {/* The board puts these two under the list on a phone and in the row
